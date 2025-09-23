@@ -23,8 +23,8 @@ def predict_vitals(age: int, poverty: float, air_quality: float) -> dict:
 
 def build_obx_vitals(vitals: dict, start_set_id: int = 10) -> list[str]:
     segs = []
-    segs.append(f"OBX|{start_set_id}|NM|8480-6^Systolic BP^LN||{vitals['systolic_bp']:.1f}|mmHg|90-140|||F")
-    segs.append(f"OBX|{start_set_id+1}|NM|8867-4^Heart rate^LN||{vitals['heart_rate']:.1f}|/min|60-100|||F")
-    segs.append(f"OBX|{start_set_id+2}|NM|59408-5^Oxygen saturation^LN||{vitals['o2_sat']:.1f}|%|95-100|||F")
-    segs.append(f"OBX|{start_set_id+3}|NM|39156-5^Body mass index^LN||{vitals['bmi']:.1f}|kg/m2|18.5-24.9|||F")
+    segs.append(f"OBX|{start_set_id}|NM|8480-6^Systolic BP^LN||{vitals['systolic_bp']:.1f}|mmHg|90-140||||F")
+    segs.append(f"OBX|{start_set_id+1}|NM|8867-4^Heart rate^LN||{vitals['heart_rate']:.1f}|/min|60-100||||F")
+    segs.append(f"OBX|{start_set_id+2}|NM|59408-5^Oxygen saturation^LN||{vitals['o2_sat']:.1f}|%|95-100||||F")
+    segs.append(f"OBX|{start_set_id+3}|NM|39156-5^Body mass index^LN||{vitals['bmi']:.1f}|kg/m2|18.5-24.9||||F")
     return segs

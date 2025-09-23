@@ -11,7 +11,7 @@ def seg_msh(message_type: str) -> str:
     if "^" in message_type and message_type.count("^") == 1:
         message_type = f"{message_type}^{structures.get(message_type, '')}"
     control_id = str(uuid.uuid4())
-    return f"MSH|^~\\&|FAKELAB|FAKEFACILITY|CMX|STAGE|{now}||{message_type}|{control_id}|P|2.5|||AL|NE||UNICODE UTF-8"
+    return f"MSH|^~\\&|FAKELAB|MEDILACRAHS|MLHS|STAGE|{now}||{message_type}|{control_id}|P|2.5|||AL|NE||UNICODE UTF-8"
 
 def seg_evn(enc: Encounter, event_type: str = "A01") -> str:
     evn_ts = ts_hl7(enc.admit_datetime)
@@ -50,12 +50,12 @@ def seg_obx(obs: Observation) -> str:
     sub_id = obs.observation_sub_id or "1"
     value = obs.observation_text or ""
     status = obs.result_status or "F"
-    producer = "FAKEFACILITY^RAD_DEPT1"
-    return f"OBX|1|TX|{ident}|{sub_id}|{hl7_escape(value)}||||||{status}|||{producer}"
+    producer = "MEDILACRAHS^DEPT1"
+    return f"OBX|1|TX|{ident}|{sub_id}|{hl7_escape(value)}|||||||{status}|||{producer}"
 
 def seg_obx_lines(obs: Observation, start_set_id: int = 1, wrap_width: int = 200) -> List[str]:
     ident = f"{obs.cpt_code}^{obs.procedure_description}^CPT"
-    status = obs.result_status or "F"; producer = "FAKEFACILITY^RAD_DEPT1"
+    status = obs.result_status or "F"; producer = "MEDILACRAHS^DEPT1"
     norm = (obs.observation_text or "").replace("\r\n","\n").replace("\r","\n")
     raw_lines = norm.split("\n")
     lines = []
@@ -102,3 +102,100 @@ def seg_dg1(enc: Encounter, icd_code: str, desc: str = "", *,
     # Put display text in CE.2; keep DG1-4 blank (common pattern)
     ce = f"{icd_code}^{hl7_escape(desc)}^{coding_system}" if icd_code else "^^"
     return f"DG1|{set_id}||{ce}||{dt_hl7}|{diag_type}"
+
+# --- Add near your other segment builders in segments.py ---
+
+from typing import Optional, Tuple
+from .utils import ts_hl7, hl7_escape
+
+_PRODUCER = "MEDILACRAHS^DEPT1"  # keep consistent with your seg_obx/seg_obx_lines
+
+def _obx_cwe(
+    *,
+    set_id: int,
+    obx3: Tuple[str, str, str],
+    value: Tuple[str, str, str],
+    sub_id: int = 1,
+    status: str = "F",
+    effective_dt: Optional[str] = None,  # "YYYY-MM-DD HH:MM:SS" or None
+    method: Optional[Tuple[str, str, str]] = None,  # OBX-17 (e.g., source)
+    performing_org: Optional[str] = None  # OBX-23
+) -> str:
+    """
+    Generic OBX builder for CWE values in v2.5.
+      obx3: (code, text, coding_system)  -> OBX-3
+      value: (code, text, coding_system) -> OBX-5
+    """
+    obx3_ce = f"{obx3[0]}^{hl7_escape(obx3[1])}^{obx3[2]}"
+    val_ce = f"{value[0]}^{hl7_escape(value[1])}^{value[2]}"
+
+    # OBX-14 Effective date/time
+    obx14 = ts_hl7(effective_dt) if effective_dt else ""
+
+    # OBX-17 Method (or provenance/source), optional CWE
+    obx17 = ""
+    if method:
+        obx17 = f"{method[0]}^{hl7_escape(method[1])}^{method[2]}"
+
+    # OBX-23 Performing organization
+    obx23 = performing_org or ""
+
+    # Fields: OBX|1|CWE|OBX-3|sub|OBX-5||||||status|||producer| ... |OBX-14| ... |OBX-17| ... | ... |OBX-23
+    return (
+        f"OBX|{set_id}|CWE|{obx3_ce}|{sub_id}|{val_ce}||||||{status}||R|{_PRODUCER}|"
+        f"|{obx14}|{''}|{obx17}||||{obx23}"
+    )
+
+def seg_obx_gender_identity(
+    *,
+    set_id: int,
+    gi_code: str = "446151000124109",  # SNOMED CT Male (example default)
+    gi_text: str = "Male",
+    gi_system: str = "SCT",
+    effective_dt: Optional[str] = None,
+    method: Optional[Tuple[str, str, str]] = None,
+    performing_org: Optional[str] = None
+) -> str:
+    """OBX for LOINC 76691-5 (Gender identity)"""
+    obx3 = ("76691-5", "Gender identity", "LN")
+    value = (gi_code, gi_text, gi_system)
+    return _obx_cwe(
+        set_id=set_id, obx3=obx3, value=value,
+        effective_dt=effective_dt, method=method, performing_org=performing_org
+    )
+
+def seg_obx_pronouns(
+    *,
+    set_id: int,
+    pronoun_code: str = "LA29520-6",    # they/them from LL5144-2 (example default)
+    pronoun_text: str = "they/them/their/theirs/themselves",
+    pronoun_system: str = "LN",         # answers list (LOINC/LA codes)
+    effective_dt: Optional[str] = None,
+    method: Optional[Tuple[str, str, str]] = None,
+    performing_org: Optional[str] = None
+) -> str:
+    """OBX for LOINC 90778-2 (Personal pronouns - Reported)"""
+    obx3 = ("90778-2", "Personal pronouns - Reported", "LN")
+    value = (pronoun_code, pronoun_text, pronoun_system)
+    return _obx_cwe(
+        set_id=set_id, obx3=obx3, value=value,
+        effective_dt=effective_dt, method=method, performing_org=performing_org
+    )
+
+def seg_obx_spcu(
+    *,
+    set_id: int,
+    spcu_code: str = "F-T",                 # example: "Apply female-typical settings"
+    spcu_text: str = "Apply female-typical settings",
+    spcu_system: str = "HL7",               # use your chosen THO/HL7 system id
+    effective_dt: Optional[str] = None,
+    method: Optional[Tuple[str, str, str]] = None,
+    performing_org: Optional[str] = None
+) -> str:
+    """OBX for SPCU (Sex Parameter for Clinical Use) in v2.5"""
+    obx3 = ("SPCU", "Sex parameter for clinical use", "HL7")
+    value = (spcu_code, spcu_text, spcu_system)
+    return _obx_cwe(
+        set_id=set_id, obx3=obx3, value=value,
+        effective_dt=effective_dt, method=method, performing_org=performing_org
+    )

@@ -4,15 +4,10 @@ import os, re
 from datetime import datetime, timezone
 from typing import Optional, Dict
 
-try:
-    from hl7_demo.generators import gen_patient, gen_encounter, gen_transaction, gen_observation
-    from hl7_demo.reports import load_reports
-    from hl7_demo.messages import build_adt, build_oru, build_dft
-except ModuleNotFoundError:
-    from generators import gen_patient, gen_encounter, gen_transaction, gen_observation
-    from reports import load_reports
-    from messages import build_adt, build_oru, build_dft
 
+from hl7_demo.generators import gen_patient, gen_encounter, gen_transaction, gen_observation
+from hl7_demo.reports import load_reports
+from hl7_demo.messages import build_adt, build_oru, build_dft
 from storage_duckdb_entities import (
     init_db, upsert_patient, upsert_encounter, upsert_observation, upsert_transaction, append_message, DEFAULT_DB_PATH
 )

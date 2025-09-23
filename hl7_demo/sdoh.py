@@ -111,4 +111,136 @@ def build_obx_poverty_pct(pct: float | None, set_id: int = 3) -> str:
     if pct is None: return ""
     try: val = f"{float(pct):.1f}"
     except Exception: return ""
-    return f"OBX|{set_id}|NM|ACS_POVERTY_PCT^Poverty (ACS 5-year)%^L||{val}|||||F"
+    return f"OBX|{set_id}|NM|ACS_POVERTY_PCT^Poverty (ACS 5-year)%^L||{val}||||||F"
+
+# Adding More APIs/SDOH Data
+
+
+# --- Additions: keyless public APIs for SDOH ---
+
+import time
+from functools import lru_cache
+import requests
+
+# Reuse your existing _http_get_json if present; if not, keep this local helper
+def _http_get_json_with_retries(url: str, params: dict | None = None, timeout: float = 8.0, attempts: int = 3):
+    for attempt in range(attempts):
+        try:
+            r = requests.get(url, params=params, timeout=timeout)
+            if r.status_code == 200:
+                return r.json()
+            if r.status_code in (429, 500, 502, 503, 504):
+                time.sleep(0.5 * (attempt + 1))
+                continue
+            break
+        except Exception:
+            time.sleep(0.5 * (attempt + 1))
+    return None
+
+# 1) Census Geocoder: ZIP -> county/state/coords (no key)
+@lru_cache(maxsize=2048)
+def zip_to_county_fips(zip5: str) -> dict | None:
+    """
+    Returns:
+      {
+        'state_fips': '25',
+        'county_fips': '25025' (state_fips + county_3),
+        'county_name': 'Suffolk County',
+        'state_abbrev': 'MA',
+        'lat': 42.36, 'lon': -71.06
+      } or None
+    """
+    if not zip5 or len(str(zip5)) < 5:
+        return None
+    z5 = str(zip5).strip()[:5]
+    url = "https://geocoding.geo.census.gov/geocoder/geographies/onelineaddress"
+    params = {
+        "address": z5,
+        "benchmark": "Public_AR_Census2020",
+        "vintage": "Census2020_Census2020",
+        "format": "json",
+    }
+    data = _http_get_json_with_retries(url, params=params, timeout=8)
+    try:
+        am = (data or {}).get("result", {}).get("addressMatches", [])[0]
+        geos = am.get("geographies", {})
+        counties = geos.get("Counties") or []
+        county = counties[0] if counties else {}
+        state_fips = str(county.get("STATE", "")).zfill(2)
+        c3 = str(county.get("COUNTY", "")).zfill(3)
+        county_fips = f"{state_fips}{c3}" if state_fips and c3 else None
+        return {
+            "state_fips": state_fips or None,
+            "county_fips": county_fips,
+            "county_name": county.get("NAME") or county.get("COUNTY_NAME"),
+            "state_abbrev": county.get("USPS"),
+            "lat": am.get("coordinates", {}).get("y"),
+            "lon": am.get("coordinates", {}).get("x"),
+        }
+    except Exception:
+        return None
+
+# 2) CDC PLACES (SODA API): select a measure by ZCTA (no key, but rate-limited)
+@lru_cache(maxsize=2048)
+def get_places_measure_by_zcta(zcta: str, measure_name: str = "Obesity among adults aged >=18 years") -> float | None:
+    """
+    Returns the Data_Value for the requested measure (percentage) for a ZCTA, or None if not available.
+    """
+    if not zcta or len(str(zcta)) < 5:
+        return None
+    z5 = str(zcta).strip()[:5]
+    # 2022 PLACES ZCTA resource id: as of writing often 'gd4x-jyhw'; SODA is stable but ids can change over time.
+    # Keep both measure and zcta in the query to avoid downloading the world.
+    base = "https://data.cdc.gov/resource/gd4x-jyhw.json"
+    params = {
+        "$select": "zcta5,measure,Data_Value",
+        "$limit": "1",
+        "$where": "zcta5 = '{}' AND measure = '{}'".format(z5.replace("'", "''"), measure_name.replace("'", "''")),
+    }
+    data = _http_get_json_with_retries(base, params=params, timeout=8)
+    if isinstance(data, list) and data:
+        try:
+            return float(data[0].get("data_value"))
+        except Exception:
+            return None
+    return None
+
+def build_obx_places_obesity(zcta: str, set_id: int = 10) -> str:
+    """OBX for CDC PLACES: Adults with obesity (%)"""
+    from .utils import hl7_escape  # reuse your existing utility
+    val = get_places_measure_by_zcta(zcta, "Obesity among adults aged >=18 years")
+    if val is None:
+        return f"OBX|{set_id}|TX|PLACES_OBESITY^Adults with Obesity (%)^L||N/A|||||F"
+    return f"OBX|{set_id}|NM|PLACES_OBESITY^Adults with Obesity (%)^L||{val:.1f}|%||||F"
+
+# 3) BLS LAUS (no key): county unemployment mapped via ZIP->county
+@lru_cache(maxsize=4096)
+def get_unemployment_rate_by_zip(zip5: str) -> float | None:
+    """
+    Looks up the county via Census, then fetches latest unemployment rate via BLS LAUS.
+    Series ID format: LAUCN + state(2) + county(3) + 0000000003
+    """
+    geo = zip_to_county_fips(zip5)
+    if not geo or not geo.get("county_fips"):
+        return None
+    state_fp = geo["state_fips"]
+    county3 = geo["county_fips"][2:]
+    series_id = f"LAUCN{state_fp}{county3}0000000003"
+    url = f"https://api.bls.gov/publicAPI/v2/timeseries/data/{series_id}"
+    params = {"latest": "true"}
+    data = _http_get_json_with_retries(url, params=params, timeout=8)
+    try:
+        series = (data or {}).get("Results", {}).get("series", [])
+        pts = series[0].get("data", []) if series else []
+        if not pts:
+            return None
+        return float(pts[0]["value"])
+    except Exception:
+        return None
+
+def build_obx_unemployment(zip5: str, set_id: int = 11) -> str:
+    """OBX for county unemployment rate (%) derived from ZIP"""
+    rate = get_unemployment_rate_by_zip(zip5)
+    if rate is None:
+        return f"OBX|{set_id}|TX|BLS_UNEMPLOYMENT^Unemployment Rate (%)^L||N/A|||||F"
+    return f"OBX|{set_id}|NM|BLS_UNEMPLOYMENT^Unemployment Rate (%)^L||{rate:.1f}|%||||F"

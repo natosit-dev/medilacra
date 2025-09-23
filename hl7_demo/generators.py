@@ -91,3 +91,108 @@ def gen_observation(enc: Encounter, report_row) -> Observation:
         result_status="F",
         completed_time=completed.strftime("%Y-%m-%d %H:%M:%S"),
     )
+
+
+# --- Add near your other helpers in generators.py ---
+
+import random
+from datetime import datetime
+
+def pick_gender_identity():
+    # SNOMED examples; swap as you like
+    return random.choice([
+        ("446151000124109", "Male", "SCT"),
+        ("446141000124107", "Female", "SCT"),
+        ("33791000087105",  "Non-binary gender", "SCT"),
+        ("74964007",        "Intersex", "SCT"),
+    ])
+
+def pick_pronouns():
+    # LOINC LA codes (examples)
+    return random.choice([
+        ("LA29520-6", "they/them/their/theirs/themselves", "LN"),
+        ("LA29519-8", "she/her/her/hers/herself", "LN"),
+        ("LA29518-0", "he/him/his/his/himself", "LN"),
+    ])
+
+# --- Gender Harmony biased selectors (drop in) ---
+
+from typing import Tuple, Dict
+
+# Canonical option pools
+_GI_POOL = [
+    ("446151000124109", "Male", "SCT"),
+    ("446141000124107", "Female", "SCT"),
+    ("33791000087105",  "Non-binary gender", "SCT"),
+    ("74964007",        "Intersex", "SCT"),
+]
+
+_PRONOUN_POOL = [
+    ("LA29518-0", "he/him/his/his/himself", "LN"),
+    ("LA29519-8", "she/her/her/hers/herself", "LN"),
+    ("LA29520-6", "they/them/their/theirs/themselves", "LN"),
+]
+
+_SPCU_POOL = [
+    ("M-T", "Apply male-typical settings", "HL7"),
+    ("F-T", "Apply female-typical settings", "HL7"),
+    ("S",   "Specific (organ/system-specific)", "HL7"),
+]
+
+# Typical mappings for alignment with PID-8 Administrative Sex
+_TYPICAL_BY_SEX: Dict[str, Dict[str, Tuple[str, str, str]]] = {
+    "M": {
+        "gi": _GI_POOL[0],        # Male
+        "pro": _PRONOUN_POOL[0],  # he/him
+        "spcu": _SPCU_POOL[0],    # M-T
+    },
+    "F": {
+        "gi": _GI_POOL[1],        # Female
+        "pro": _PRONOUN_POOL[1],  # she/her
+        "spcu": _SPCU_POOL[1],    # F-T
+    },
+}
+
+def _rand_other(pool, not_this: Tuple[str, str, str]):
+    choices = [x for x in pool if x != not_this]
+    return random.choice(choices) if choices else not_this
+
+def choose_gender_harmony_values(admin_sex: str, match_bias: float = 0.95):
+    """
+    Returns a dict: {"gi": (code,text,system), "pro": (...), "spcu": (...)}
+    - With probability `match_bias`, values align to PID-8 (M/F typical).
+    - Otherwise, pick values outside the typical mapping.
+    """
+    sex = (admin_sex or "").upper()
+    typical = _TYPICAL_BY_SEX.get(sex)
+
+    if not typical:
+        # Unknown/other admin sex -> fully random
+        return {
+            "gi": random.choice(_GI_POOL),
+            "pro": random.choice(_PRONOUN_POOL),
+            "spcu": random.choice(_SPCU_POOL),
+        }
+
+    if random.random() < match_bias:
+        # Align with PID-8
+        return typical
+
+    # Non-typical case (5%): choose alternatives not equal to the typical picks
+    return {
+        "gi": _rand_other(_GI_POOL, typical["gi"]),
+        "pro": _rand_other(_PRONOUN_POOL, typical["pro"]),
+        "spcu": _rand_other(_SPCU_POOL, typical["spcu"]),
+    }
+
+
+def pick_spcu():
+    # Example SPCU values; align with the set you choose to use
+    return random.choice([
+        ("F-T", "Apply female-typical settings", "HL7"),
+        ("M-T", "Apply male-typical settings", "HL7"),
+        ("S",   "Specific (organ/system-specific)", "HL7"),
+    ])
+
+def now_str():
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")

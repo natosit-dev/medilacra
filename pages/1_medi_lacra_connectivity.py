@@ -9,21 +9,13 @@ from datetime import datetime
 import streamlit as st
 import requests
 
-# Try package-style imports first, then local
-try:
-    from hl7_demo.sdoh import (
-        get_air_quality_by_zip, build_obx_air_quality,
-        get_poverty_pct_by_zcta, build_obx_poverty_pct,
-        get_police_station_count_by_zip, build_obx_police_count,
-    )
-    from hl7_demo.config import AIRNOW_API_KEY, AIRNOW_MILES_DEFAULT, ACS_YEAR
-except ModuleNotFoundError:
-    from sdoh import (
-        get_air_quality_by_zip, build_obx_air_quality,
-        get_poverty_pct_by_zcta, build_obx_poverty_pct,
-        get_police_station_count_by_zip, build_obx_police_count,
-    )
-    from config import AIRNOW_API_KEY, AIRNOW_MILES_DEFAULT, ACS_YEAR
+from hl7_demo.sdoh import (
+    get_air_quality_by_zip, build_obx_air_quality,
+    get_poverty_pct_by_zcta, build_obx_poverty_pct,
+    get_police_station_count_by_zip, build_obx_police_count,
+)
+from hl7_demo.config import AIRNOW_API_KEY, AIRNOW_MILES_DEFAULT, ACS_YEAR
+
 
 st.set_page_config(page_title="MediLacra — Connectivity Tester", layout="wide")
 st.title("🌐 MediLacra — Connectivity Tester")
@@ -195,8 +187,7 @@ with tab_api:
         z_aqi = st.text_input("ZIP for AirNow", "02139")
     with c2:
         z_acs = st.text_input("ZCTA for ACS", "02139")
-    with c3:
-        z_pol = st.text_input("ZIP for ArcGIS", "02139")
+
 
     if st.button("Run Probes", type="primary"):
         rows = []
@@ -211,15 +202,10 @@ with tab_api:
         pct = get_poverty_pct_by_zcta(z_acs)
         t_acs = (time.time()-t0)*1000.0
         rows.append(("Census ACS", "acs5/B17001", z_acs, "OK" if pct is not None else "NO DATA", f"{t_acs:.1f} ms"))
-        # ArcGIS
-        t0 = time.time()
-        cnt = get_police_station_count_by_zip(z_pol)
-        t_esri = (time.time()-t0)*1000.0
-        rows.append(("ArcGIS", "Local Law Enforcement Locations", z_pol, "OK" if isinstance(cnt,int) and cnt >= 0 else "NO DATA", f"{t_esri:.1f} ms"))
-        # Render table
+         # Render table
         st.table({"Service":[r[0] for r in rows], "Endpoint":[r[1] for r in rows], "Input":[r[2] for r in rows], "Result":[r[3] for r in rows], "Latency":[r[4] for r in rows]})
         # OBX previews
         with st.expander("OBX Previews"):
             if aqi: st.code(build_obx_air_quality(aqi))
             if pct is not None: st.code(build_obx_poverty_pct(pct))
-            st.code(build_obx_police_count(cnt))
+           

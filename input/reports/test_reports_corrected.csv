@@ -1,0 +1,101 @@
+report_uid,cpt_code,icd_code,procedure_description,report_text,provider_id,provider_name,message_type,service_line,test_dataset_tag
+b22b3e3f-33c3-4a38-b73b-75070654dd43,71045,R07.9,"Chest X-ray, single view","Indication: Chest pain, unspecified.
+Technique: Single frontal view chest radiograph was obtained.
+Findings: The cardiomediastinal silhouette is normal in size and contour. Lungs are clear with no focal airspace consolidation, pneumothorax, or pleural effusion. No acute bony abnormalities.
+Impression: No acute cardiopulmonary process.
+Signed by: Dr. John Doe, MD",H827610,John Doe,ORU,Radiology,test_reports
+4f3f7e60-ff19-4406-8326-d8e8f8c0efc6,71046,R06.02,"Chest X-ray, 2 views","Indication: Shortness of breath.
+Technique: Posteroanterior and lateral views of the chest were obtained.
+Findings: The heart size is normal. Mild interstitial markings are present. No focal pneumonia is identified. There is a small right pleural effusion. Bony thorax is intact.
+Impression: Mild pulmonary edema with small right pleural effusion. No focal pneumonia.
+Signed by: Dr. Jane Smith, MD",H268847,Jane Smith,ORU,Radiology,test_reports
+e626e015-64a3-4600-867e-1b6df89882c6,70450,R51,CT scan of head without contrast,"Indication: Chronic headaches, rule out intracranial pathology.
+Technique: Non-contrast head CT was performed in axial sections.
+Findings: No acute intracranial hemorrhage or territorial infarction. Ventricles and sulci are age-appropriate. No mass effect or midline shift. No abnormal extra-axial fluid collections.
+Impression: No acute intracranial abnormality.
+Signed by: Dr. Michael Johnson, MD",H299414,Michael Johnson,ORU,Radiology,test_reports
+60de1d09-6bb0-4bde-aa05-9e0d00f3442f,"77063, 77067",Z12.31,"Screening mammography with tomosynthesis, bilateral","Indication: Routine breast cancer screening.
+Technique: Bilateral screening mammogram was performed with tomosynthesis (3D) in two views per breast.
+Findings: Breast composition is scattered fibroglandular densities. No suspicious masses, microcalcifications, or architectural distortions are seen in either breast. Skin and nipples are unremarkable. Axillary regions show no abnormal lymph nodes.
+Impression: Negative screening mammogram. BI-RADS 1: No evidence of malignancy. Recommend routine annual screening.
+Signed by: Dr. Emily Davis, MD",H620438,Emily Davis,ORU,Radiology,test_reports
+d1a253ad-cb08-4715-991c-95b3b3bf0178,74018,R10.9,"Abdominal X-ray, single view","Indication: Abdominal pain, unspecified.
+Technique: Single supine frontal radiograph of the abdomen was obtained.
+Findings: Bowel gas pattern is nonobstructive. No evidence of pneumoperitoneum. No radiopaque renal calculi are identified. The visualized bony structures are intact.
+Impression: No acute abdominal abnormality.
+Signed by: Dr. David Lee, MD",H115108,David Lee,ORU,Radiology,test_reports
+39525f87-a4bc-46e9-8bcd-cc72ac02c471,"71045, 74018",Z46.59,Chest and abdominal X-rays (1 view each),"Indication: Verification of nasogastric tube placement post insertion.
+Technique: Single view portable chest and abdomen radiographs were obtained.
+Findings: An enteric tube is seen coursing through the esophagus into the stomach; the tip is projected over the gastric body. Lungs are clear without focal consolidation or pneumothorax. No free intraperitoneal air is visible. Skeletal structures appear intact.
+Impression: Nasogastric tube terminates in the stomach. No evidence of malposition. No acute chest or abdominal findings.
+Signed by: Dr. Susan Brown, MD",H755178,Susan Brown,ORU,Radiology,test_reports
+b76a8cd4-0149-4cdd-bdcc-c3bbce6b0b8c,74177,R10.31,CT scan of abdomen and pelvis with contrast,"Indication: Right lower quadrant abdominal pain, concern for appendicitis.
+Technique: Contrast-enhanced CT of the abdomen and pelvis was performed.
+Findings: The appendix is enlarged to 11 mm with wall thickening and surrounding fat stranding. No abscess or perforation is seen. Liver, spleen, pancreas, and kidneys are unremarkable. No obstructive urolithiasis. Bowel is otherwise normal. Incidental note of a 2 cm simple cyst in the left kidney.
+Impression: Findings are consistent with acute appendicitis, without evidence of perforation or abscess.
+Signed by: Dr. James Miller, MD",H804531,James Miller,ORU,Radiology,test_reports
+bcc6de72-ce64-4c70-ac2a-d02bdcffd060,76770,R31.9,Complete abdominal ultrasound (retroperitoneal),"Indication: Hematuria (blood in urine).
+Technique: Comprehensive ultrasound of the kidneys and bladder was performed.
+Findings: The kidneys are normal in size and echogenicity with no evidence of hydronephrosis or discrete renal mass. No renal calculi are visualized. The urinary bladder is distended and demonstrates no wall thickening or masses.
+Impression: Normal renal ultrasound. No sonographic cause of hematuria identified.
+Signed by: Dr. Linda Garcia, MD",H146317,Linda Garcia,ORU,Radiology,test_reports
+c6c414fa-c083-4154-b2fe-11e1f83c19a5,76830,N93.9,Transvaginal pelvic ultrasound,"Indication: Abnormal vaginal bleeding.
+Technique: Transvaginal ultrasound of the pelvis was performed with an endovaginal transducer.
+Findings: The uterus is anteverted and measures 8.0 x 4.2 x 3.5 cm. The endometrial stripe is 5 mm, normal for age. A 2.5 cm fibroid is noted in the anterior uterine wall. Both ovaries are normal in appearance with small follicles. No free pelvic fluid is present.
+Impression: Small uterine fibroid identified. No evidence of endometrial thickening or ovarian mass.
+Signed by: Dr. Robert Wilson, MD",H633808,Robert Wilson,ORU,Radiology,test_reports
+43f23e3f-f2e1-45fa-b218-7dbb5431b681,73030,M25.511,"Shoulder X-ray, 2 views","Indication: Right shoulder pain.
+Technique: AP and lateral views of the right shoulder were obtained.
+Findings: The glenohumeral joint alignment is normal. No acute fracture or dislocation is seen. There are mild degenerative changes at the acromioclavicular joint. Soft tissues are unremarkable.
+Impression: No acute bony injury of the right shoulder; mild AC joint osteoarthritis.
+Signed by: Dr. Patricia Taylor, MD",H794592,Patricia Taylor,ORU,Radiology,test_reports
+4cadc9eb-39e7-4405-a640-2169847b5bb6,76705,R10.11,"Limited abdominal ultrasound (e.g., RUQ)","Indication: Right upper quadrant pain, rule out gallstones.
+Technique: Limited ultrasound of the abdomen (focused on liver and gallbladder) was performed.
+Findings: The liver is normal in echotexture without focal lesions. The gallbladder contains multiple small gallstones without wall thickening or pericholecystic fluid. The common bile duct is 5 mm in diameter. No intrahepatic biliary dilation. The right kidney is visualized and appears normal.
+Impression: Cholelithiasis without sonographic evidence of acute cholecystitis.
+Signed by: Dr. William Martin, MD",H581617,William Martin,ORU,Radiology,test_reports
+5a1ebc0b-4bff-4216-9669-93624169b6b9,72082,M41.9,"Spine X-ray (scoliosis survey, 2 views)","Indication: Scoliosis follow-up.
+Technique: Standing AP and lateral radiographs of the entire spine were obtained.
+Findings: There is an S-shaped curvature of the thoracolumbar spine with a Cobb angle of approximately 15 degrees in the thoracic region. Vertebral body heights are maintained. No acute fractures are seen. Alignment is otherwise normal. No significant rotation of vertebrae noted.
+Impression: Mild thoracolumbar scoliosis without acute osseous abnormalities.
+Signed by: Dr. Karen Anderson, MD",H268551,Karen Anderson,ORU,Radiology,test_reports
+f4b5402a-4d9c-489f-991c-5b3e7dfe1ec4,73630,M79.672,"Foot X-ray, complete (3+ views)","Indication: Left foot pain after injury.
+Technique: Three views of the left foot were obtained.
+Findings: No acute fracture or dislocation of the left foot is seen. The joint spaces are preserved. There is a mild hallux valgus deformity at the great toe. No lytic or blastic lesions are identified. Soft tissues are unremarkable.
+Impression: No acute bony abnormality of the left foot.
+Signed by: Dr. Thomas Thompson, MD",H217470,Thomas Thompson,ORU,Radiology,test_reports
+59cf9506-a43d-46fd-aa6e-923f8f842bee,73610,M25.571,"Ankle X-ray, complete (3+ views)","Indication: Right ankle pain and swelling after twisting injury.
+Technique: Three views of the right ankle were obtained.
+Findings: No fracture or dislocation is identified in the right ankle. There is soft tissue swelling over the lateral malleolus. The mortise is intact. No osteochondral defects are seen.
+Impression: No radiographic evidence of fracture. Findings consistent with ankle sprain.
+Signed by: Dr. Lisa Thomas, MD",H694204,Lisa Thomas,ORU,Radiology,test_reports
+0439eaf0-1660-4e78-8a22-7c5524b90563,71260,R91.8,CT scan of chest with contrast,"Indication: Abnormal chest X-ray showing a pulmonary nodule.
+Technique: Contrast-enhanced CT of the chest was performed with intravenous contrast.
+Findings: There is a 6 mm nodule in the right upper lobe with spiculated margins. No other pulmonary nodules are present. No mediastinal or hilar lymphadenopathy. The lungs are otherwise clear. Heart and great vessels are unremarkable. No pleural effusion or pneumothorax.
+Impression: Solitary 6 mm spiculated nodule in the right upper lobe. Recommend PET-CT or short-term follow-up imaging to further characterize this finding.
+Signed by: Dr. Charles Jackson, MD",H266124,Charles Jackson,ORU,Radiology,test_reports
+50efd7ee-66f2-47d6-8326-1c9f613b7110,74176,N20.0,CT scan of abdomen and pelvis without contrast,"Indication: Flank pain, rule out kidney stone.
+Technique: Non-contrast helical CT of the abdomen and pelvis was performed (CT KUB protocol).
+Findings: A 4 mm calculus is present in the distal right ureter near the ureterovesical junction, with mild right hydroureteronephrosis. No additional stones are seen in the kidneys or ureters. The appendix is normal. No acute diverticulitis. Liver, spleen, pancreas, and adrenal glands are within normal limits.
+Impression: Right distal ureterolithiasis causing mild hydronephrosis. Findings consistent with a right ureteral stone.
+Signed by: Dr. Barbara White, MD",H460546,Barbara White,ORU,Radiology,test_reports
+140f4098-0cf9-41d2-8227-e17ca961dd70,73130,M79.641,"Hand X-ray, complete (3+ views)","Indication: Right hand pain, concern for fracture.
+Technique: Three views of the right hand were obtained.
+Findings: No acute fracture or dislocation is seen in the right hand. Joint spaces are maintained. There are mild degenerative changes at the first carpometacarpal joint (base of thumb). Soft tissues are normal.
+Impression: No acute fracture. Mild osteoarthritis at the thumb base.
+Signed by: Dr. Matthew Harris, MD",H394554,Matthew Harris,ORU,Radiology,test_reports
+3354b352-1806-49d2-8ea4-0bb5de9d3014,73590,M79.661,"Lower leg (tibia/fibula) X-ray, 2 views","Indication: Right lower leg injury, rule out fracture.
+Technique: AP and lateral views of the right tibia and fibula were obtained.
+Findings: There is a spiral fracture of the mid shaft of the right fibula with minimal displacement. The tibia is intact with no fracture. Surrounding soft tissues show mild swelling. The knee and ankle joints appear normal on this exam.
+Impression: Spiral fracture of the mid right fibula. Tibia is intact.
+Signed by: Dr. Nancy Lewis, MD",H841148,Nancy Lewis,ORU,Radiology,test_reports
+06c6ca1f-5e3e-4e07-9e6c-4be0d0b8b6b9,72170,R10.2,"Pelvis X-ray, 1-2 views","Indication: Pelvic pain after fall, rule out fracture.
+Technique: Anteroposterior view of the pelvis was obtained.
+Findings: The pelvic ring is intact. No fracture of the hips or pelvis is seen. The hip joints are normally aligned. There is mild degenerative change in both hip joints. No radiopaque foreign body.
+Impression: No acute pelvic fracture or dislocation.
+Signed by: Dr. Steven Robinson, MD",H145021,Steven Robinson,ORU,Radiology,test_reports
+858f0ff9-bf13-4f91-9595-6f4927eb0ad7,70551,R51,MRI of the brain without contrast,"Indication: Chronic headaches, rule out intracranial lesion.
+Technique: MRI of the brain was performed without gadolinium contrast. Multiplanar T1, T2, FLAIR, and diffusion-weighted sequences were obtained.
+Findings: No evidence of acute infarct or intracranial hemorrhage. The ventricles and sulci are normal in caliber. No enhancing mass or abnormal extra-axial collections. Mild scattered T2/FLAIR hyperintensities in the periventricular white matter, consistent with chronic microvascular changes. Orbits and paranasal sinuses are unremarkable.
+Impression: No acute intracranial abnormality. No mass or hemorrhage. Mild chronic microvascular ischemic changes.
+Signed by: Dr. Maria Clark, MD",H342376,Maria Clark,ORU,Radiology,test_reports
