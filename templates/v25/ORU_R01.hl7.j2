@@ -1,0 +1,8 @@
+MSH|^~\&|{{ rules.msh3|default('MEDILACRA') }}|{{ rules.msh4|default('SYNTH') }}|{{ rules.msh5|default('DEST') }}|{{ rules.msh6|default('DESTFAC') }}|{{ encounter.event_ts|ts }}||ORU^R01|{{ encounter.control_id }}|P|2.5
+PID|1|{{ patient.mrn|default('') }}||{{ patient.id|default('') }}||{{ patient.last|default('')|hl7_escape }}^{{ patient.first|default('')|hl7_escape }}||{{ patient.dob|default('') }}|{{ patient.sex|default('') }}
+PV1|1|{{ encounter.cls|default('') }}|{{ encounter.location|default('') }}|||||||||||{{ encounter.visit_number|default('') }}
+ORC|RE|{{ encounter.placer|default('') }}|{{ encounter.filler|default('') }}|||CM||||{{ encounter.ordering_provider_id|default('') }}^{{ encounter.ordering_provider_name|default('')|hl7_escape }}
+OBR|1|{{ encounter.placer|default('') }}|{{ encounter.filler|default('') }}|{{ panel.code|default('') }}^{{ panel.text|default('')|hl7_escape }}^LN|||{{ encounter.collection_ts|default('')|ts }}|||||||||{{ encounter.result_provider_id|default('') }}^{{ encounter.result_provider_name|default('')|hl7_escape }}||||||F
+{%- for obx in observations -%}
+OBX|{{ loop.index }}|{{ obx.datatype|default('ST') }}|{{ obx.code|default('') }}^{{ obx.text|default('')|hl7_escape }}^{{ obx.system|default('LN') }}|{{ obx.sub_id|default('') }}|{{ obx.value|default('') }}|{{ obx.units|default('') }}|{{ obx.ref_range|default('') }}|{{ obx.abn|default('') }}|{{ obx.prob|default('') }}|{{ obx.status|default('F') }}|{{ obx.datetime|default('')|ts }}|||{{ rules.obx13|default(obx.sensitivity|default('')) }}
+{%- endfor -%}

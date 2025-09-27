@@ -4,7 +4,7 @@ from .segments import (
     seg_obx_gender_identity, seg_obx_pronouns, seg_obx_spcu   # ← ADD THESE
 )
 
-from .sdoh import get_police_station_count_by_zip, build_obx_police_count, get_air_quality_by_zip, build_obx_air_quality, get_poverty_pct_by_zcta, build_obx_poverty_pct, build_obx_places_obesity, build_obx_unemployment
+from .sdoh import  get_air_quality_by_zip, build_obx_air_quality, get_poverty_pct_by_zcta, build_obx_poverty_pct, build_obx_places_obesity, build_obx_unemployment
 from .vitals import predict_vitals, build_obx_vitals
 from .models import Patient, Encounter, Transaction, Observation
 from typing import List, Optional, Dict

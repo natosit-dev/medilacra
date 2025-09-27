@@ -19,7 +19,7 @@ def gen_patient() -> Patient:
     first_last = fake.name().split()
     first, last = first_last[0], first_last[-1]
     return Patient(
-        patient_id=fake.unique.bothify("RAD#######"),
+        patient_id=fake.unique.bothify("MRN#######"),
         patient_name=f"{last.upper()}, {first.upper()}",
         date_of_birth=fake.date_of_birth(minimum_age=18, maximum_age=90).strftime("%Y-%m-%d"),
         sex=random.choice(["M","F"]),
@@ -39,12 +39,14 @@ def gen_encounter(patient_id: str) -> Encounter:
     visit = fake.unique.bothify("VN##########")
     prov = fake.name().split(); first, last = prov[0], prov[-1]
     prov_disp = f"{last.upper()}, {first.upper()}"
+    account_number=fake.unique.bothify("ACCT########")
     return Encounter(
         encounter_id=f"{patient_id}_{visit}",
         patient_id=patient_id,
         visit_number=visit,
+        account_number=account_number,
         patient_class="OUTPATIENT",
-        assigned_patient_location="RAD_DEPT1",
+        assigned_patient_location="DEPT1",
         admit_datetime=admit_dt.strftime("%Y-%m-%d %H:%M:%S"),
         discharge_datetime=disch_dt.strftime("%Y-%m-%d %H:%M:%S"),
         hospital_service="RAD",
