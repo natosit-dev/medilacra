@@ -1,10 +1,15 @@
-
 # storage_duckdb_entities.py
-import duckdb
 from typing import Dict, Any
 from datetime import datetime
 
-DEFAULT_DB_PATH = "./medilacra.duckdb"
+from utils.db import writer, reader, get_db_path
+from utils.log_utils import get_logger
+
+logger = get_logger(name="MediLacra",
+                    context={"component": "storage", "module": "storage_duckdb_entities", "env": "dev"})
+
+# Keep for backwards compatibility; utils.db manages the actual path
+DEFAULT_DB_PATH = get_db_path()
 
 DDL = [
     """
@@ -83,11 +88,11 @@ DDL = [
       dt DATE
     );
 
-    -- Add MRN to patients (unique), keep patient_id as the primary key you already use
+-- Add MRN to patients (unique), keep patient_id as the primary key you already use
 ALTER TABLE patients ADD COLUMN IF NOT EXISTS mrn TEXT;
 CREATE UNIQUE INDEX IF NOT EXISTS ux_patients_mrn ON patients(mrn);
 
--- Add account number to encounters; enforce patient+visit uniqueness
+-- Add account number to encounters. enforce patient+visit uniqueness
 ALTER TABLE encounters ADD COLUMN IF NOT EXISTS account_number TEXT;
 CREATE UNIQUE INDEX IF NOT EXISTS ux_enc_patient_visit
   ON encounters(patient_id, visit_number);
@@ -106,26 +111,29 @@ CREATE TABLE IF NOT EXISTS orders (
 );
 CREATE INDEX IF NOT EXISTS ix_orders_patient ON orders(patient_id);
 CREATE INDEX IF NOT EXISTS ix_orders_enc ON orders(encounter_id);
-
     """
 ]
 
+def _exec_ddl():
+    with writer() as con:
+        for block in DDL:
+            # Execute each statement within the block individually
+            parts = [s.strip() for s in block.split(";") if s.strip()]
+            for stmt in parts:
+                # DuckDB accepts statements without trailing semicolons too
+                con.execute(stmt)
+        logger.info("DDL applied", extra={"extra": {"tables": ["patients","encounters","observations","transactions","messages","orders"]}})
+
 def init_db(db_path: str = DEFAULT_DB_PATH) -> str:
-    con = duckdb.connect(db_path)
-    try:
-        for stmt in DDL:
-            con.execute(stmt)
-    finally:
-        con.close()
-    return db_path
+    """Initialize schema; returns the resolved DB path."""
+    _exec_ddl()
+    return DEFAULT_DB_PATH
 
-def _connect(db_path: str):
-    return duckdb.connect(db_path)
-
-# storage_duckdb_entities.py
+# -------------------------
+# Upserts (short-lived writers)
+# -------------------------
 def upsert_patient(p: Dict[str, Any], db_path: str = DEFAULT_DB_PATH):
-    con = _connect(db_path)
-    try:
+    with writer() as con:
         con.execute("BEGIN")
         con.execute("DELETE FROM patients WHERE patient_id = ?", [p["patient_id"]])
         con.execute(
@@ -135,7 +143,7 @@ def upsert_patient(p: Dict[str, Any], db_path: str = DEFAULT_DB_PATH):
                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))""",
             [
                 p.get("patient_id"),
-                p.get("mrn") or p.get("patient_id"),  # <= MRN default
+                p.get("mrn") or p.get("patient_id"),
                 p.get("patient_name"), p.get("date_of_birth"),
                 p.get("sex"), p.get("race"), p.get("ssn"), p.get("phone"),
                 p.get("address"), p.get("city"), p.get("state"),
@@ -144,15 +152,10 @@ def upsert_patient(p: Dict[str, Any], db_path: str = DEFAULT_DB_PATH):
             ]
         )
         con.execute("COMMIT")
-    except Exception:
-        con.execute("ROLLBACK"); raise
-    finally:
-        con.close()
-
+        logger.info("patient.upsert", extra={"extra": {"patient_id": p.get("patient_id")}})
 
 def upsert_encounter(e: Dict[str, Any], db_path: str = DEFAULT_DB_PATH):
-    con = _connect(db_path)
-    try:
+    with writer() as con:
         con.execute("BEGIN")
         con.execute("DELETE FROM encounters WHERE encounter_id = ?", [e["encounter_id"]])
         con.execute(
@@ -178,15 +181,10 @@ def upsert_encounter(e: Dict[str, Any], db_path: str = DEFAULT_DB_PATH):
             ]
         )
         con.execute("COMMIT")
-    except Exception:
-        con.execute("ROLLBACK"); raise
-    finally:
-        con.close()
-
+        logger.info("encounter.upsert", extra={"extra": {"encounter_id": e.get("encounter_id")}})
 
 def upsert_observation(o: Dict[str, Any], db_path: str = DEFAULT_DB_PATH):
-    con = _connect(db_path)
-    try:
+    with writer() as con:
         con.execute("BEGIN")
         con.execute(
             "DELETE FROM observations WHERE encounter_id = ? AND observation_id = ?",
@@ -207,14 +205,13 @@ def upsert_observation(o: Dict[str, Any], db_path: str = DEFAULT_DB_PATH):
             ]
         )
         con.execute("COMMIT")
-    except Exception:
-        con.execute("ROLLBACK"); raise
-    finally:
-        con.close()
+        logger.info("observation.upsert", extra={"extra": {
+            "encounter_id": o.get("encounter_id"),
+            "observation_id": o.get("observation_id")
+        }})
 
 def upsert_order(row: Dict[str, Any], db_path: str = DEFAULT_DB_PATH):
-    con = _connect(db_path)
-    try:
+    with writer() as con:
         con.execute("BEGIN")
         con.execute("DELETE FROM orders WHERE placer_order_number = ?", [row["placer_order_number"]])
         con.execute(
@@ -227,15 +224,13 @@ def upsert_order(row: Dict[str, Any], db_path: str = DEFAULT_DB_PATH):
             ]
         )
         con.execute("COMMIT")
-    except Exception:
-        con.execute("ROLLBACK"); raise
-    finally:
-        con.close()
-
+        logger.info("order.upsert", extra={"extra": {
+            "placer_order_number": row.get("placer_order_number"),
+            "filler_order_number": row.get("filler_order_number")
+        }})
 
 def upsert_transaction(t: Dict[str, Any], db_path: str = DEFAULT_DB_PATH):
-    con = _connect(db_path)
-    try:
+    with writer() as con:
         con.execute("BEGIN")
         con.execute("DELETE FROM transactions WHERE transaction_id = ?", [t["transaction_id"]])
         con.execute(
@@ -253,14 +248,12 @@ def upsert_transaction(t: Dict[str, Any], db_path: str = DEFAULT_DB_PATH):
             ]
         )
         con.execute("COMMIT")
-    except Exception:
-        con.execute("ROLLBACK"); raise
-    finally:
-        con.close()
+        logger.info("transaction.upsert", extra={"extra": {
+            "transaction_id": t.get("transaction_id"), "encounter_id": t.get("encounter_id")
+        }})
 
 def append_message(row: Dict[str, Any], db_path: str = DEFAULT_DB_PATH):
-    con = _connect(db_path)
-    try:
+    with writer() as con:
         con.execute(
             "INSERT INTO messages VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             [
@@ -269,5 +262,6 @@ def append_message(row: Dict[str, Any], db_path: str = DEFAULT_DB_PATH):
                 row.get("ingest_ts"), row.get("ingest_ts").date() if row.get("ingest_ts") else None
             ]
         )
-    finally:
-        con.close()
+        logger.info("message.append", extra={"extra": {
+            "type": row.get("message_type"), "encounter_id": row.get("encounter_id")
+        }})

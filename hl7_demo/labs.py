@@ -1,7 +1,17 @@
-# labs.py
+# labs.py 
+
 import os, math, random
 from datetime import datetime
 from typing import Dict, List, Tuple
+
+# Logging
+try:
+    from utils.log_utils import get_logger
+except Exception:
+    # Fallback if used standalone (won't break behavior)
+    from log_utils import get_logger  # type: ignore
+
+logger = get_logger(name="MediLacra", context={"component": "labs"})
 
 # We’ll reuse your existing SDOH helpers the same way messages.py does
 from .sdoh import get_air_quality_by_zip, get_poverty_pct_by_zcta
@@ -49,49 +59,86 @@ def predict_labs_for_patient(p: Patient) -> Dict[str, Dict]:
     Return a dict keyed by LOINC with computed value+metadata for this patient,
     shifted by SDOH (poverty %, AQI) similar to your vitals approach.
     """
-    pov = float(get_poverty_pct_by_zcta(p.zip_code) or 0.0)            # % below poverty line
-    aq  = get_air_quality_by_zip(p.zip_code) or {}
-    aqi = float(aq.get("aqi", 50.0))                                    # Ambient AQI fallback
+    try:
+        logger.info("Generating lab predictions", extra={"extra": {"patient_uid": getattr(p, "patient_uid", None), "zip": getattr(p, "zip_code", None)}})
+        raw_pov = get_poverty_pct_by_zcta(p.zip_code)
+        if raw_pov in (None, ""):
+            logger.warning("Poverty percentage missing for ZCTA; defaulting to 0.0", extra={"extra": {"zip": getattr(p, "zip_code", None)}})
+        pov = float(raw_pov or 0.0)  # % below poverty line
 
-    results: Dict[str, Dict] = {}
-    for loinc, spec in LABS_SPEC.items():
-        base = random.gauss(spec["mean"], spec["sd"])
-        # SDOH shifts (linear; scaled down to reasonable magnitudes)
-        sdoh_shift = pov * spec["poverty_beta"] + aqi * spec["aqi_beta"]
-        val = base + random.gauss(sdoh_shift, spec["sd"] * 0.05)        # add tiny noise around shift
+        aq = get_air_quality_by_zip(p.zip_code) or {}
+        if "aqi" not in aq:
+            logger.warning("AQI missing for ZIP; defaulting to 50.0", extra={"extra": {"zip": getattr(p, "zip_code", None)}})
+        aqi = float(aq.get("aqi", 50.0))  # Ambient AQI fallback
 
-        lo, hi = spec["ref"]
-        # Don’t hard-clip; allow out-of-range, but clamp absurd tails
-        val = _clip(val, lo - (hi-lo), hi + (hi-lo))
-        flag = _abnormal_flag(val, lo, hi)
+        results: Dict[str, Dict] = {}
+        for loinc, spec in LABS_SPEC.items():
+            base = random.gauss(spec["mean"], spec["sd"])
+            # SDOH shifts (linear; scaled down to reasonable magnitudes)
+            sdoh_shift = pov * spec["poverty_beta"] + aqi * spec["aqi_beta"]
+            noisy = base + random.gauss(sdoh_shift, spec["sd"] * 0.05)  # tiny noise around shift
 
-        results[loinc] = {
-            "loinc": loinc,
-            "name": spec["name"],
-            "value": round(val, 2),
-            "units": spec["units"],
-            "ref_low": lo,
-            "ref_high": hi,
-            "abnormal_flag": flag,
-            "status": "F",
-        }
-    return results
+            lo, hi = spec["ref"]
+            unclipped = noisy
+            val = _clip(noisy, lo - (hi - lo), hi + (hi - lo))  # clamp absurd tails
+            if val != unclipped:
+                logger.warning(
+                    "Value clipped to reasonable range",
+                    extra={"extra": {"loinc": loinc, "name": spec["name"], "unclipped": round(unclipped, 4), "clipped": round(val, 4), "ref_window": f"{lo}-{hi}"}}
+                )
+
+            flag = _abnormal_flag(val, lo, hi)
+
+            results[loinc] = {
+                "loinc": loinc,
+                "name": spec["name"],
+                "value": round(val, 2),
+                "units": spec["units"],
+                "ref_low": lo,
+                "ref_high": hi,
+                "abnormal_flag": flag,
+                "status": "F",
+            }
+
+        logger.info("Finished lab predictions", extra={"extra": {"patient_uid": getattr(p, "patient_uid", None), "n_labs": len(results)}})
+        return results
+
+    except Exception as e:
+        logger.error("Error generating lab predictions", extra={"extra": {"error": str(e)}})
+        raise
 
 def build_obx_labs(labs: Dict[str, Dict], start_set_id: int = 20) -> List[str]:
     """
     Generate OBX segments for a dict returned by predict_labs_for_patient().
     Matches your vitals OBX style (numeric, final status).
     """
-    segs: List[str] = []
-    sid = start_set_id
-    for loinc, d in labs.items():
-        ref = f"{d['ref_low']}-{d['ref_high']}"
-        # OBX: set_id | value type | id (LOINC^name^LN) | value | units | ref | abnormal | | | status
-        segs.append(
-            f"OBX|{sid}|NM|{loinc}^{d['name']}^LN||{d['value']}|{d['units']}|{ref}|{d['abnormal_flag']}||{d['status']}"
-        )
-        sid += 1
-    return segs
+    try:
+        logger.info("Building OBX segments for labs", extra={"extra": {"count": len(labs), "start_set_id": start_set_id}})
+
+        if not labs:
+            logger.warning("No labs provided to build_obx_labs; returning empty segment list")
+
+        segs: List[str] = []
+        sid = start_set_id
+        for loinc, d in labs.items():
+            # Defensive warnings if expected keys are missing
+            for k in ("name", "value", "units", "ref_low", "ref_high", "abnormal_flag", "status"):
+                if k not in d:
+                    logger.warning("Missing expected field in lab record", extra={"extra": {"loinc": loinc, "missing_key": k}})
+
+            ref = f"{d['ref_low']}-{d['ref_high']}"
+            # OBX: set_id | value type | id (LOINC^name^LN) | value | units | ref | abnormal | | | status
+            segs.append(
+                f"OBX|{sid}|NM|{loinc}^{d['name']}^LN||{d['value']}|{d['units']}|{ref}|{d['abnormal_flag']}||{d['status']}"
+            )
+            sid += 1
+
+        logger.info("Completed OBX segment build", extra={"extra": {"segments": len(segs)}})
+        return segs
+
+    except Exception as e:
+        logger.error("Error building OBX segments", extra={"extra": {"error": str(e)}})
+        raise
 
 # ----------------------------
 # ORM/ORU builders for labs
@@ -102,29 +149,65 @@ def build_lab_orm(p: Patient, enc: Encounter, order_code: str = "SYN_LABS", orde
     Build a minimal ORM^O01 lab order tied to the encounter’s placer/filler numbers.
     Uses seg_msh/seg_pid/seg_pv1 for consistency with your pipeline.
     """
-    now = datetime.now().strftime("%Y%m%d%H%M%S")
-    parts = [
-        seg_msh("ORM^O01"),
-        seg_pid(p),
-        seg_pv1(enc),
-        # ORC|NW (new order) | Placer | Filler | status CM | order datetime | ordering provider
-        f"ORC|NW|{enc.placer_order_number}|{enc.filler_order_number}||CM|||{now}||||{enc.ordering_provider_id}^{enc.ordering_provider_name}",
-        # OBR: set_id | placer | filler | Universal Service ID (order/test code^text^99LAB) | obs datetime
-        f"OBR|1|{enc.placer_order_number}|{enc.filler_order_number}|{order_code}^{order_text}^99LAB|||{now}|||||||||{enc.ordering_provider_id}^{enc.ordering_provider_name}",
-    ]
-    return "\r".join(parts)
+    try:
+        logger.info(
+            "Building ORM^O01",
+            extra={"extra": {
+                "patient_uid": getattr(p, "patient_uid", None),
+                "encounter_uid": getattr(enc, "encounter_uid", None),
+                "placer": getattr(enc, "placer_order_number", None),
+                "filler": getattr(enc, "filler_order_number", None),
+                "ordering_provider_id": getattr(enc, "ordering_provider_id", None)
+            }}
+        )
+        if not getattr(enc, "ordering_provider_id", None) or not getattr(enc, "ordering_provider_name", None):
+            logger.warning("Ordering provider information missing or incomplete on Encounter")
+
+        now = datetime.now().strftime("%Y%m%d%H%M%S")
+        parts = [
+            seg_msh("ORM^O01"),
+            seg_pid(p),
+            seg_pv1(enc),
+            # ORC|NW (new order) | Placer | Filler | status CM | order datetime | ordering provider
+            f"ORC|NW|{enc.placer_order_number}|{enc.filler_order_number}||CM|||{now}||||{enc.ordering_provider_id}^{enc.ordering_provider_name}",
+            # OBR: set_id | placer | filler | Universal Service ID (order/test code^text^99LAB) | obs datetime
+            f"OBR|1|{enc.placer_order_number}|{enc.filler_order_number}|{order_code}^{order_text}^99LAB|||{now}|||||||||{enc.ordering_provider_id}^{enc.ordering_provider_name}",
+        ]
+        msg = "\r".join(parts)
+        logger.info("ORM^O01 built", extra={"extra": {"message_length": len(msg)}})
+        return msg
+
+    except Exception as e:
+        logger.error("Error building ORM^O01", extra={"extra": {"error": str(e)}})
+        raise
 
 def build_lab_oru(p: Patient, enc: Encounter, labs: Dict[str, Dict], order_code: str = "SYN_LABS", order_text: str = "Synthetic Lab Panel", start_set_id: int = 20) -> str:
     """
     Build an ORU^R01 with one OBR (the order/panel) and OBX lines for each test.
     """
-    now = datetime.now().strftime("%Y%m%d%H%M%S")
-    obx_lines = build_obx_labs(labs, start_set_id=start_set_id)
-    parts = [
-        seg_msh("ORU^R01"),
-        seg_pid(p),
-        seg_pv1(enc),
-        f"OBR|1|{enc.placer_order_number}|{enc.filler_order_number}|{order_code}^{order_text}^99LAB|||{now}|||||||||{enc.ordering_provider_id}^{enc.ordering_provider_name}",
-        *obx_lines,
-    ]
-    return "\r".join(parts)
+    try:
+        logger.info(
+            "Building ORU^R01",
+            extra={"extra": {
+                "patient_uid": getattr(p, "patient_uid", None),
+                "encounter_uid": getattr(enc, "encounter_uid", None),
+                "n_labs": len(labs),
+                "start_set_id": start_set_id
+            }}
+        )
+        now = datetime.now().strftime("%Y%m%d%H%M%S")
+        obx_lines = build_obx_labs(labs, start_set_id=start_set_id)
+        parts = [
+            seg_msh("ORU^R01"),
+            seg_pid(p),
+            seg_pv1(enc),
+            f"OBR|1|{enc.placer_order_number}|{enc.filler_order_number}|{order_code}^{order_text}^99LAB|||{now}|||||||||{enc.ordering_provider_id}^{enc.ordering_provider_name}",
+            *obx_lines,
+        ]
+        msg = "\r".join(parts)
+        logger.info("ORU^R01 built", extra={"extra": {"message_length": len(msg), "obx_count": len(obx_lines)}})
+        return msg
+
+    except Exception as e:
+        logger.error("Error building ORU^R01", extra={"extra": {"error": str(e)}})
+        raise

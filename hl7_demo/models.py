@@ -6,6 +6,7 @@ class Encounter:
     encounter_id: str
     patient_id: str
     visit_number: str
+    account_number: str 
     patient_class: str
     assigned_patient_location: str
     admit_datetime: str

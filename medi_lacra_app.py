@@ -1,9 +1,21 @@
 import os
 import time
 import glob
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import streamlit as st
+
+# --- Logging (from your utils module)
+try:
+    from utils.log_utils import get_logger  # assumes utils/ is a package (has __init__.py)
+except Exception as _e:
+    # Minimal fallback so the app still runs if import path isn't ready yet
+    import logging
+    def get_logger(name="MediLacra", context=None, level=logging.INFO):
+        logger = logging.getLogger(name)
+        if not logger.handlers:
+            logging.basicConfig(level=level, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+        return logger
 
 # MediLacra (hl7_demo) imports
 from hl7_demo.pipeline import run_pipeline
@@ -14,7 +26,10 @@ from hl7_demo.config import AIRNOW_MILES_DEFAULT
 
 st.set_page_config(page_title="MediLacra — HL7 Generator", layout="wide")
 
-st.title("🧪 MediLacra — HL7 Message Generator")
+# --- App-scoped logger
+logger = get_logger(name="MediLacra", context={"component": "app", "module": "medi_lacra_app", "env": "dev"})
+
+st.title("MediLacra — HL7 Message Generator")
 st.caption("Simulated Enriched Medical Data")
 
 with st.sidebar:
@@ -41,38 +56,71 @@ with col1:
         df_reports = load_reports(report_glob)
         st.success(f"Reports OK • {len(df_reports):,} rows loaded")
         st.dataframe(df_reports.head(5))
+        logger.info("Reports loaded", extra={"extra": {"glob": report_glob, "rows": int(len(df_reports))}})
     except Exception as e:
         st.error(f"Reports not ready: {e}")
+        logger.warning("Reports load failed", extra={"extra": {"glob": report_glob, "error": str(e)}})
 with col2:
     st.subheader("ZIP Reference")
     try:
         df_zip = load_zip_table()
         st.success(f"ZIP table OK • {len(df_zip):,} rows")
         st.dataframe(df_zip.sample(min(5, len(df_zip))))
+        logger.info("ZIP table loaded", extra={"extra": {"rows": int(len(df_zip))}})
     except Exception as e:
         st.error(f"ZIP reference not ready: {e}")
+        logger.warning("ZIP table load failed", extra={"extra": {"error": str(e)}})
 
 # --- Generate ---
 if run_btn:
+    logger.info(
+        "Run clicked",
+        extra={
+            "extra": {
+                "patients": int(n_patients),
+                "seed_locked": bool(use_seed),
+                "seed": int(seed) if use_seed else None,
+                "per_encounter": bool(per_encounter),
+                "bulk": not bool(per_encounter),
+                "report_glob": report_glob,
+                "out_dir": out_dir,
+                "airnow_miles": int(miles),
+                "add_places_obesity_obx": bool(add_places_obesity_obx),
+                "add_unemployment_obx": bool(add_unemployment_obx),
+                "include_labs": bool(include_labs),
+                "persist": persist,
+            }
+        },
+    )
+
     os.makedirs(out_dir, exist_ok=True)
     st.info("Starting pipeline...")
     start = time.time()
-    with st.spinner("Generating HL7 messages..."):
-        counts = run_pipeline(
-            n_patients=n_patients,
-            report_glob=report_glob,
-            seed=seed if use_seed else None,
-            per_encounter=per_encounter,
-            bulk=not per_encounter,
-            out_dir=out_dir,
-            miles=miles,
-            add_places_obesity_obx=add_places_obesity_obx,
-            add_unemployment_obx=add_unemployment_obx,
-            include_labs=include_labs,
-            persist=persist,
+    try:
+        with st.spinner("Generating HL7 messages..."):
+            counts = run_pipeline(
+                n_patients=n_patients,
+                report_glob=report_glob,
+                seed=seed if use_seed else None,
+                per_encounter=per_encounter,
+                bulk=not per_encounter,
+                out_dir=out_dir,
+                miles=miles,
+                add_places_obesity_obx=add_places_obesity_obx,
+                add_unemployment_obx=add_unemployment_obx,
+                include_labs=include_labs,
+                persist=persist,
+            )
+        dur = time.time() - start
+        st.success(
+            f"Done in {dur:.2f}s — ADT: {counts.get('ADT',0)}, ORU: {counts.get('ORU',0)}, "
+            f"DFT: {counts.get('DFT',0)}, ORM: {counts.get('ORM',0)}, ORU_LABS: {counts.get('ORU_LABS',0)}"
         )
-    dur = time.time() - start
-    st.success(f"Done in {dur:.2f}s — ADT: {counts.get('ADT',0)}, ORU: {counts.get('ORU',0)}, DFT: {counts.get('DFT',0)}, ORM: {counts.get('ORM',0)}, ORU_LABS: {counts.get('ORU_LABS',0)}")
+        logger.info("Pipeline completed", extra={"extra": {"duration_sec": round(dur, 3), **{k: int(v) for k, v in counts.items()}}})
+    except Exception as e:
+        dur = time.time() - start
+        st.error(f"Pipeline error: {e}")
+        logger.error("Pipeline failed", extra={"extra": {"duration_sec": round(dur, 3), "error": str(e)}})
 
     # Show recent files written (last 3 minutes)
     now = time.time()
@@ -81,8 +129,8 @@ if run_btn:
         try:
             mtime = os.path.getmtime(path)
             rows.append((mtime, path))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Error reading file mtime", extra={"extra": {"path": path, "error": str(e)}})
 
     if rows:
         rows.sort(key=lambda x: x[0], reverse=True)
@@ -92,7 +140,11 @@ if run_btn:
             for path in recent[:200]:
                 mtime = os.path.getmtime(path)
                 st.code(f"{datetime.fromtimestamp(mtime):%Y-%m-%d %H:%M:%S}  {os.path.basename(path)}")
+            logger.info("Recent files listed", extra={"extra": {"recent_count": len(recent), "window_sec": 180}})
         else:
             st.info("No files found in the last 3 minutes. Showing the latest 30 files instead.")
             for mtime, path in rows[:30]:
                 st.code(f"{datetime.fromtimestamp(mtime):%Y-%m-%d %H:%M:%S}  {os.path.basename(path)}")
+            logger.info("Fallback file listing shown", extra={"extra": {"listed_count": min(30, len(rows))}})
+    else:
+        logger.info("No HL7 files found to list", extra={"extra": {"out_dir": out_dir}})
