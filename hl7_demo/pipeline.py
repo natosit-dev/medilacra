@@ -1,21 +1,45 @@
-# pipeline_unified.py
-# One script to generate HL7 (ADT/ORU/DFT) and optionally persist to DuckDB or nowhere.
+# pipeline.py
+# Unified generator for HL7 (ADT/ORU/DFT) with optional DuckDB persistence.
+# Behavior unchanged; logging added for observability and easier debugging.
 
 import os, re, random
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional, Dict, List, Tuple
 
-# Import generators / message builders (supports package or local layout)
+# -----------------------------
+# Logging (structured)
+# -----------------------------
+try:
+    from utils.log_utils import get_logger  # package layout
+except Exception:
+    from .log_utils import get_logger  # script/local layout  # type: ignore
+
+logger = get_logger(name="MediLacra", context={"component": "pipeline"})
+
+# -----------------------------
+# Imports: generators + builders
+# Support both package and local execution layouts without changing behavior.
+# -----------------------------
 try:
     from hl7_demo.generators import gen_patient, gen_encounter, gen_transaction, gen_observation
     from hl7_demo.reports import load_reports
     from hl7_demo.messages import build_adt, build_oru, build_dft, build_orm_labs, build_oru_labs
 except ModuleNotFoundError:
-    from generators import gen_patient, gen_encounter, gen_transaction, gen_observation
-    from reports import load_reports
-    from .messages import build_adt, build_oru, build_dft, build_orm_labs, build_oru_labs
+    try:
+        from generators import gen_patient, gen_encounter, gen_transaction, gen_observation
+        from reports import load_reports
+        # Prefer local import if present; fall back to relative (package) import
+        try:
+            from messages import build_adt, build_oru, build_dft, build_orm_labs, build_oru_labs  # type: ignore
+        except Exception:
+            from .messages import build_adt, build_oru, build_dft, build_orm_labs, build_oru_labs  # type: ignore
+    except Exception as e:
+        logger.error("Failed to import generators/reports/messages", extra={"extra": {"error": str(e)}})
+        raise
 
-# Optional persistence backends
+# -----------------------------
+# Optional persistence backend (DuckDB)
+# -----------------------------
 DUCK_OK = True
 try:
     from storage_duckdb_entities import (
@@ -24,17 +48,21 @@ try:
         append_message as duck_append_message,
         DEFAULT_DB_PATH as DUCK_DEFAULT_DB_PATH,
     )
+    logger.info("DuckDB persistence module available", extra={"extra": {"default_db_path": "auto (module-provided)"}})
 except Exception:
     DUCK_OK = False
-    DUCK_DEFAULT_DB_PATH = "medilacra.duckdb"
+    DUCK_DEFAULT_DB_PATH = "medilacra.duckdb"  # used only for messaging if persistence is disabled
+    logger.warning("DuckDB persistence module unavailable; filesystem-only mode unless overridden")
 
-# Delta-related code removed
-
+# -----------------------------
+# Small utilities (unchanged behavior)
+# -----------------------------
 def _safe_encounter_for_filename(encounter_id: str) -> str:
+    """Sanitize encounter id for safe filename usage."""
     return re.sub(r"[^A-Za-z0-9_\-]", "_", encounter_id)
 
-
 def _first_msh_and_control_id(raw_msg: str) -> Tuple[str, str]:
+    """Return first MSH line and the message control ID (MSH-10) if present."""
     first = raw_msg.split("\r", 1)[0].strip()
     ctrl = ""
     if first.startswith("MSH|"):
@@ -43,8 +71,8 @@ def _first_msh_and_control_id(raw_msg: str) -> Tuple[str, str]:
             ctrl = parts[9]
     return first, ctrl or ""
 
-
 def _collect_msg_row(run_id: str, message_type: str, path: str, msg: str) -> dict:
+    """Collect a row payload describing the written HL7 message for DB logging."""
     first, ctrl = _first_msh_and_control_id(msg)
     name = os.path.basename(path)
     m = re.search(r"_(VN[0-9A-Z]+)_", name)
@@ -58,119 +86,198 @@ def _collect_msg_row(run_id: str, message_type: str, path: str, msg: str) -> dic
         "written_path": os.path.abspath(path),
     }
 
-
-def run_pipeline(n_patients: int, report_glob: str, seed: Optional[int],
-                 per_encounter: bool, bulk: bool, out_dir: str, miles: int,
-                 add_places_obesity_obx: bool = False, add_unemployment_obx: bool = False,
-                 include_labs: bool = True,
-                 persist: str = "none",
-                 duckdb_path: Optional[str] = None) -> Dict[str,int]:
-
+# -----------------------------
+# Core: run_pipeline
+# -----------------------------
+def run_pipeline(
+    n_patients: int,
+    report_glob: str,
+    seed: Optional[int],
+    per_encounter: bool,
+    bulk: bool,
+    out_dir: str,
+    miles: int,
+    add_places_obesity_obx: bool = False,
+    add_unemployment_obx: bool = False,
+    include_labs: bool = True,
+    persist: str = "none",
+    duckdb_path: Optional[str] = None
+) -> Dict[str, int]:
     """
     Generate n_patients worth of ADT/ORU/DFT messages and optionally persist entities + message log.
 
-    per_encounter=True  -> one file per encounter per message type
-    per_encounter=False -> bulk files per message type for the run (appends)
-    bulk is ignored if per_encounter=True (kept for API compatibility)
+    Modes (unchanged):
+      per_encounter=True  -> one file per encounter per message type
+      per_encounter=False -> bulk files per message type for the run (appends)
+      bulk is ignored if per_encounter=True (kept for API compatibility)
 
     persist:
-      - "duckdb": upsert entities + append message log to DuckDB (storage_duckdb_entities)
+      - "duckdb": upsert entities + append message log using storage_duckdb_entities
       - "none"  : filesystem only (no DB persistence)
     """
-    from faker import Faker
+    from faker import Faker  # local import to avoid module cost if unused by caller
 
+    # ---- Seeding for reproducibility
     if seed is not None:
-        random.seed(seed); Faker.seed(seed)
+        random.seed(seed)
+        Faker.seed(seed)
+        logger.info("Randomness seeded", extra={"extra": {"seed": seed}})
 
+    # ---- Prepare output folder + load report catalog
     os.makedirs(out_dir, exist_ok=True)
-    reports = load_reports(report_glob)
+    logger.info("Output directory ready", extra={"extra": {"out_dir": os.path.abspath(out_dir)}})
 
+    reports = load_reports(report_glob)
+    logger.info("Reports loaded", extra={"extra": {"report_glob": report_glob, "report_rows": getattr(reports, 'shape', ('?', '?'))[0] if hasattr(reports, 'shape') else "unknown"}})
+
+    # ---- Generate a run id (used in message log persistence)
     run_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     run_id = f"run_{run_ts}"
 
-    counts: Dict[str, int] = {"ADT": 0, "ORU": 0, "DFT": 0, "ORM":0, "ORU_LABS":0}
+    # ---- Counters (return value)
+    counts: Dict[str, int] = {"ADT": 0, "ORU": 0, "DFT": 0, "ORM": 0, "ORU_LABS": 0}
 
-    # Prepare DuckDB if requested
+    # ---- Optional DuckDB init
+    db_path = duckdb_path or DUCK_DEFAULT_DB_PATH
     if persist == "duckdb":
         if not DUCK_OK:
+            logger.error("DuckDB persistence requested but module unavailable", extra={"extra": {"requested_path": db_path}})
             raise RuntimeError("DuckDB persistence requested, but storage_duckdb_entities is unavailable.")
-        db_path = duckdb_path or DUCK_DEFAULT_DB_PATH
-        duck_init(db_path)
+        try:
+            duck_init(db_path)
+            logger.info("DuckDB initialized", extra={"extra": {"db_path": os.path.abspath(db_path)}})
+        except Exception as e:
+            logger.error("Failed to initialize DuckDB", extra={"extra": {"db_path": db_path, "error": str(e)}})
+            raise
 
-    for _ in range(n_patients):
-        # ---- Generate synthetic entities
-        p = gen_patient()
-        e = gen_encounter(p.patient_id)
-        t = gen_transaction(e.encounter_id)
-        report_row = reports.sample(n=1).iloc[0]
-        o = gen_observation(e, report_row)
+    # ---- Main generation loop
+    logger.info("Starting pipeline run", extra={"extra": {
+        "run_id": run_id,
+        "n_patients": n_patients,
+        "per_encounter": per_encounter,
+        "bulk": bulk,
+        "include_labs": include_labs,
+        "persist": persist,
+        "miles": miles,
+        "sdoh_flags": {"places_obesity": add_places_obesity_obx, "unemployment": add_unemployment_obx},
+    }})
 
-        # ---- Persist entities (DuckDB only)
-        if persist == "duckdb":
-            payload = lambda x: x.__dict__ if hasattr(x, "__dict__") else dict(x)
-            upsert_patient(payload(p), db_path=db_path)
-            upsert_encounter(payload(e), db_path=db_path)
-            upsert_transaction(payload(t), db_path=db_path)
-            upsert_observation(payload(o), db_path=db_path)
+    for idx in range(n_patients):
+        try:
+            # ---- Generate synthetic entities (one patient/encounter set)
+            p = gen_patient()
+            e = gen_encounter(p.patient_id)
+            t = gen_transaction(e.encounter_id)
+            report_row = reports.sample(n=1).iloc[0]
+            o = gen_observation(e, report_row)
 
-        # ---- Build HL7 messages
-        adt = build_adt(p, e, miles=miles, obs=o,
+            logger.info("Entities generated", extra={"extra": {
+                "i": idx + 1,
+                "patient_id": getattr(p, "patient_id", None),
+                "encounter_id": getattr(e, "encounter_id", None)
+            }})
+
+            # ---- Persist entities (DuckDB only)
+            if persist == "duckdb":
+                try:
+                    payload = lambda x: x.__dict__ if hasattr(x, "__dict__") else dict(x)
+                    upsert_patient(payload(p), db_path=db_path)
+                    upsert_encounter(payload(e), db_path=db_path)
+                    upsert_transaction(payload(t), db_path=db_path)
+                    upsert_observation(payload(o), db_path=db_path)
+                except Exception as pe:
+                    logger.error("DuckDB entity upsert failed", extra={"extra": {"error": str(pe)}})
+                    raise
+
+            # ---- Build HL7 messages for this encounter
+            adt = build_adt(
+                p, e, miles=miles, obs=o,
                 add_places_obesity_obx=add_places_obesity_obx,
-                add_unemployment_obx=add_unemployment_obx)
-        oru = build_oru(p, e, [o])
-        dft = build_dft(p, e, [t], [o])
+                add_unemployment_obx=add_unemployment_obx
+            )
+            oru = build_oru(p, e, [o])
+            dft = build_dft(p, e, [t], [o])
 
-        # NEW: optional labs kept separate from ADT & narrative ORU
-        if include_labs:
-            orm_labs = build_orm_labs(p, e)
-            oru_labs = build_oru_labs(p, e, start_set_id=20)
+            # Optional separate lab messages (kept distinct from narrative ORU)
+            orm_labs = None
+            oru_labs = None
+            if include_labs:
+                orm_labs = build_orm_labs(p, e)
+                oru_labs = build_oru_labs(p, e, start_set_id=20)
 
-        # ---- Write files
-        safe_enc = _safe_encounter_for_filename(e.encounter_id)
-        # Fix: Add lab messages to the bulk file dictionary
-        bulk_files = {
-            "ADT": os.path.join(out_dir, f"ADT_{run_ts}.hl7"),
-            "ORU": os.path.join(out_dir, f"ORU_{run_ts}.hl7"),
-            "DFT": os.path.join(out_dir, f"DFT_{run_ts}.hl7"),
-            "ORM": os.path.join(out_dir, f"ORM_{run_ts}.hl7"),
-            "ORU_LABS": os.path.join(out_dir, f"ORU_LABS_{run_ts}.hl7"),
-        }
+            # ---- File naming setup
+            safe_enc = _safe_encounter_for_filename(e.encounter_id)
+            bulk_files = {
+                "ADT": os.path.join(out_dir, f"ADT_{run_ts}.hl7"),
+                "ORU": os.path.join(out_dir, f"ORU_{run_ts}.hl7"),
+                "DFT": os.path.join(out_dir, f"DFT_{run_ts}.hl7"),
+                "ORM": os.path.join(out_dir, f"ORM_{run_ts}.hl7"),
+                "ORU_LABS": os.path.join(out_dir, f"ORU_LABS_{run_ts}.hl7"),
+            }
 
-        msgs = {"ADT": adt, "ORU": oru, "DFT": dft}
-        if include_labs:
-            msgs["ORM"] = orm_labs
-            msgs["ORU_LABS"] = oru_labs
+            # Collect messages to write for this encounter
+            msgs: Dict[str, str] = {"ADT": adt, "ORU": oru, "DFT": dft}
+            if include_labs and orm_labs and oru_labs:
+                msgs["ORM"] = orm_labs
+                msgs["ORU_LABS"] = oru_labs
 
-        if per_encounter:
-            for name, msg in msgs.items():
-                path = os.path.join(out_dir, f"{name}_{safe_enc}_{run_ts}.hl7")
-                with open(path, "w", encoding="utf-8") as f:
-                    f.write(msg)
-                counts[name] += 1
+            # ---- Write messages (per-encounter files or append to bulk)
+            if per_encounter:
+                for name, msg in msgs.items():
+                    path = os.path.join(out_dir, f"{name}_{safe_enc}_{run_ts}.hl7")
+                    try:
+                        with open(path, "w", encoding="utf-8") as f:
+                            f.write(msg)
+                        counts[name] += 1
+                        logger.info("Wrote per-encounter file", extra={"extra": {"type": name, "path": path}})
+                    except OSError as ioe:
+                        # Common on Windows if the file is locked by another process
+                        logger.error("File write failed (per-encounter)", extra={"extra": {"type": name, "path": path, "error": str(ioe)}})
+                        raise
 
-                # Collect bronze row for DB persistence
-                if persist == "duckdb":
-                    row = _collect_msg_row(run_id, name, path, msg)
-                    duck_append_message(row, db_path=db_path)
-        else:
-            for name, msg in msgs.items():
-                path = bulk_files[name]
-                mode = "a" if os.path.exists(path) else "w"
-                with open(path, mode, encoding="utf-8") as f:
-                    if mode == "a":
-                        f.write("\n\n")
-                    f.write(msg)
-                counts[name] += 1
+                    # Append a bronze-style message log row to DuckDB if requested
+                    if persist == "duckdb":
+                        try:
+                            row = _collect_msg_row(run_id, name, path, msg)
+                            duck_append_message(row, db_path=db_path)
+                        except Exception as le:
+                            logger.error("DuckDB message log append failed", extra={"extra": {"type": name, "path": path, "error": str(le)}})
+                            raise
+            else:
+                for name, msg in msgs.items():
+                    path = bulk_files[name]
+                    mode = "a" if os.path.exists(path) else "w"
+                    try:
+                        with open(path, mode, encoding="utf-8") as f:
+                            if mode == "a":
+                                f.write("\n\n")  # blank lines between messages when appending
+                            f.write(msg)
+                        counts[name] += 1
+                        logger.info("Wrote bulk file", extra={"extra": {"type": name, "path": path, "mode": mode}})
+                    except OSError as ioe:
+                        logger.error("File write failed (bulk)", extra={"extra": {"type": name, "path": path, "mode": mode, "error": str(ioe)}})
+                        raise
 
-                if persist == "duckdb":
-                    row = _collect_msg_row(run_id, name, path, msg)
-                    duck_append_message(row, db_path=db_path)
+                    if persist == "duckdb":
+                        try:
+                            row = _collect_msg_row(run_id, name, path, msg)
+                            duck_append_message(row, db_path=db_path)
+                        except Exception as le:
+                            logger.error("DuckDB message log append failed", extra={"extra": {"type": name, "path": path, "error": str(le)}})
+                            raise
 
+        except Exception as e:
+            # A single encounter failure is bubbled up (unchanged behavior),
+            # but we include a detailed log entry to diagnose quickly.
+            logger.error("Encounter processing failed", extra={"extra": {"i": idx + 1, "error": str(e)}})
+            raise
+
+    logger.info("Pipeline run complete", extra={"extra": {"run_id": run_id, "counts": counts}})
     return counts
 
-
-# --- Backward-compatible aliases (keeps older pages/calls working) ---
-
+# -----------------------------
+# Backward-compatible alias
+# -----------------------------
 def run_and_persist(
     n_patients: int,
     report_glob: str,
@@ -185,9 +292,10 @@ def run_and_persist(
     add_unemployment_obx: bool = False,
 ) -> Dict[str, int]:
     """
-    Legacy name that behaves like the old DuckDB pipeline.
+    Legacy entry point matching older callers (kept to avoid breaking pages).
     Accepts the new SDOH flags to prevent TypeError in older call sites.
     """
+    logger.info("run_and_persist called (compatibility wrapper)")
     return run_pipeline(
         n_patients=n_patients,
         report_glob=report_glob,
@@ -202,10 +310,9 @@ def run_and_persist(
         duckdb_path=db_path,
     )
 
-
-# The entire log_recent_messages_to_bronze function has been removed.
-
-
+# -----------------------------
+# CLI (kept as-is except logs)
+# -----------------------------
 if __name__ == "__main__":
     import argparse
     ap = argparse.ArgumentParser(description="MediLacra unified HL7 generator")
@@ -222,6 +329,7 @@ if __name__ == "__main__":
     ap.add_argument("--duckdb-path", type=str, default=None, help="DuckDB database path")
     args = ap.parse_args()
 
+    logger.info("CLI invocation", extra={"extra": vars(args)})
     counts = run_pipeline(
         n_patients=args.n,
         report_glob=args.reports,
@@ -235,4 +343,6 @@ if __name__ == "__main__":
         persist=args.persist,
         duckdb_path=args.duckdb_path,
     )
+    # Keep original behavior: print the final counts in CLI mode
     print("[DONE]", counts)
+    logger.info("CLI run finished", extra={"extra": {"counts": counts}})

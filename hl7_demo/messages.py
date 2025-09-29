@@ -20,7 +20,6 @@ AIRNOW_MILES_DEFAULT = 75
 def build_adt(
     p: Patient,
     enc: Encounter,
-    add_police_obx: bool = True,
     add_air_obx: bool = True,
     add_poverty_obx: bool = True,
     add_places_obesity_obx: bool = False,
