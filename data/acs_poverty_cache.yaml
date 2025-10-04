@@ -1,0 +1,1008 @@
+02139|2023:
+  pulled_at: '2025-10-01T14:29:16+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 4505.0
+    pct: 13.2
+    total: 34082.0
+  year: '2023'
+  zcta: 02139
+10004|2023:
+  pulled_at: '2025-10-04T23:42:36+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 157.0
+    pct: 4.1
+    total: 3860.0
+  year: '2023'
+  zcta: '10004'
+10005|2023:
+  pulled_at: '2025-09-30T16:36:55+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 424.0
+    pct: 4.6
+    total: 9238.0
+  year: '2023'
+  zcta: '10005'
+10013|2023:
+  pulled_at: '2025-10-04T23:35:43+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 2609.0
+    pct: 9.9
+    total: 26287.0
+  year: '2023'
+  zcta: '10013'
+15002|2023:
+  pulled_at: '2025-10-04T23:38:09+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '15002'
+15007|2023:
+  pulled_at: '2025-10-04T23:38:32+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 263.0
+    pct: 55.3
+    total: 476.0
+  year: '2023'
+  zcta: '15007'
+15013|2023:
+  pulled_at: '2025-10-04T23:39:44+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '15013'
+15014|2023:
+  pulled_at: '2025-10-04T23:40:14+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 353.0
+    pct: 11.8
+    total: 2989.0
+  year: '2023'
+  zcta: '15014'
+15015|2023:
+  pulled_at: '2025-10-04T23:40:25+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 22.0
+    pct: 1.7
+    total: 1302.0
+  year: '2023'
+  zcta: '15015'
+15018|2023:
+  pulled_at: '2025-10-04T23:34:55+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 66.0
+    pct: 7.3
+    total: 899.0
+  year: '2023'
+  zcta: '15018'
+15019|2023:
+  pulled_at: '2025-10-04T23:36:26+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 222.0
+    pct: 18.0
+    total: 1236.0
+  year: '2023'
+  zcta: '15019'
+20119|2023:
+  pulled_at: '2025-10-04T23:40:34+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 334.0
+    pct: 9.4
+    total: 3543.0
+  year: '2023'
+  zcta: '20119'
+20372|2023:
+  pulled_at: '2025-10-04T23:40:11+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '20372'
+20390|2023:
+  pulled_at: '2025-10-04T23:39:29+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 0.0
+    pct: null
+    total: 0.0
+  year: '2023'
+  zcta: '20390'
+24714|2023:
+  pulled_at: '2025-10-04T23:37:46+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 10.0
+    pct: 4.8
+    total: 210.0
+  year: '2023'
+  zcta: '24714'
+24728|2023:
+  pulled_at: '2025-10-04T23:41:26+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '24728'
+24731|2023:
+  pulled_at: '2025-10-04T23:35:20+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 12.0
+    pct: 100.0
+    total: 12.0
+  year: '2023'
+  zcta: '24731'
+27026|2023:
+  pulled_at: '2025-10-04T23:38:30+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '27026'
+29006|2023:
+  pulled_at: '2025-10-01T14:21:51+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 1362.0
+    pct: 15.2
+    total: 8933.0
+  year: '2023'
+  zcta: '29006'
+30004|2023:
+  pulled_at: '2025-10-04T23:36:03+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 3284.0
+    pct: 4.8
+    total: 67801.0
+  year: '2023'
+  zcta: '30004'
+30006|2023:
+  pulled_at: '2025-10-01T14:29:31+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '30006'
+32003|2023:
+  pulled_at: '2025-10-04T23:35:24+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 1490.0
+    pct: 5.1
+    total: 29146.0
+  year: '2023'
+  zcta: '32003'
+32034|2023:
+  pulled_at: '2025-10-04T23:39:36+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 2712.0
+    pct: 7.0
+    total: 38973.0
+  year: '2023'
+  zcta: '32034'
+32044|2023:
+  pulled_at: '2025-10-04T23:40:29+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 423.0
+    pct: 17.9
+    total: 2366.0
+  year: '2023'
+  zcta: '32044'
+32050|2023:
+  pulled_at: '2025-10-04T23:41:20+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '32050'
+35006|2023:
+  pulled_at: '2025-10-04T23:38:56+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 262.0
+    pct: 7.3
+    total: 3599.0
+  year: '2023'
+  zcta: '35006'
+35014|2023:
+  pulled_at: '2025-10-04T23:42:30+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 359.0
+    pct: 10.8
+    total: 3336.0
+  year: '2023'
+  zcta: '35014'
+35031|2023:
+  pulled_at: '2025-10-04T23:39:05+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 1229.0
+    pct: 15.5
+    total: 7929.0
+  year: '2023'
+  zcta: '35031'
+37016|2023:
+  pulled_at: '2025-10-04T23:35:16+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 54.0
+    pct: 6.3
+    total: 851.0
+  year: '2023'
+  zcta: '37016'
+38603|2023:
+  pulled_at: '2025-10-04T23:39:16+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 366.0
+    pct: 14.6
+    total: 2506.0
+  year: '2023'
+  zcta: '38603'
+38604|2023:
+  pulled_at: '2025-10-04T23:42:12+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '38604'
+38611|2023:
+  pulled_at: '2025-10-01T14:21:01+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 3584.0
+    pct: 21.6
+    total: 16577.0
+  year: '2023'
+  zcta: '38611'
+46001|2023:
+  pulled_at: '2025-10-04T23:38:01+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 1030.0
+    pct: 10.0
+    total: 10296.0
+  year: '2023'
+  zcta: '46001'
+46006|2023:
+  pulled_at: '2025-10-04T23:37:53+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '46006'
+46022|2023:
+  pulled_at: '2025-10-04T23:35:55+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '46022'
+46023|2023:
+  pulled_at: '2025-10-04T23:36:00+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '46023'
+48002|2023:
+  pulled_at: '2025-09-30T16:54:50+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 184.0
+    pct: 5.9
+    total: 3129.0
+  year: '2023'
+  zcta: '48002'
+48007|2023:
+  pulled_at: '2025-09-30T21:03:21+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '48007'
+48012|2023:
+  pulled_at: '2025-10-04T23:41:50+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '48012'
+48014|2023:
+  pulled_at: '2025-10-04T23:36:13+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 265.0
+    pct: 6.2
+    total: 4297.0
+  year: '2023'
+  zcta: '48014'
+48024|2023:
+  pulled_at: '2025-09-30T21:03:19+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '48024'
+50001|2023:
+  pulled_at: '2025-10-04T23:40:03+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 25.0
+    pct: 4.0
+    total: 618.0
+  year: '2023'
+  zcta: '50001'
+50023|2023:
+  pulled_at: '2025-09-30T16:36:51+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 1954.0
+    pct: 4.4
+    total: 44518.0
+  year: '2023'
+  zcta: '50023'
+50026|2023:
+  pulled_at: '2025-10-04T23:39:47+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 131.0
+    pct: 25.3
+    total: 518.0
+  year: '2023'
+  zcta: '50026'
+55012|2023:
+  pulled_at: '2025-10-04T23:37:02+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 211.0
+    pct: 10.8
+    total: 1958.0
+  year: '2023'
+  zcta: '55012'
+57001|2023:
+  pulled_at: '2025-10-04T23:37:06+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 128.0
+    pct: 8.6
+    total: 1488.0
+  year: '2023'
+  zcta: '57001'
+57002|2023:
+  pulled_at: '2025-10-04T23:34:47+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 53.0
+    pct: 3.3
+    total: 1615.0
+  year: '2023'
+  zcta: '57002'
+57015|2023:
+  pulled_at: '2025-10-04T23:35:36+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 46.0
+    pct: 5.7
+    total: 805.0
+  year: '2023'
+  zcta: '57015'
+57016|2023:
+  pulled_at: '2025-10-04T23:37:15+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 8.0
+    pct: 1.2
+    total: 680.0
+  year: '2023'
+  zcta: '57016'
+58012|2023:
+  pulled_at: '2025-10-04T23:34:59+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 120.0
+    pct: 4.3
+    total: 2798.0
+  year: '2023'
+  zcta: '58012'
+58020|2023:
+  pulled_at: '2025-10-01T14:29:21+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '58020'
+59001|2023:
+  pulled_at: '2025-10-01T14:21:56+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 131.0
+    pct: 9.1
+    total: 1437.0
+  year: '2023'
+  zcta: '59001'
+59003|2023:
+  pulled_at: '2025-10-04T23:36:44+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 327.0
+    pct: 25.9
+    total: 1261.0
+  year: '2023'
+  zcta: '59003'
+59008|2023:
+  pulled_at: '2025-10-04T23:36:57+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 99.0
+    pct: 19.7
+    total: 503.0
+  year: '2023'
+  zcta: '59008'
+59013|2023:
+  pulled_at: '2025-10-04T23:39:31+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 20.0
+    pct: 9.4
+    total: 213.0
+  year: '2023'
+  zcta: '59013'
+59014|2023:
+  pulled_at: '2025-10-04T23:42:40+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 185.0
+    pct: 12.4
+    total: 1488.0
+  year: '2023'
+  zcta: '59014'
+59021|2023:
+  pulled_at: '2025-10-04T23:36:41+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '59021'
+60012|2023:
+  pulled_at: '2025-10-04T23:35:40+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 860.0
+    pct: 7.3
+    total: 11854.0
+  year: '2023'
+  zcta: '60012'
+63006|2023:
+  pulled_at: '2025-10-03T14:22:29+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '63006'
+63008|2023:
+  pulled_at: '2025-10-04T23:40:00+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '63008'
+63018|2023:
+  pulled_at: '2025-10-04T23:36:55+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '63018'
+66003|2023:
+  pulled_at: '2025-10-04T23:39:03+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '66003'
+66012|2023:
+  pulled_at: '2025-10-01T14:21:57+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 1245.0
+    pct: 12.2
+    total: 10202.0
+  year: '2023'
+  zcta: '66012'
+66023|2023:
+  pulled_at: '2025-10-04T23:38:37+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 32.0
+    pct: 3.4
+    total: 954.0
+  year: '2023'
+  zcta: '66023'
+68008|2023:
+  pulled_at: '2025-09-30T16:52:48+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 990.0
+    pct: 7.8
+    total: 12698.0
+  year: '2023'
+  zcta: '68008'
+68013|2023:
+  pulled_at: '2025-10-04T23:36:24+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '68013'
+70012|2023:
+  pulled_at: '2025-10-04T23:35:06+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '70012'
+70013|2023:
+  pulled_at: '2025-10-04T23:42:49+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '70013'
+70020|2023:
+  pulled_at: '2025-10-04T23:37:59+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '70020'
+71607|2023:
+  pulled_at: '2025-10-04T23:37:30+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '71607'
+71616|2023:
+  pulled_at: '2025-10-04T23:41:32+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '71616'
+71621|2023:
+  pulled_at: '2025-10-04T23:41:05+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '71621'
+73001|2023:
+  pulled_at: '2025-10-04T23:38:42+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 0.0
+    pct: 0.0
+    total: 67.0
+  year: '2023'
+  zcta: '73001'
+73006|2023:
+  pulled_at: '2025-10-04T23:41:11+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 417.0
+    pct: 17.0
+    total: 2458.0
+  year: '2023'
+  zcta: '73006'
+73007|2023:
+  pulled_at: '2025-10-04T23:42:15+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 217.0
+    pct: 7.4
+    total: 2945.0
+  year: '2023'
+  zcta: '73007'
+73010|2023:
+  pulled_at: '2025-10-04T23:35:32+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 1720.0
+    pct: 8.2
+    total: 20923.0
+  year: '2023'
+  zcta: '73010'
+73014|2023:
+  pulled_at: '2025-10-04T23:39:52+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 180.0
+    pct: 13.9
+    total: 1295.0
+  year: '2023'
+  zcta: '73014'
+73016|2023:
+  pulled_at: '2025-10-04T23:35:28+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 93.0
+    pct: 3.7
+    total: 2547.0
+  year: '2023'
+  zcta: '73016'
+75019|2023:
+  pulled_at: '2025-10-04T23:38:23+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 1755.0
+    pct: 3.9
+    total: 44617.0
+  year: '2023'
+  zcta: '75019'
+75024|2023:
+  pulled_at: '2025-10-04T23:40:45+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 2678.0
+    pct: 6.0
+    total: 44931.0
+  year: '2023'
+  zcta: '75024'
+80006|2023:
+  pulled_at: '2025-10-04T23:41:44+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '80006'
+80013|2023:
+  pulled_at: '2025-10-04T23:35:09+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 7900.0
+    pct: 10.6
+    total: 74534.0
+  year: '2023'
+  zcta: '80013'
+80025|2023:
+  pulled_at: '2025-10-04T23:36:18+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 20.0
+    pct: 19.8
+    total: 101.0
+  year: '2023'
+  zcta: '80025'
+82009|2023:
+  pulled_at: '2025-10-04T23:38:51+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 1849.0
+    pct: 5.3
+    total: 35078.0
+  year: '2023'
+  zcta: '82009'
+83202|2023:
+  pulled_at: '2025-10-04T23:38:11+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 2660.0
+    pct: 11.3
+    total: 23439.0
+  year: '2023'
+  zcta: '83202'
+83224|2023:
+  pulled_at: '2025-10-04T23:35:50+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '83224'
+84010|2023:
+  pulled_at: '2025-09-30T16:36:47+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 2896.0
+    pct: 6.3
+    total: 46102.0
+  year: '2023'
+  zcta: '84010'
+84016|2023:
+  pulled_at: '2025-10-04T23:40:22+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '84016'
+84023|2023:
+  pulled_at: '2025-10-04T23:37:23+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 15.0
+    pct: 17.9
+    total: 84.0
+  year: '2023'
+  zcta: '84023'
+85005|2023:
+  pulled_at: '2025-10-04T23:40:59+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '85005'
+85018|2023:
+  pulled_at: '2025-10-04T23:37:33+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 3527.0
+    pct: 9.2
+    total: 38199.0
+  year: '2023'
+  zcta: '85018'
+87007|2023:
+  pulled_at: '2025-10-04T23:37:37+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 1165.0
+    pct: 55.7
+    total: 2093.0
+  year: '2023'
+  zcta: '87007'
+87018|2023:
+  pulled_at: '2025-09-30T16:52:55+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 355.0
+    pct: 63.8
+    total: 556.0
+  year: '2023'
+  zcta: '87018'
+87023|2023:
+  pulled_at: '2025-10-04T23:41:53+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 41.0
+    pct: 18.5
+    total: 222.0
+  year: '2023'
+  zcta: '87023'
+89009|2023:
+  pulled_at: '2025-09-30T16:37:07+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '89009'
+90005|2023:
+  pulled_at: '2025-10-04T23:36:30+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 9463.0
+    pct: 24.6
+    total: 38396.0
+  year: '2023'
+  zcta: '90005'
+90006|2023:
+  pulled_at: '2025-10-04T23:36:34+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 13274.0
+    pct: 24.4
+    total: 54319.0
+  year: '2023'
+  zcta: '90006'
+90013|2023:
+  pulled_at: '2025-10-04T23:34:51+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 6063.0
+    pct: 40.9
+    total: 14822.0
+  year: '2023'
+  zcta: '90013'
+90020|2023:
+  pulled_at: '2025-10-04T23:37:42+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 7024.0
+    pct: 18.4
+    total: 38273.0
+  year: '2023'
+  zcta: '90020'
+96703|2023:
+  pulled_at: '2025-10-01T14:29:32+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 313.0
+    pct: 9.1
+    total: 3447.0
+  year: '2023'
+  zcta: '96703'
+96705|2023:
+  pulled_at: '2025-10-04T23:40:50+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 131.0
+    pct: 5.5
+    total: 2376.0
+  year: '2023'
+  zcta: '96705'
+96706|2023:
+  pulled_at: '2025-09-30T16:37:00+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 4661.0
+    pct: 5.7
+    total: 82446.0
+  year: '2023'
+  zcta: '96706'
+96709|2023:
+  pulled_at: '2025-10-04T23:40:43+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '96709'
+97002|2023:
+  pulled_at: '2025-10-04T23:35:13+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 562.0
+    pct: 8.7
+    total: 6461.0
+  year: '2023'
+  zcta: '97002'
+97024|2023:
+  pulled_at: '2025-10-04T23:36:48+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 1715.0
+    pct: 14.7
+    total: 11702.0
+  year: '2023'
+  zcta: '97024'
+98009|2023:
+  pulled_at: '2025-10-04T23:42:28+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '98009'
+98012|2023:
+  pulled_at: '2025-09-30T16:46:28+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 3612.0
+    pct: 4.8
+    total: 75931.0
+  year: '2023'
+  zcta: '98012'
+98018|2023:
+  pulled_at: '2025-10-04T23:39:14+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '98018'
+99502|2023:
+  pulled_at: '2025-10-04T23:38:19+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 1360.0
+    pct: 5.2
+    total: 25997.0
+  year: '2023'
+  zcta: '99502'
+99503|2023:
+  pulled_at: '2025-10-04T23:37:11+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 1813.0
+    pct: 14.1
+    total: 12857.0
+  year: '2023'
+  zcta: '99503'
+99513|2023:
+  pulled_at: '2025-10-04T23:42:07+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: 0.0
+    pct: null
+    total: 0.0
+  year: '2023'
+  zcta: '99513'
+99524|2023:
+  pulled_at: '2025-10-04T23:36:11+00:00'
+  source: US Census ACS 5-year
+  value:
+    below: null
+    pct: null
+    total: null
+  year: '2023'
+  zcta: '99524'

@@ -147,4 +147,5 @@ else:
     c3.metric("Selected Report Row", f"{idx+1:,}/{len(df_reports):,}")
     c4.metric("Message Type", msg_type)
 
-    st.code(msg, language="hl7")
+    hl7_display = msg.replace("\r", "\n")
+    st.code(hl7_display, language="hl7")

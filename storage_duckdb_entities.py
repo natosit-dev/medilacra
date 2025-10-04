@@ -11,6 +11,11 @@ logger = get_logger(name="MediLacra",
 # Keep for backwards compatibility; utils.db manages the actual path
 DEFAULT_DB_PATH = get_db_path()
 
+def _resolve_db_path(db_path: str | None = None) -> str:
+    """Return the provided path or fall back to the configured default."""
+
+    return db_path or get_db_path()
+
 DDL = [
     """
     CREATE TABLE IF NOT EXISTS patients (
@@ -114,8 +119,9 @@ CREATE INDEX IF NOT EXISTS ix_orders_enc ON orders(encounter_id);
     """
 ]
 
-def _exec_ddl():
-    with writer() as con:
+def _exec_ddl(db_path: str | None = None):
+    resolved_path = _resolve_db_path(db_path)
+    with writer(resolved_path) as con:
         for block in DDL:
             # Execute each statement within the block individually
             parts = [s.strip() for s in block.split(";") if s.strip()]
@@ -124,16 +130,18 @@ def _exec_ddl():
                 con.execute(stmt)
         logger.info("DDL applied", extra={"extra": {"tables": ["patients","encounters","observations","transactions","messages","orders"]}})
 
-def init_db(db_path: str = DEFAULT_DB_PATH) -> str:
+def init_db(db_path: str | None = None) -> str:
     """Initialize schema; returns the resolved DB path."""
-    _exec_ddl()
-    return DEFAULT_DB_PATH
+    resolved_path = _resolve_db_path(db_path)
+    _exec_ddl(resolved_path)
+    return resolved_path
 
 # -------------------------
 # Upserts (short-lived writers)
 # -------------------------
-def upsert_patient(p: Dict[str, Any], db_path: str = DEFAULT_DB_PATH):
-    with writer() as con:
+def upsert_patient(p: Dict[str, Any], db_path: str | None = None):
+    resolved_path = _resolve_db_path(db_path)
+    with writer(resolved_path) as con:
         con.execute("BEGIN")
         con.execute("DELETE FROM patients WHERE patient_id = ?", [p["patient_id"]])
         con.execute(
@@ -154,8 +162,9 @@ def upsert_patient(p: Dict[str, Any], db_path: str = DEFAULT_DB_PATH):
         con.execute("COMMIT")
         logger.info("patient.upsert", extra={"extra": {"patient_id": p.get("patient_id")}})
 
-def upsert_encounter(e: Dict[str, Any], db_path: str = DEFAULT_DB_PATH):
-    with writer() as con:
+def upsert_encounter(e: Dict[str, Any], db_path: str | None = None):
+    resolved_path = _resolve_db_path(db_path)
+    with writer(resolved_path) as con:
         con.execute("BEGIN")
         con.execute("DELETE FROM encounters WHERE encounter_id = ?", [e["encounter_id"]])
         con.execute(
@@ -183,8 +192,9 @@ def upsert_encounter(e: Dict[str, Any], db_path: str = DEFAULT_DB_PATH):
         con.execute("COMMIT")
         logger.info("encounter.upsert", extra={"extra": {"encounter_id": e.get("encounter_id")}})
 
-def upsert_observation(o: Dict[str, Any], db_path: str = DEFAULT_DB_PATH):
-    with writer() as con:
+def upsert_observation(o: Dict[str, Any], db_path: str | None = None):
+    resolved_path = _resolve_db_path(db_path)
+    with writer(resolved_path) as con:
         con.execute("BEGIN")
         con.execute(
             "DELETE FROM observations WHERE encounter_id = ? AND observation_id = ?",
@@ -210,8 +220,9 @@ def upsert_observation(o: Dict[str, Any], db_path: str = DEFAULT_DB_PATH):
             "observation_id": o.get("observation_id")
         }})
 
-def upsert_order(row: Dict[str, Any], db_path: str = DEFAULT_DB_PATH):
-    with writer() as con:
+def upsert_order(row: Dict[str, Any], db_path: str | None = None):
+    resolved_path = _resolve_db_path(db_path)
+    with writer(resolved_path) as con:
         con.execute("BEGIN")
         con.execute("DELETE FROM orders WHERE placer_order_number = ?", [row["placer_order_number"]])
         con.execute(
@@ -229,8 +240,9 @@ def upsert_order(row: Dict[str, Any], db_path: str = DEFAULT_DB_PATH):
             "filler_order_number": row.get("filler_order_number")
         }})
 
-def upsert_transaction(t: Dict[str, Any], db_path: str = DEFAULT_DB_PATH):
-    with writer() as con:
+def upsert_transaction(t: Dict[str, Any], db_path: str | None = None):
+    resolved_path = _resolve_db_path(db_path)
+    with writer(resolved_path) as con:
         con.execute("BEGIN")
         con.execute("DELETE FROM transactions WHERE transaction_id = ?", [t["transaction_id"]])
         con.execute(
@@ -252,8 +264,9 @@ def upsert_transaction(t: Dict[str, Any], db_path: str = DEFAULT_DB_PATH):
             "transaction_id": t.get("transaction_id"), "encounter_id": t.get("encounter_id")
         }})
 
-def append_message(row: Dict[str, Any], db_path: str = DEFAULT_DB_PATH):
-    with writer() as con:
+def append_message(row: Dict[str, Any], db_path: str | None = None):
+    resolved_path = _resolve_db_path(db_path)
+    with writer(resolved_path) as con:
         con.execute(
             "INSERT INTO messages VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             [

@@ -27,17 +27,26 @@ fake = Faker()
 def gen_patient() -> Patient:
     """
     Create a synthetic Patient with street from Faker and ZIP/city/state from refdata.
+    Ensures patient name aligns with sex.
     """
     try:
         place = sample_zip_city_state()  # {'zip','city','state'}
-        first_last = fake.name().split()
+        sex = random.choice(["M", "F"])
+
+        # Pick name generator based on sex
+        if sex == "F":
+            first_last = fake.name_female().split()
+        else:
+            first_last = fake.name_male().split()
+
         first, last = first_last[0], first_last[-1]
+
         patient = Patient(
             patient_id=fake.unique.bothify("RAD#######"),
             patient_name=f"{last.upper()}, {first.upper()}",
             date_of_birth=fake.date_of_birth(minimum_age=18, maximum_age=90).strftime("%Y-%m-%d"),
-            sex=random.choice(["M","F"]),
-            race=random.choice(["White","Black","Asian","Hispanic","Other"]),
+            sex=sex,
+            race=random.choice(["White", "Black", "Asian", "Hispanic", "Other"]),
             ssn=fake.ssn(),
             address=fake.street_address(),           # street only
             phone=one_line(fake.phone_number()),
@@ -53,6 +62,7 @@ def gen_patient() -> Patient:
     except Exception as e:
         logger.error("gen_patient failed", extra={"extra": {"error": str(e)}})
         raise
+
 
 
 def gen_encounter(patient_id: str) -> Encounter:
