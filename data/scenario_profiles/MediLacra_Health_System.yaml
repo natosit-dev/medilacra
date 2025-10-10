@@ -1,0 +1,89 @@
+profile_version: 1
+profile_name: MediLacra Health System
+notes: MVP profile; PV1 routing only.
+facilities:
+- facility_code: MLHS
+  name: MEDILACRA HEALTH SYSTEM
+  address: 123 Fake Street
+  city: Springfield
+  state: MA
+  zip: '01112'
+  timezone: America/New_York
+  org_id: '98765'
+  locations:
+  - location_code: OP3
+    location_type: MEDSURG
+    room_format: ROOM#
+    bed_format: BED#
+    rooms_count: 0
+    beds_per_room: 1
+    weight: 1.0
+  - location_code: ER1
+    location_type: ED
+    room_format: RM#
+    bed_format: BED#
+    rooms_count: 0
+    beds_per_room: 2
+    weight: 1.0
+departments:
+- facility_code: MLHSSURG
+  department_code: SURG
+  name: Surgery
+  service_line: Surgery
+  hospital_service: MEDSURG
+- facility_code: MLHSMED
+  department_code: MED
+  name: Internal Medicine
+  service_line: Medicine
+  hospital_service: MED
+- facility_code: MLHSRAD
+  department_code: RAD
+  name: Radiology
+  service_line: Radiology
+  hospital_service: RAD
+- facility_code: MLHSED
+  department_code: ED
+  name: Emergency Department
+  service_line: Emergency
+  hospital_service: ER
+- facility_code: MLHSPC
+  department_code: PC
+  name: Primary Care
+  service_line: Primary Care
+  hospital_service: PC
+visit_mix:
+  IP: 25.0
+  OP: 40.0
+  ED: 20.0
+  OBS: 10.0
+  AS: 3.0
+  CL: 2.0
+routing:
+  IP:
+    location_types:
+      MEDSURG: 80.0
+      ICU: 20.0
+    default_department_code: ''
+  OP:
+    location_types:
+      CLINIC: 70.0
+      RAD: 30.0
+    default_department_code: PC
+  ED:
+    location_types:
+      ED: 100.0
+    default_department_code: ED
+  OBS:
+    location_types:
+      OBS: 80.0
+      MEDSURG: 20.0
+    default_department_code: ''
+  AS:
+    location_types:
+      OR: 100.0
+    default_department_code: SURG
+  CL:
+    location_types:
+      CLINIC: 100.0
+    default_department_code: PC
+preview_seed: 1233

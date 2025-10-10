@@ -4,6 +4,7 @@ output/
 *.duckdb
 .wal
 logs/
+kiln/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
