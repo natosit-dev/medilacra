@@ -1356,6 +1356,11 @@
     source: AirNow
     state: MS
   zip: '38611'
+38614|25:
+  miles: 25
+  pulled_at: '2025-10-13T17:01:28+00:00'
+  value: {}
+  zip: '38614'
 38615|25:
   miles: 25
   pulled_at: '2025-10-08T00:09:20+00:00'
@@ -2163,7 +2168,7 @@
   zip: '58005'
 58007|25:
   miles: 25
-  pulled_at: '2025-10-07T23:47:27+00:00'
+  pulled_at: '2025-10-13T17:01:59+00:00'
   value: {}
   zip: '58007'
 58011|25:
@@ -2195,7 +2200,7 @@
   zip: '58020'
 58023|25:
   miles: 25
-  pulled_at: '2025-10-13T17:00:51+00:00'
+  pulled_at: '2025-10-13T17:01:10+00:00'
   value: {}
   zip: '58023'
 58024|25:
@@ -2749,6 +2754,11 @@
   pulled_at: '2025-10-07T23:35:21+00:00'
   value: {}
   zip: '71607'
+71609|25:
+  miles: 25
+  pulled_at: '2025-10-13T17:02:26+00:00'
+  value: {}
+  zip: '71609'
 71616|25:
   miles: 25
   pulled_at: '2025-10-04T23:41:33+00:00'
@@ -2764,6 +2774,11 @@
   pulled_at: '2025-10-04T23:41:06+00:00'
   value: {}
   zip: '71621'
+71622|25:
+  miles: 25
+  pulled_at: '2025-10-13T17:02:53+00:00'
+  value: {}
+  zip: '71622'
 71623|25:
   miles: 25
   pulled_at: '2025-10-08T00:37:30+00:00'
@@ -2933,13 +2948,13 @@
   zip: '75013'
 75016|25:
   miles: 25
-  pulled_at: '2025-10-07T23:48:15+00:00'
+  pulled_at: '2025-10-13T17:01:30+00:00'
   value:
-    aqi: 80
+    aqi: 53
     area: Dallas-Fort Worth
     category: Moderate
-    obs_time: 2025-10-07 17 CST
-    parameter: O3
+    obs_time: 2025-10-13 10 CST
+    parameter: PM2.5
     source: AirNow
     state: TX
   zip: '75016'
