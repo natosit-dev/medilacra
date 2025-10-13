@@ -20,11 +20,17 @@ from .models import Encounter, Observation, Transaction
 from .utils import ts_hl7, hl7_name_from_full, hl7_name_from_display, hl7_escape
 
 
-def seg_msh(message_type: str) -> str:
+def seg_msh(
+    message_type: str,
+    *,
+    sending_app: str = "FAKELAB",
+    sending_facility: str = "MEDILACRAHS",
+    receiving_app: str = "MLHS",
+    receiving_facility: str = "STAGE",
+) -> str:
     """
     MSH - Message Header (v2.5)
-      Auto-injects structure code (e.g., ADT_A01) when given "ADT^A01".
-      Generates a UUID for MSH-10 (Message Control ID).
+      Accepts optional sender/receiver. Defaults preserve prior behavior.
     """
     try:
         logger.info("Building MSH", extra={"extra": {"input_message_type": message_type}})
@@ -34,13 +40,15 @@ def seg_msh(message_type: str) -> str:
             message_type = f"{message_type}^{structures.get(message_type, '')}"
         control_id = str(uuid.uuid4())
         msh = (
-            f"MSH|^~\\&|FAKELAB|MEDILACRAHS|MLHS|STAGE|{now}||{message_type}|{control_id}|P|2.5|||AL|NE||UNICODE UTF-8"
+            f"MSH|^~\\&|{sending_app}|{sending_facility}|{receiving_app}|{receiving_facility}|"
+            f"{now}||{message_type}|{control_id}|P|2.5|||AL|NE||UNICODE UTF-8"
         )
         logger.info("MSH built", extra={"extra": {"message_type": message_type, "control_id": control_id}})
         return msh
     except Exception as e:
         logger.error("Error building MSH", extra={"extra": {"error": str(e)}})
         raise
+
 
 
 def seg_evn(enc: Encounter, event_type: str = "A01") -> str:
@@ -104,7 +112,7 @@ def seg_pv1(enc: Encounter) -> str:
         attending_nm = hl7_name_from_full(enc.attending_provider_name)
         pv1 = (
             f"PV1|1|{enc.patient_class}|{enc.assigned_patient_location}||||{enc.attending_provider_id}^{attending_nm}"
-            f"||||||||||||{enc.visit_number}|||||||||||||||||||||||||{admit}|{disch}"
+            f"||{enc.hospital_service}||||||||||{enc.visit_number}|||||||||||||||||||||||||{admit}|{disch}"
         )
         logger.info(
             "PV1 built",

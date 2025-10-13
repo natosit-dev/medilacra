@@ -35,50 +35,62 @@ def _city_state_for_zip(z5: str):
     except Exception:
         pass
     return None, None
+# --- Shared YAML cache helpers ---
+import os, datetime
+try:
+    import yaml  # PyYAML
+except Exception:
+    yaml = None
+
+_DATA_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "data"))
+
+def _now_utc_iso() -> str:
+    return datetime.datetime.utcnow().replace(microsecond=0, tzinfo=datetime.timezone.utc).isoformat()
+
+def _ensure_data_dir():
+    try:
+        os.makedirs(_DATA_DIR, exist_ok=True)
+    except Exception as e:
+        logger.warning("Cache: failed to ensure data dir %s err=%s", _DATA_DIR, e)
+
+def _load_yaml_cache(path: str, label: str) -> dict:
+    if not yaml:
+        logger.warning("%s cache: PyYAML not installed; skipping disk cache.", label)
+        return {}
+    if not os.path.exists(path):
+        return {}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+            return data if isinstance(data, dict) else {}
+    except Exception as e:
+        logger.warning("%s cache: read error %s err=%s", label, path, e)
+        return {}
+
+def _save_yaml_cache(path: str, label: str, cache: dict) -> None:
+    if not yaml:
+        return
+    try:
+        _ensure_data_dir()
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            yaml.safe_dump(cache, f, sort_keys=True, allow_unicode=True)
+        os.replace(tmp, path)
+    except Exception as e:
+        logger.warning("%s cache: write error %s err=%s", label, path, e)
+
+def _is_fresh(pulled_at_iso: str | None, max_age: datetime.timedelta) -> bool:
+    try:
+        if not pulled_at_iso:
+            return False
+        ts = datetime.datetime.fromisoformat(pulled_at_iso.replace("Z", "+00:00"))
+        age = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc) - ts
+        return age <= max_age
+    except Exception:
+        return False
 
 # --- ArcGIS police station count ---
-_ARCGIS_HOST = "https://services1.arcgis.com"
-_ARCGIS_PATH = "/Hp6G80Pky0om7QvQ/ArcGIS/rest/services/Local_Law_Enforcement_Locations/FeatureServer/0/query"
 
-def _arcgis_stats_url(z5: str) -> str:
-    where = f"ZIP LIKE '{z5}%'"
-    stats = [{"statisticType": "count", "onStatisticField": "OBJECTID", "outStatisticFieldName": "station_count"}]
-    qs = f"where={quote(where)}&outStatistics={quote(json.dumps(stats,separators=(',',':')))}&groupByFieldsForStatistics=ZIP&returnGeometry=false&f=json"
-    return f"{_ARCGIS_HOST}{_ARCGIS_PATH}?{qs}"
-
-def _arcgis_count_url(z5: str) -> str:
-    where = f"ZIP LIKE '{z5}%'"
-    return f"{_ARCGIS_HOST}{_ARCGIS_PATH}?where={quote(where)}&returnCountOnly=true&f=json"
-
-def get_police_station_count_by_zip(zip5: Optional[str], timeout: float = 6.0) -> int | str:
-    if not zip5: return "No Data"
-    z5 = str(zip5).strip()[:5]
-    if not z5.isdigit() or len(z5) != 5: return "No Data"
-    for attempt in range(3):
-        try:
-            r = requests.get(_arcgis_stats_url(z5), timeout=timeout)
-            if r.status_code == 200:
-                body = r.json(); feats = body.get("features") or []
-                if feats:
-                    cnt = int((feats[0] or {}).get("attributes",{}).get("station_count", 0))
-                    if cnt > 0: return cnt
-            if r.status_code in (429,500,502,503,504): time.sleep(0.5*(attempt+1)); continue
-            break
-        except Exception: time.sleep(0.5*(attempt+1))
-    for attempt in range(2):
-        try:
-            r = requests.get(_arcgis_count_url(z5), timeout=timeout)
-            if r.status_code == 200:
-                return max(0, int((r.json() or {}).get("count", 0)))
-            if r.status_code in (429,500,502,503,504): time.sleep(0.5*(attempt+1)); continue
-            break
-        except Exception: time.sleep(0.5*(attempt+1))
-    return 0
-
-def build_obx_police_count(count: int | str, set_id: int = 1) -> str:
-    try: val = max(0, int(count))
-    except Exception: val = 0
-    return f"OBX|{set_id}|NM|ESRI_POLICE_COUNT^Police Station Count^L||{val}|||||F"
 
 # --- AirNow (file-cached) ---
 import os, time, json, requests, datetime
@@ -409,6 +421,7 @@ def _http_get_json_with_retries(url: str, params: dict | None = None, timeout: f
     return None
 
 # 1) Census Geocoder: ZIP -> county/state/coords (no key)
+_GEOCODER_CACHE_PATH = os.path.join(_DATA_DIR, "geocoder_cache.yaml")
 
 def zip_to_county_fips(zip5: str) -> dict | None:
     """
@@ -429,6 +442,11 @@ def zip_to_county_fips(zip5: str) -> dict | None:
             return None
 
         z5 = str(zip5).strip()[:5]
+        cache = _load_yaml_cache(_GEOCODER_CACHE_PATH, "Geocoder")
+        rec = cache.get(z5) or {}
+        if rec and _is_fresh(rec.get("pulled_at"), datetime.timedelta(days=365)):
+            logger.info("Geocoder cache hit: zip=%s", z5)
+            return rec.get("value")
 
         def _extract_from_census_match(am):
             geos = (am or {}).get("geographies", {}) or {}
@@ -609,6 +627,8 @@ def zip_to_county_fips(zip5: str) -> dict | None:
                         return out
 
         logger.warning("FIPS resolution failed for zip=%s (all fallbacks)", z5)
+        cache[z5] = {"pulled_at": _now_utc_iso(), "value": None}
+        _save_yaml_cache(_GEOCODER_CACHE_PATH, "Geocoder", cache)
         return None
 
     except requests.Timeout:
@@ -619,14 +639,47 @@ def zip_to_county_fips(zip5: str) -> dict | None:
         return None
 
 
-
 # 2) CDC PLACES (SODA API): select a measure by ZCTA (no key, but rate-limited)
 
-def get_places_measure_by_zcta(zcta: str, measure_name: str = "Obesity among adults aged >=18 years") -> float | None:
+# ---------- 3) CDC PLACES (ZCTA) with YAML cache ----------
+import os
+import datetime
+from typing import Optional
+
+_PLACES_OBESITY_CACHE_PATH = os.path.join(_DATA_DIR, "places_obesity_cache.yaml")
+
+def get_places_measure_by_zcta(
+    zcta: str,
+    measure_name: str = "Obesity among adults aged >=18 years",
+    ttl_days: int = 30,
+    socrata_dataset: str = "cwsq-ngmh",
+    app_token: Optional[str] = None,
+) -> Optional[float]:
     """
-    Returns the percentage Data_Value for a ZCTA, or None if not available.
-    Primary: CDC PLACES ZCTA dataset 9umn-c3jf with measure LIKE 'Obesity among adults%'.
-    Fallback: short_question_text = 'Obesity' (some rows omit/vary the long measure).
+    Return a CDC PLACES measure (default: adult obesity %) for a ZCTA (5-digit string).
+    Uses a YAML cache on disk to avoid re-hitting Socrata.
+
+    Cache key: "{ZCTA}|{measure_prefix}"
+    Record: { pulled_at: ISO8601, value: float|None }
+
+    Parameters
+    ----------
+    zcta : str
+        Five-digit ZCTA (ZIP Code Tabulation Area).
+    measure_name : str
+        Exact CDC PLACES 'measure' field string. The default targets adult obesity.
+    ttl_days : int
+        Cache time-to-live (days).
+    socrata_dataset : str
+        Socrata dataset identifier for PLACES ZCTA view. Default is a common PLACES id.
+        If your project uses a different dataset/view, override here.
+    app_token : Optional[str]
+        Optional Socrata App Token for higher rate limits.
+
+    Returns
+    -------
+    Optional[float]
+        Latest 'data_value' for the measure, if found; else None.
     """
     try:
         if not zcta or len(str(zcta)) < 5:
@@ -634,52 +687,49 @@ def get_places_measure_by_zcta(zcta: str, measure_name: str = "Obesity among adu
             return None
 
         z5 = str(zcta).strip()[:5]
-        base = "https://data.cdc.gov/resource/9umn-c3jf.json"
+        measure_prefix = measure_name.split(" aged", 1)[0] if " aged" in measure_name else measure_name
+        key = f"{z5}|{measure_prefix}"
 
-        # Attempt 1: prefix match on measure (robust to minor wording drift)
-        measure_prefix = measure_name
-        if " aged" in measure_name:
-            measure_prefix = measure_name.split(" aged", 1)[0]  # "Obesity among adults"
+        cache = _load_yaml_cache(_PLACES_OBESITY_CACHE_PATH, "PLACES")
+        rec = cache.get(key) or {}
+        if rec and _is_fresh(rec.get("pulled_at"), datetime.timedelta(days=ttl_days)):
+            logger.info("PLACES cache hit: key=%s", key)
+            try:
+                val = rec.get("value")
+                return float(val) if val is not None else None
+            except Exception:
+                return None
 
-        params1 = {
-            "$select": "locationid,measure,short_question_text,data_value",
-            "$limit": "1",
-            "$where": f"locationid = '{z5}' AND measure LIKE '{measure_prefix}%'",
+        # --- HTTP attempt (Socrata) ---
+        # NOTE: Adjust the dataset or query parameters to match your chosen PLACES view.
+        # We request the most recent 'data_value' for given ZCTA + measure.
+        url = f"https://chronicdata.cdc.gov/resource/{socrata_dataset}.json"
+        params = {
+            "locationname": f"ZCTA5 {z5}",
+            "measure": measure_name,
+            "$select": "data_value,year",
+            "$order": "year DESC",
+            "$limit": 1,
         }
-        logger.debug("PLACES attempt1 request: %s params=%s", base, params1)
-        r1 = requests.get(base, params=params1, timeout=8)
-        logger.info("PLACES attempt1 response: status=%s zcta=%s", r1.status_code, z5)
+        headers = {}
+        if app_token:
+            headers["X-App-Token"] = app_token
 
-        rows = []
-        if r1.status_code == 200:
-            rows = r1.json() or []
-            logger.debug("PLACES attempt1 rows=%s preview=%s", len(rows), rows[:1])
+        r = requests.get(url, params=params, headers=headers, timeout=8)
+        logger.info("PLACES response: status=%s zcta=%s", r.status_code, z5)
+
+        out_val = None
+        if r.status_code == 200:
+            js = r.json() or []
+            if js:
+                raw = js[0].get("data_value")
+                out_val = float(raw) if raw not in (None, "", "NA") else None
         else:
-            logger.warning("PLACES attempt1 non-200: %s", r1.text[:300].replace("\n", " "))
+            logger.warning("PLACES non-200 for zcta=%s: %s", z5, r.text[:300].replace("\n", " "))
 
-        # Attempt 2: short_question_text fallback ('Obesity')
-        if not rows:
-            params2 = {
-                "$select": "locationid,measure,short_question_text,data_value",
-                "$limit": "1",
-                "$where": f"locationid = '{z5}' AND short_question_text = 'Obesity'",
-            }
-            logger.debug("PLACES attempt2 request: %s params=%s", base, params2)
-            r2 = requests.get(base, params=params2, timeout=8)
-            logger.info("PLACES attempt2 response: status=%s zcta=%s", r2.status_code, z5)
-            if r2.status_code == 200:
-                rows = r2.json() or []
-                logger.debug("PLACES attempt2 rows=%s preview=%s", len(rows), rows[:1])
-            else:
-                logger.warning("PLACES attempt2 non-200: %s", r2.text[:300].replace("\n", " "))
-
-        if not rows:
-            logger.info("PLACES empty result for zcta=%s (after both attempts)", z5)
-            return None
-
-        val = rows[0].get("data_value")
-        logger.info("PLACES parsed: zcta=%s value=%s", z5, val)
-        return float(val) if val is not None else None
+        cache[key] = {"pulled_at": _now_utc_iso(), "value": out_val}
+        _save_yaml_cache(_PLACES_OBESITY_CACHE_PATH, "PLACES", cache)
+        return out_val
 
     except requests.Timeout:
         logger.error("PLACES timeout: zcta=%s", zcta)
@@ -687,7 +737,6 @@ def get_places_measure_by_zcta(zcta: str, measure_name: str = "Obesity among adu
     except Exception as e:
         logger.exception("PLACES error: zcta=%s err=%s", zcta, e)
         return None
-
 
 def build_obx_places_obesity(zcta: str, set_id: int = 10) -> str:
     """OBX for CDC PLACES: Adults with obesity (%)"""
@@ -699,41 +748,82 @@ def build_obx_places_obesity(zcta: str, set_id: int = 10) -> str:
     return f"OBX|{set_id}|NM|PLACES_OBESITY^Adults with Obesity (%)^L||{val:.1f}|%||||F"
 
 # 3) BLS LAUS (no key): county unemployment mapped via ZIP->county
-def get_unemployment_rate_by_zip(zip5: str) -> float | None:
+# ---------- 4) BLS Unemployment via LAUS with YAML cache ----------
+_BLS_UNEMPLOYMENT_CACHE_PATH = os.path.join(_DATA_DIR, "bls_unemployment_cache.yaml")
+
+def get_unemployment_rate_by_zip(zip5: str, ttl_days: int = 30) -> Optional[float]:
     """
-    Looks up the county via Census, then fetches latest unemployment rate via BLS LAUS.
-    Series ID format: LAUCN + state(2) + county(3) + 0000000003
+    Return latest county-level unemployment rate for a ZIP by mapping to county FIPS (ZIP→County)
+    and querying the BLS LAUS public API. Caches results in YAML.
+
+    Cache key: ZIP5
+    Record: { pulled_at, county_fips, series_id, value }
+
+    Parameters
+    ----------
+    zip5 : str
+        Five-digit ZIP code.
+    ttl_days : int
+        Cache time-to-live.
+
+    Returns
+    -------
+    Optional[float]
+        Latest unemployment rate (percentage) or None if unavailable.
     """
     try:
-        geo = zip_to_county_fips(zip5)
-        if not geo or not geo.get("county_fips") or not geo.get("state_fips"):
-            logger.warning("BLS: missing county FIPS for zip=%s geo=%s", zip5, geo)
+        z5 = (str(zip5).strip()[:5] if zip5 else "")
+        if len(z5) != 5 or not z5.isdigit():
+            logger.warning("BLS: invalid zip=%s", zip5)
             return None
 
-        state_fp = geo["state_fips"]
-        county3 = geo["county_fips"][2:]
-        series_id = f"LAUCN{state_fp}{county3}0000000003"
+        cache = _load_yaml_cache(_BLS_UNEMPLOYMENT_CACHE_PATH, "BLS Unemployment")
+        rec = cache.get(z5) or {}
+        if rec and _is_fresh(rec.get("pulled_at"), datetime.timedelta(days=ttl_days)):
+            logger.info("BLS cache hit: zip=%s", z5)
+            try:
+                val = rec.get("value")
+                return float(val) if val is not None else None
+            except Exception:
+                return None
+
+        # ZIP -> county/state FIPS (expects your existing resolver to also provide lat/lon optionally)
+        geo = zip_to_county_fips(z5)
+        if not geo or not geo.get("county_fips") or not geo.get("state_fips"):
+            logger.warning("BLS: missing county FIPS for zip=%s geo=%s", z5, geo)
+            # negative-cache to avoid repeated failures
+            cache[z5] = {"pulled_at": _now_utc_iso(), "county_fips": None, "series_id": None, "value": None}
+            _save_yaml_cache(_BLS_UNEMPLOYMENT_CACHE_PATH, "BLS Unemployment", cache)
+            return None
+
+        state_fp = geo["state_fips"]              # e.g., "06"
+        county3 = geo["county_fips"][2:]          # strip state to get county 3-digit
+        series_id = f"LAUCN{state_fp}{county3}0000000003"  # unemployment rate series
+
         url = f"https://api.bls.gov/publicAPI/v2/timeseries/data/{series_id}"
         params = {"latest": "true"}
-
-        logger.debug("BLS request: %s params=%s", url, params)
         r = requests.get(url, params=params, timeout=8)
         logger.info("BLS response: status=%s series=%s", r.status_code, series_id)
 
-        if r.status_code != 200:
-            logger.warning("BLS non-200: %s", r.text[:300].replace("\n", " "))
-            return None
+        out_val = None
+        if r.status_code == 200:
+            data = r.json() or {}
+            series = (data.get("Results", {}) or {}).get("series", []) or []
+            if series and series[0].get("data"):
+                pt = series[0]["data"][0]
+                val = pt.get("value")
+                out_val = float(val) if val not in (None, "", "NA") else None
+        else:
+            logger.warning("BLS non-200 for series=%s: %s", series_id, r.text[:300].replace("\n", " "))
 
-        data = r.json() or {}
-        series = (data.get("Results", {}) or {}).get("series", []) or []
-        if not series or not series[0].get("data"):
-            logger.info("BLS no datapoints for series=%s", series_id)
-            return None
-
-        pt = series[0]["data"][0]
-        val = pt.get("value")
-        logger.info("BLS parsed: series=%s period=%s %s value=%s", series_id, pt.get("periodName"), pt.get("year"), val)
-        return float(val) if val is not None else None
+        cache[z5] = {
+            "pulled_at": _now_utc_iso(),
+            "county_fips": geo["county_fips"],
+            "series_id": series_id,
+            "value": out_val,
+        }
+        _save_yaml_cache(_BLS_UNEMPLOYMENT_CACHE_PATH, "BLS Unemployment", cache)
+        return out_val
 
     except requests.Timeout:
         logger.error("BLS timeout for zip=%s", zip5)

@@ -19,6 +19,8 @@ logger.info("generators module loaded")
 from .models import Patient, Encounter, Transaction, Observation
 from .utils import one_line
 from .refdata import sample_zip_city_state
+from utils.scenario_profile import compute_pv1_fields  
+
 
 fake = Faker()
 
@@ -65,28 +67,43 @@ def gen_patient() -> Patient:
 
 
 
-def gen_encounter(patient_id: str) -> Encounter:
+def gen_encounter(patient_id: str, profile: dict | None = None) -> Encounter:
     """
-    Generate a single Encounter for a patient, including admit/discharge, visit/account,
-    and provider/placer/filler identifiers.
+    Generate a single Encounter for a patient.
+    If a Scenario profile is provided, PV1 fields (class, location, hospital_service) are derived from it.
+    Otherwise, fallback to existing Radiology-centric defaults.
     """
     try:
         admit_dt = fake.date_time_between(start_date="-14d", end_date="-1d")
-        disch_dt = admit_dt + timedelta(hours=random.randint(1,6))
+        disch_dt = admit_dt + timedelta(hours=random.randint(1, 6))
         visit = fake.unique.bothify("VN##########")
         account_number = fake.unique.bothify("ACC#######%?")
+
         prov = fake.name().split(); first, last = prov[0], prov[-1]
         prov_disp = f"{last.upper()}, {first.upper()}"
+
+        # --- NEW: derive PV1 from Scenario if provided ---
+        if profile:
+            pv1 = compute_pv1_fields(profile)
+            patient_class = {"I": "INPATIENT", "O": "OUTPATIENT", "E": "EMERGENCY"}.get(pv1["pv1_2"], "OUTPATIENT")
+            assigned_patient_location = pv1["pv1_3"]
+            hospital_service = pv1["hospital_service"] or "RAD"
+        else:
+            # Fallback (unchanged behavior)
+            patient_class = "OUTPATIENT"
+            assigned_patient_location = "RAD_DEPT1"
+            hospital_service = "RAD"
+
         enc = Encounter(
             encounter_id=f"{patient_id}_{visit}",
             patient_id=patient_id,
             visit_number=visit,
             account_number=account_number,
-            patient_class="OUTPATIENT",
-            assigned_patient_location="RAD_DEPT1",
+            patient_class=patient_class,                  # PV1-2 (semantic)
+            assigned_patient_location=assigned_patient_location,  # PV1-3
             admit_datetime=admit_dt.strftime("%Y-%m-%d %H:%M:%S"),
             discharge_datetime=disch_dt.strftime("%Y-%m-%d %H:%M:%S"),
-            hospital_service="RAD",
+            hospital_service=hospital_service,            # PV1-10
             ordering_provider_id=fake.bothify("R######"),
             ordering_provider_name=prov_disp,
             attending_provider_id=fake.bothify("P######"),
@@ -99,14 +116,16 @@ def gen_encounter(patient_id: str) -> Encounter:
             extra={"extra": {
                 "encounter_id": enc.encounter_id,
                 "visit_number": enc.visit_number,
-                "admit": enc.admit_datetime,
-                "discharge": enc.discharge_datetime,
+                "patient_class": enc.patient_class,
+                "assigned_location": enc.assigned_patient_location,
+                "hospital_service": enc.hospital_service,
             }},
         )
         return enc
     except Exception as e:
         logger.error("gen_encounter failed", extra={"extra": {"patient_id": patient_id, "error": str(e)}})
         raise
+
 
 
 def gen_transaction(encounter_id: str) -> Transaction:

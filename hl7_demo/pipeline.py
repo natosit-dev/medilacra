@@ -86,6 +86,32 @@ def _collect_msg_row(run_id: str, message_type: str, path: str, msg: str) -> dic
         "written_path": os.path.abspath(path),
     }
 
+def _facility_from_pv1_3(pv1_3: str) -> str:
+    """Extract facility code from PV1-3 (component 4)."""
+    parts = (pv1_3 or "").split("^")
+    return parts[3] if len(parts) >= 4 and parts[3] else "MEDILACRAHS"
+
+def _set_msh_sending_facility(raw_msg: str, sending_facility: str) -> str:
+    """
+    Replace MSH-4 (sending facility) in the first MSH segment line.
+    Keeps everything else intact.
+    """
+    if not raw_msg:
+        return raw_msg
+    # split on first HL7 segment break (\r preferred; fall back to \n)
+    sep = "\r" if "\r" in raw_msg else "\n"
+    first, rest = (raw_msg.split(sep, 1) + [""])[:2]
+    if not first.startswith("MSH|"):
+        return raw_msg  # unexpected; leave unchanged
+    parts = first.split("|")
+    if len(parts) < 6:
+        return raw_msg  # malformed MSH; leave unchanged
+    # parts[0]=MSH, [1]=^~\&, [2]=sending_app, [3]=sending_facility
+    parts[3] = sending_facility or parts[3]
+    new_first = "|".join(parts)
+    return new_first + (sep + rest if rest else "")
+
+
 # -----------------------------
 # Core: run_pipeline
 # -----------------------------
@@ -101,6 +127,7 @@ def run_pipeline(
     add_unemployment_obx: bool = False,
     include_labs: bool = True,
     persist: str = "none",
+    scenario_profile: dict | None = None,
     duckdb_path: Optional[str] = None
 ) -> Dict[str, int]:
     """
@@ -166,7 +193,7 @@ def run_pipeline(
         try:
             # ---- Generate synthetic entities (one patient/encounter set)
             p = gen_patient()
-            e = gen_encounter(p.patient_id)
+            e = gen_encounter(p.patient_id, profile=scenario_profile)
             t = gen_transaction(e.encounter_id)
             report_row = reports.sample(n=1).iloc[0]
             o = gen_observation(e, report_row)
@@ -204,6 +231,17 @@ def run_pipeline(
             if include_labs:
                 orm_labs = build_orm_labs(p, e)
                 oru_labs = build_oru_labs(p, e, start_set_id=20)
+
+            if scenario_profile:
+                sending_facility = _facility_from_pv1_3(e.assigned_patient_location)
+                adt = _set_msh_sending_facility(adt, sending_facility)
+                oru = _set_msh_sending_facility(oru, sending_facility)
+                dft = _set_msh_sending_facility(dft, sending_facility)
+                if orm_labs:
+                    orm_labs = _set_msh_sending_facility(orm_labs, sending_facility)
+                if oru_labs:
+                    oru_labs = _set_msh_sending_facility(oru_labs, sending_facility)
+                logger.info("MSH-4 set from Scenario", extra={"extra": {"sending_facility": sending_facility}})
 
             # ---- File naming setup
             safe_enc = _safe_encounter_for_filename(e.encounter_id)

@@ -89,13 +89,13 @@
   zip: '10009'
 10010|25:
   miles: 25
-  pulled_at: '2025-10-08T00:51:14+00:00'
+  pulled_at: '2025-10-13T16:47:32+00:00'
   value:
-    aqi: 36
+    aqi: 26
     area: New York City Region
     category: Good
-    obs_time: 2025-10-07 19 EST
-    parameter: PM2.5
+    obs_time: 2025-10-13 11 EST
+    parameter: O3
     source: AirNow
     state: NY
   zip: '10010'
@@ -147,6 +147,11 @@
     source: AirNow
     state: NJ
   zip: '10015'
+10016|25:
+  miles: 25
+  pulled_at: '2025-10-13T16:57:46+00:00'
+  value: {}
+  zip: '10016'
 10018|25:
   miles: 25
   pulled_at: '2025-10-07T23:28:20+00:00'
@@ -441,12 +446,12 @@
   zip: '20102'
 20104|25:
   miles: 25
-  pulled_at: '2025-10-08T00:45:05+00:00'
+  pulled_at: '2025-10-13T16:49:18+00:00'
   value:
-    aqi: 31
+    aqi: 24
     area: Northern Virginia
     category: Good
-    obs_time: 2025-10-07 19 EST
+    obs_time: 2025-10-13 11 EST
     parameter: O3
     source: AirNow
     state: VA
@@ -632,7 +637,7 @@
   zip: '20394'
 24714|25:
   miles: 25
-  pulled_at: '2025-10-08T00:56:34+00:00'
+  pulled_at: '2025-10-13T16:45:58+00:00'
   value: {}
   zip: '24714'
 24716|25:
@@ -640,6 +645,11 @@
   pulled_at: '2025-10-07T23:53:38+00:00'
   value: {}
   zip: '24716'
+24717|25:
+  miles: 25
+  pulled_at: '2025-10-13T16:43:55+00:00'
+  value: {}
+  zip: '24717'
 24721|25:
   miles: 25
   pulled_at: '2025-10-07T23:49:47+00:00'
@@ -723,7 +733,7 @@
   zip: '27013'
 27015|25:
   miles: 25
-  pulled_at: '2025-10-07T23:49:19+00:00'
+  pulled_at: '2025-10-13T16:53:59+00:00'
   value: {}
   zip: '27015'
 27016|25:
@@ -790,6 +800,11 @@
     source: AirNow
     state: SC
   zip: '29002'
+29003|25:
+  miles: 25
+  pulled_at: '2025-10-13T16:51:24+00:00'
+  value: {}
+  zip: '29003'
 29006|25:
   miles: 25
   pulled_at: '2025-10-01T14:21:51+00:00'
@@ -810,6 +825,11 @@
   pulled_at: '2025-10-07T23:45:05+00:00'
   value: {}
   zip: '29011'
+29012|25:
+  miles: 25
+  pulled_at: '2025-10-13T16:47:30+00:00'
+  value: {}
+  zip: '29012'
 29014|25:
   miles: 25
   pulled_at: '2025-10-08T00:19:09+00:00'
@@ -820,6 +840,11 @@
   pulled_at: '2025-10-08T00:42:56+00:00'
   value: {}
   zip: '29018'
+29019|25:
+  miles: 25
+  pulled_at: '2025-10-13T16:44:41+00:00'
+  value: {}
+  zip: '29019'
 29020|25:
   miles: 25
   pulled_at: '2025-10-07T23:51:41+00:00'
@@ -886,12 +911,12 @@
   zip: '30010'
 30012|25:
   miles: 25
-  pulled_at: '2025-10-08T00:39:33+00:00'
+  pulled_at: '2025-10-11T14:12:16+00:00'
   value:
-    aqi: 40
+    aqi: 30
     area: Atlanta
     category: Good
-    obs_time: 2025-10-07 19 EST
+    obs_time: 2025-10-11 9 EST
     parameter: PM2.5
     source: AirNow
     state: GA
@@ -903,7 +928,7 @@
   zip: '30015'
 30016|25:
   miles: 25
-  pulled_at: '2025-10-08T00:38:30+00:00'
+  pulled_at: '2025-10-13T16:43:10+00:00'
   value: {}
   zip: '30016'
 30021|25:
@@ -918,6 +943,11 @@
     source: AirNow
     state: GA
   zip: '30021'
+30022|25:
+  miles: 25
+  pulled_at: '2025-10-11T14:11:43+00:00'
+  value: {}
+  zip: '30022'
 30023|25:
   miles: 25
   pulled_at: '2025-10-08T00:37:19+00:00'
@@ -1058,12 +1088,12 @@
   zip: '32042'
 32043|25:
   miles: 25
-  pulled_at: '2025-10-07T23:28:33+00:00'
+  pulled_at: '2025-10-13T16:48:01+00:00'
   value:
-    aqi: 31
+    aqi: 16
     area: Putnam County
     category: Good
-    obs_time: 2025-10-07 18 EST
+    obs_time: 2025-10-13 11 EST
     parameter: PM10
     source: AirNow
     state: FL
@@ -1097,6 +1127,18 @@
     source: AirNow
     state: FL
   zip: '32050'
+35004|25:
+  miles: 25
+  pulled_at: '2025-10-13T16:50:21+00:00'
+  value:
+    aqi: 55
+    area: Birmingham
+    category: Moderate
+    obs_time: 2025-10-13 10 CST
+    parameter: PM2.5
+    source: AirNow
+    state: AL
+  zip: '35004'
 35006|25:
   miles: 25
   pulled_at: '2025-10-07T23:42:13+00:00'
@@ -1123,7 +1165,7 @@
   zip: '35007'
 35010|25:
   miles: 25
-  pulled_at: '2025-10-08T00:17:49+00:00'
+  pulled_at: '2025-10-13T16:49:02+00:00'
   value: {}
   zip: '35010'
 35014|25:
@@ -1182,6 +1224,11 @@
   pulled_at: '2025-10-07T23:27:11+00:00'
   value: {}
   zip: '35051'
+35055|25:
+  miles: 25
+  pulled_at: '2025-10-11T14:12:15+00:00'
+  value: {}
+  zip: '35055'
 35062|25:
   miles: 25
   pulled_at: '2025-10-08T00:50:27+00:00'
@@ -1284,7 +1331,7 @@
   zip: '38602'
 38603|25:
   miles: 25
-  pulled_at: '2025-10-08T00:33:01+00:00'
+  pulled_at: '2025-10-13T16:45:20+00:00'
   value: {}
   zip: '38603'
 38604|25:
@@ -1331,7 +1378,7 @@
   zip: '38622'
 38623|25:
   miles: 25
-  pulled_at: '2025-10-07T23:43:18+00:00'
+  pulled_at: '2025-10-10T23:03:58+00:00'
   value: {}
   zip: '38623'
 38625|25:
@@ -1371,6 +1418,18 @@
     source: AirNow
     state: KY
   zip: '40014'
+40018|25:
+  miles: 25
+  pulled_at: '2025-10-13T16:43:57+00:00'
+  value:
+    aqi: 58
+    area: Louisville
+    category: Moderate
+    obs_time: 2025-10-13 11 EST
+    parameter: PM2.5
+    source: AirNow
+    state: KY
+  zip: '40018'
 40020|25:
   miles: 25
   pulled_at: '2025-10-07T23:28:31+00:00'
@@ -1534,6 +1593,11 @@
   pulled_at: '2025-10-08T00:42:05+00:00'
   value: {}
   zip: '46023'
+46026|25:
+  miles: 25
+  pulled_at: '2025-10-13T16:50:01+00:00'
+  value: {}
+  zip: '46026'
 48001|25:
   miles: 25
   pulled_at: '2025-10-08T00:47:45+00:00'
@@ -1654,6 +1718,18 @@
     source: AirNow
     state: IA
   zip: '50001'
+50003|25:
+  miles: 25
+  pulled_at: '2025-10-13T16:54:47+00:00'
+  value:
+    aqi: 29
+    area: Des Moines
+    category: Good
+    obs_time: 2025-10-13 10 CST
+    parameter: PM2.5
+    source: AirNow
+    state: IA
+  zip: '50003'
 50005|25:
   miles: 25
   pulled_at: '2025-10-08T00:53:21+00:00'
@@ -1674,6 +1750,11 @@
   pulled_at: '2025-10-07T23:48:52+00:00'
   value: {}
   zip: '50013'
+50018|25:
+  miles: 25
+  pulled_at: '2025-10-13T16:48:49+00:00'
+  value: {}
+  zip: '50018'
 50023|25:
   miles: 25
   pulled_at: '2025-09-30T16:36:51+00:00'
@@ -1703,13 +1784,13 @@
   zip: '53009'
 53012|25:
   miles: 25
-  pulled_at: '2025-10-08T00:44:13+00:00'
+  pulled_at: '2025-10-13T16:44:56+00:00'
   value:
-    aqi: 27
+    aqi: 56
     area: Milwaukee and South Ozaukee Counties
-    category: Good
-    obs_time: 2025-10-07 18 CST
-    parameter: O3
+    category: Moderate
+    obs_time: 2025-10-13 10 CST
+    parameter: PM2.5
     source: AirNow
     state: WI
   zip: '53012'
@@ -1727,13 +1808,13 @@
   zip: '53013'
 53015|25:
   miles: 25
-  pulled_at: '2025-10-08T00:59:22+00:00'
+  pulled_at: '2025-10-13T16:53:05+00:00'
   value:
-    aqi: 31
+    aqi: 37
     area: North Ozaukee and Sheboygan Counties
     category: Good
-    obs_time: 2025-10-07 18 CST
-    parameter: O3
+    obs_time: 2025-10-13 10 CST
+    parameter: PM2.5
     source: AirNow
     state: WI
   zip: '53015'
@@ -1809,6 +1890,18 @@
     source: AirNow
     state: MN
   zip: '55005'
+55006|25:
+  miles: 25
+  pulled_at: '2025-10-13T16:49:04+00:00'
+  value:
+    aqi: 16
+    area: East Central Minnesota
+    category: Good
+    obs_time: 2025-10-13 10 CST
+    parameter: O3
+    source: AirNow
+    state: MN
+  zip: '55006'
 55010|25:
   miles: 25
   pulled_at: '2025-10-07T23:40:58+00:00'
@@ -2177,6 +2270,11 @@
   pulled_at: '2025-10-08T01:00:34+00:00'
   value: {}
   zip: '59016'
+59017|25:
+  miles: 25
+  pulled_at: '2025-10-13T16:56:54+00:00'
+  value: {}
+  zip: '59017'
 59019|25:
   miles: 25
   pulled_at: '2025-10-07T23:45:31+00:00'
@@ -2276,13 +2374,13 @@
   zip: '60022'
 60026|25:
   miles: 25
-  pulled_at: '2025-10-08T00:40:45+00:00'
+  pulled_at: '2025-10-13T16:46:00+00:00'
   value:
-    aqi: 31
+    aqi: 56
     area: North and West Suburbs (Chicago)
-    category: Good
-    obs_time: 2025-10-07 18 CST
-    parameter: O3
+    category: Moderate
+    obs_time: 2025-10-13 10 CST
+    parameter: PM2.5
     source: AirNow
     state: IL
   zip: '60026'
@@ -2334,7 +2432,7 @@
   zip: '63011'
 63013|25:
   miles: 25
-  pulled_at: '2025-10-08T14:17:55+00:00'
+  pulled_at: '2025-10-13T16:54:41+00:00'
   value: {}
   zip: '63013'
 63014|25:
@@ -2344,7 +2442,7 @@
   zip: '63014'
 63016|25:
   miles: 25
-  pulled_at: '2025-10-08T00:26:41+00:00'
+  pulled_at: '2025-10-13T16:52:36+00:00'
   value: {}
   zip: '63016'
 63017|25:
@@ -2496,16 +2594,21 @@
   zip: '68016'
 68017|25:
   miles: 25
-  pulled_at: '2025-10-08T00:53:33+00:00'
+  pulled_at: '2025-10-13T16:41:29+00:00'
   value:
-    aqi: 31
+    aqi: 17
     area: Lincoln
     category: Good
-    obs_time: 2025-10-07 18 CST
+    obs_time: 2025-10-13 10 CST
     parameter: O3
     source: AirNow
     state: NE
   zip: '68017'
+68018|25:
+  miles: 25
+  pulled_at: '2025-10-13T16:52:09+00:00'
+  value: {}
+  zip: '68018'
 68022|25:
   miles: 25
   pulled_at: '2025-10-07T23:27:20+00:00'
@@ -2581,6 +2684,11 @@
   pulled_at: '2025-10-04T23:42:50+00:00'
   value: {}
   zip: '70013'
+70014|25:
+  miles: 25
+  pulled_at: '2025-10-13T16:47:04+00:00'
+  value: {}
+  zip: '70014'
 70015|25:
   miles: 25
   pulled_at: '2025-10-08T00:36:24+00:00'
@@ -2613,7 +2721,7 @@
   zip: '70024'
 71601|25:
   miles: 25
-  pulled_at: '2025-10-08T00:04:41+00:00'
+  pulled_at: '2025-10-13T16:35:06+00:00'
   value: {}
   zip: '71601'
 71604|25:
@@ -2950,7 +3058,7 @@
   zip: '80006'
 80009|25:
   miles: 25
-  pulled_at: '2025-10-09T16:41:22+00:00'
+  pulled_at: '2025-10-13T16:55:38+00:00'
   value: {}
   zip: '80009'
 80013|25:
@@ -3097,12 +3205,12 @@
   zip: '82005'
 82009|25:
   miles: 25
-  pulled_at: '2025-10-04T23:38:50+00:00'
+  pulled_at: '2025-10-13T16:44:43+00:00'
   value:
-    aqi: 35
+    aqi: 27
     area: Cheyenne
     category: Good
-    obs_time: 2025-10-04 16 MST
+    obs_time: 2025-10-13 9 MST
     parameter: O3
     source: AirNow
     state: WY
@@ -3122,6 +3230,11 @@
   pulled_at: '2025-10-08T00:27:25+00:00'
   value: {}
   zip: '82017'
+82018|25:
+  miles: 25
+  pulled_at: '2025-10-13T16:42:20+00:00'
+  value: {}
+  zip: '82018'
 82020|25:
   miles: 25
   pulled_at: '2025-10-06T13:50:05+00:00'
@@ -3134,7 +3247,7 @@
   zip: '82021'
 82022|25:
   miles: 25
-  pulled_at: '2025-10-08T00:16:25+00:00'
+  pulled_at: '2025-10-10T16:21:12+00:00'
   value: {}
   zip: '82022'
 82023|25:
@@ -3291,15 +3404,27 @@
     source: AirNow
     state: UT
   zip: '84003'
+84007|25:
+  miles: 25
+  pulled_at: '2025-10-10T17:01:31+00:00'
+  value:
+    aqi: 32
+    area: Roosevelt
+    category: Good
+    obs_time: 2025-10-10 9 MST
+    parameter: PM2.5
+    source: AirNow
+    state: UT
+  zip: '84007'
 84010|25:
   miles: 25
-  pulled_at: '2025-09-30T16:36:47+00:00'
+  pulled_at: '2025-10-13T16:45:34+00:00'
   value:
-    aqi: 44
+    aqi: 56
     area: Salt Lake City
-    category: Good
-    obs_time: 2025-09-30 9 MST
-    parameter: O3
+    category: Moderate
+    obs_time: 2025-10-13 9 MST
+    parameter: PM2.5
     source: AirNow
     state: UT
   zip: '84010'
@@ -3419,6 +3544,18 @@
     source: AirNow
     state: AZ
   zip: '85018'
+85019|25:
+  miles: 25
+  pulled_at: '2025-10-13T16:46:12+00:00'
+  value:
+    aqi: 29
+    area: Phoenix
+    category: Good
+    obs_time: 2025-10-13 9 MST
+    parameter: PM10
+    source: AirNow
+    state: AZ
+  zip: '85019'
 85021|25:
   miles: 25
   pulled_at: '2025-10-08T00:50:35+00:00'
@@ -3635,12 +3772,12 @@
   zip: '90005'
 90006|25:
   miles: 25
-  pulled_at: '2025-10-08T00:59:03+00:00'
+  pulled_at: '2025-10-13T16:45:21+00:00'
   value:
-    aqi: 57
+    aqi: 52
     area: Central LA CO
     category: Moderate
-    obs_time: 2025-10-07 16 PST
+    obs_time: 2025-10-13 8 PST
     parameter: PM2.5
     source: AirNow
     state: CA
@@ -3659,12 +3796,12 @@
   zip: '90009'
 90013|25:
   miles: 25
-  pulled_at: '2025-10-04T23:34:51+00:00'
+  pulled_at: '2025-10-13T16:50:49+00:00'
   value:
-    aqi: 54
+    aqi: 52
     area: Central LA CO
     category: Moderate
-    obs_time: 2025-10-04 15 PST
+    obs_time: 2025-10-13 8 PST
     parameter: PM2.5
     source: AirNow
     state: CA
@@ -3686,6 +3823,18 @@
     source: AirNow
     state: CA
   zip: '90020'
+90022|25:
+  miles: 25
+  pulled_at: '2025-10-13T16:47:46+00:00'
+  value:
+    aqi: 52
+    area: Central LA CO
+    category: Moderate
+    obs_time: 2025-10-13 8 PST
+    parameter: PM2.5
+    source: AirNow
+    state: CA
+  zip: '90022'
 90023|25:
   miles: 25
   pulled_at: '2025-10-07T23:34:44+00:00'
@@ -3844,12 +3993,12 @@
   zip: '97005'
 97007|25:
   miles: 25
-  pulled_at: '2025-09-30T16:34:41+00:00'
+  pulled_at: '2025-10-13T16:55:43+00:00'
   value:
-    aqi: 17
+    aqi: 13
     area: Beaverton
     category: Good
-    obs_time: 2025-09-30 8 PST
+    obs_time: 2025-10-13 8 PST
     parameter: PM2.5
     source: AirNow
     state: OR
@@ -3883,11 +4032,35 @@
   pulled_at: '2025-10-08T00:35:39+00:00'
   value: {}
   zip: '97012'
+97013|25:
+  miles: 25
+  pulled_at: '2025-10-13T16:52:39+00:00'
+  value:
+    aqi: 18
+    area: Clackamas
+    category: Good
+    obs_time: 2025-10-13 8 PST
+    parameter: PM2.5
+    source: AirNow
+    state: OR
+  zip: '97013'
 97017|25:
   miles: 25
   pulled_at: '2025-10-07T23:59:03+00:00'
   value: {}
   zip: '97017'
+97018|25:
+  miles: 25
+  pulled_at: '2025-10-13T16:50:03+00:00'
+  value:
+    aqi: 13
+    area: Sauvie Island
+    category: Good
+    obs_time: 2025-10-13 8 PST
+    parameter: PM2.5
+    source: AirNow
+    state: OR
+  zip: '97018'
 97019|25:
   miles: 25
   pulled_at: '2025-10-08T12:24:59+00:00'
@@ -3900,6 +4073,18 @@
     source: AirNow
     state: OR
   zip: '97019'
+97021|25:
+  miles: 25
+  pulled_at: '2025-10-13T16:46:27+00:00'
+  value:
+    aqi: 16
+    area: The Dalles
+    category: Good
+    obs_time: 2025-10-13 8 PST
+    parameter: PM2.5
+    source: AirNow
+    state: OR
+  zip: '97021'
 97024|25:
   miles: 25
   pulled_at: '2025-10-04T23:36:48+00:00'
@@ -3984,6 +4169,18 @@
     source: AirNow
     state: WA
   zip: '98009'
+98011|25:
+  miles: 25
+  pulled_at: '2025-10-13T16:51:28+00:00'
+  value:
+    aqi: 52
+    area: Seattle-Bellevue-Kent Valley
+    category: Moderate
+    obs_time: 2025-10-13 8 PST
+    parameter: PM2.5
+    source: AirNow
+    state: WA
+  zip: '98011'
 98012|25:
   miles: 25
   pulled_at: '2025-09-30T16:46:27+00:00'
@@ -4150,12 +4347,12 @@
   zip: '99518'
 99524|25:
   miles: 25
-  pulled_at: '2025-10-04T23:36:07+00:00'
+  pulled_at: '2025-10-13T16:43:12+00:00'
   value:
-    aqi: 29
+    aqi: 24
     area: Anchorage
     category: Good
-    obs_time: 2025-10-04 14 AKT
+    obs_time: 2025-10-13 7 AKT
     parameter: PM2.5
     source: AirNow
     state: AK

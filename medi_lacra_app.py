@@ -2,6 +2,7 @@ import os
 import time
 import glob
 from datetime import datetime
+import yaml
 
 import streamlit as st
 
@@ -22,6 +23,24 @@ from hl7_demo.pipeline import run_pipeline
 from hl7_demo.reports import load_reports
 from hl7_demo.refdata import load_zip_table
 from hl7_demo.config import AIRNOW_MILES_DEFAULT
+
+try:
+    from utils.scenario_profile import load_profile as load_scenario_profile
+except Exception:
+    load_scenario_profile = None
+
+PROFILE_DIR = "./data/scenario_profiles"
+
+def _list_profiles():
+    os.makedirs(PROFILE_DIR, exist_ok=True)
+    return sorted([f for f in os.listdir(PROFILE_DIR) if f.lower().endswith(".yaml")])
+
+def _load_profile(filename: str) -> dict:
+    if load_scenario_profile:
+        return load_scenario_profile(filename)
+    path = os.path.join(PROFILE_DIR, filename)
+    with open(path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
 
 
 st.set_page_config(page_title="MediLacra — HL7 Generator", layout="wide")
@@ -46,6 +65,24 @@ with st.sidebar:
     include_labs = st.checkbox("Include Labs (ORM/ORU)", value=True)
     persist = st.radio("Persist to", ["duckdb", "none"], index=0, help="Store entities and messages in DuckDB")
     run_btn = st.button("Generate Messages", type="primary", use_container_width=True)
+    st.subheader("Scenario")
+    profile_files = ["(none)"] + _list_profiles()
+    selected_profile_file = st.selectbox(
+        "Scenario Profile",
+        profile_files,
+        index=0,
+        help="YAML saved from the Site & Scenario Setup page"
+    )
+
+    scenario_profile = None
+    if selected_profile_file != "(none)":
+        try:
+            scenario_profile = _load_profile(selected_profile_file)
+            st.caption(f"Using: {scenario_profile.get('profile_name', selected_profile_file)}")
+            logger.info("Scenario profile selected", extra={"extra": {"file": selected_profile_file}})
+        except Exception as e:
+            st.warning(f"Couldn't load profile: {e}")
+            logger.warning("Scenario profile load failed", extra={"extra": {"file": selected_profile_file, "error": str(e)}})
 
 # --- Health checks panel ---
 col1, col2 = st.columns(2)
@@ -70,6 +107,8 @@ with col2:
     except Exception as e:
         st.error(f"ZIP reference not ready: {e}")
         logger.warning("ZIP table load failed", extra={"extra": {"error": str(e)}})
+    # --- Scenario Profile (optional) ---
+   
 
 # --- Generate ---
 if run_btn:
@@ -110,6 +149,7 @@ if run_btn:
                 add_unemployment_obx=add_unemployment_obx,
                 include_labs=include_labs,
                 persist=persist,
+                scenario_profile=scenario_profile
             )
         dur = time.time() - start
         st.success(

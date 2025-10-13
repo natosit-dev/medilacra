@@ -1,0 +1,31 @@
+---
+directories:
+  - C:\Data Generator
+recursive: true
+exclude:
+  - tests/
+  - docs/
+  - .pyc
+  - __pycache__
+checks:
+  - B101  # Using eval() can be dangerous
+  - B102  # Using exec() can be dangerous
+  - B103  # Using input() without validation
+  - B104  # Using raw input() without sanitization
+  - B110  # Using deprecated functions
+  - B112  # Using unsafe deserialization
+  - B113  # Using unsafe pickle
+  - B114  # Using unsafe eval
+  - B115  # Using unsafe exec
+  - B116  # Using unsafe input
+  - B117  # Using unsafe print
+  - B118  # Using unsafe system
+  - B119  # Using unsafe os.system
+  - B120  # Using unsafe subprocess
+  - B121  # Using unsafe eval
+  - B122  # Using unsafe exec
+  - B123  # Using unsafe input
+  - B124  # Using unsafe print
+  - B125  # Using unsafe system
+  - B126  # Using unsafe os.system
+  - B127  # Using unsafe subprocess
