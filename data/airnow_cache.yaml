@@ -149,7 +149,7 @@
   zip: '10015'
 10016|25:
   miles: 25
-  pulled_at: '2025-10-13T16:57:46+00:00'
+  pulled_at: '2025-10-13T16:58:20+00:00'
   value: {}
   zip: '10016'
 10018|25:
@@ -359,12 +359,12 @@
   zip: '19703'
 19708|25:
   miles: 25
-  pulled_at: '2025-10-07T23:38:59+00:00'
+  pulled_at: '2025-10-13T17:00:09+00:00'
   value:
-    aqi: 31
+    aqi: 22
     area: Greater New Castle County
     category: Good
-    obs_time: 2025-10-07 18 EST
+    obs_time: 2025-10-13 11 EST
     parameter: O3
     source: AirNow
     state: DE
@@ -1998,13 +1998,13 @@
   zip: '57001'
 57002|25:
   miles: 25
-  pulled_at: '2025-10-04T23:34:47+00:00'
+  pulled_at: '2025-10-13T16:59:29+00:00'
   value:
-    aqi: 114
+    aqi: 31
     area: Brookings
-    category: Unhealthy for Sensitive Groups
-    obs_time: 2025-10-04 17 CST
-    parameter: PM10
+    category: Good
+    obs_time: 2025-10-13 10 CST
+    parameter: PM2.5
     source: AirNow
     state: SD
   zip: '57002'
@@ -2195,7 +2195,7 @@
   zip: '58020'
 58023|25:
   miles: 25
-  pulled_at: '2025-10-06T13:50:40+00:00'
+  pulled_at: '2025-10-13T17:00:51+00:00'
   value: {}
   zip: '58023'
 58024|25:
@@ -2410,7 +2410,7 @@
   zip: '63006'
 63008|25:
   miles: 25
-  pulled_at: '2025-10-04T23:40:01+00:00'
+  pulled_at: '2025-10-13T17:00:06+00:00'
   value: {}
   zip: '63008'
 63009|25:
@@ -2440,6 +2440,11 @@
   pulled_at: '2025-10-08T00:39:03+00:00'
   value: {}
   zip: '63014'
+63015|25:
+  miles: 25
+  pulled_at: '2025-10-13T17:00:42+00:00'
+  value: {}
+  zip: '63015'
 63016|25:
   miles: 25
   pulled_at: '2025-10-13T16:52:36+00:00'

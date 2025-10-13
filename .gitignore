@@ -5,6 +5,7 @@ output/
 .wal
 logs/
 kiln/
+.tmp.driveupload/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
