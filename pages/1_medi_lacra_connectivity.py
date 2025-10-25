@@ -12,8 +12,7 @@ import requests
 from hl7_demo.sdoh import (
     get_air_quality_by_zip, build_obx_air_quality,
     get_poverty_pct_by_zcta, build_obx_poverty_pct,
-    get_police_station_count_by_zip, build_obx_police_count,
-)
+   )
 from hl7_demo.config import AIRNOW_API_KEY, AIRNOW_MILES_DEFAULT, ACS_YEAR
 
 

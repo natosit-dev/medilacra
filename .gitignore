@@ -6,6 +6,14 @@ output/
 logs/
 kiln/
 .tmp.driveupload/
+models/
+jupyter/
+dev/
+data/scenario_profiles/
+data/*.yaml
+control_id_counter.txt
+
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

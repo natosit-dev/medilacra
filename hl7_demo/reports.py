@@ -8,7 +8,7 @@ def load_reports(glob_path: str) -> pd.DataFrame:
     frames = []
     for f in files:
         df = pd.read_csv(f)
-        req = ["report_uid","cpt_code","icd_code","procedure_description","report_text"]
+        req = ["report_uid","cpt_code","cpt_description","icd_code","icd_description","procedure_description","report_text"]
         missing = {c for c in req if c not in df.columns}
         if missing:
             raise ValueError(f"{f} is missing columns: {sorted(missing)}")

@@ -1,0 +1,33 @@
+report_uid,cpt_code,icd_code,procedure_description,report_text,provider_id,provider_name,message_type,service_line,test_dataset_tag
+8826d5ae-5d04-4cdf-b978-3cf887b2ec1c,,J45.909,Chest X-ray 2 views,"NARRATIVE REPORT
+
+On 2023-10-05 at 8:00 AM, the patient presented to the clinic with a complaint of chronic cough that has persisted for approximately two weeks. The primary symptom is described as a persistent cough, which is characterized by a dry sensation in the throat and chest, without any associated sputum production or fever.
+
+The patient reports that this condition began shortly after they moved into their new apartment, where there are often low levels of indoor air quality due to poor ventilation. They have tried over-the-counter medications such as cough suppressants and expectorants but found no significant relief from the symptoms.
+
+Physical examination did not reveal any signs of respiratory distress or wheezing. The patient's vital signs were within normal limits, including a blood pressure of 120/80 mmHg, heart rate of 76 beats per minute, and respiratory rate of 18 breaths per minute.
+
+The patient was advised to continue with the over-the-counter medications but also recommended they seek further evaluation if symptoms persist or worsen. They were instructed to maintain adequate hydration and avoid irritants that might exacerbate their coughing episode.
+
+Given the nature and duration of the symptom, it is suggested that a referral for pulmonary function testing may be considered in order to rule out any underlying respiratory conditions such as asthma or chronic obstructive pulmonary disease (COPD).",prov-1001,"Leslie Miller, MD",DFT^P03,Radiology,demo
+8826d5ae-5d04-4cdf-b978-3cf887b2ec1c,,J44.9,Chest X-ray 2 views,"NARRATIVE REPORT
+
+On 2023-10-05 at 8:00 AM, the patient presented to the clinic with a complaint of chronic cough that has persisted for approximately two weeks. The primary symptom is described as a persistent cough, which is characterized by a dry sensation in the throat and chest, without any associated sputum production or fever.
+
+The patient reports that this condition began shortly after they moved into their new apartment, where there are often low levels of indoor air quality due to poor ventilation. They have tried over-the-counter medications such as cough suppressants and expectorants but found no significant relief from the symptoms.
+
+Physical examination did not reveal any signs of respiratory distress or wheezing. The patient's vital signs were within normal limits, including a blood pressure of 120/80 mmHg, heart rate of 76 beats per minute, and respiratory rate of 18 breaths per minute.
+
+The patient was advised to continue with the over-the-counter medications but also recommended they seek further evaluation if symptoms persist or worsen. They were instructed to maintain adequate hydration and avoid irritants that might exacerbate their coughing episode.
+
+Given the nature and duration of the symptom, it is suggested that a referral for pulmonary function testing may be considered in order to rule out any underlying respiratory conditions such as asthma or chronic obstructive pulmonary disease (COPD).",prov-1001,"Leslie Miller, MD",DFT^P03,Radiology,demo
+4f147f1a-ff7c-4b5d-babb-a0b75e97d3a2,71275,J44.9,X-ray 2 views,"NARRATIVE REPORT
+
+Patient: A 60-year-old female presents with shortness of breath (sob), which is worsening and has persisted for several hours despite initial treatment. The patient's history includes a diagnosis of chronic obstructive pulmonary disease (COPD) and recent trauma resulting in rib fracture.
+
+The current respiratory distress may be attributed to the exacerbation of her COPD, possibly complicated by the new rib fractures which could have compromised her ability to fully expand her chest during respiration, thereby contributing to shortness of breath. The patient's condition warrants immediate attention with a thorough evaluation and appropriate intervention to address both her COPD exacerbation as well as any respiratory complications from the recent rib fracture.",prov-1001,"Leslie Miller, MD",DFT^P03,Radiology,demo
+4f147f1a-ff7c-4b5d-babb-a0b75e97d3a2,71046,J44.9,X-ray 2 views,"NARRATIVE REPORT
+
+Patient: A 60-year-old female presents with shortness of breath (sob), which is worsening and has persisted for several hours despite initial treatment. The patient's history includes a diagnosis of chronic obstructive pulmonary disease (COPD) and recent trauma resulting in rib fracture.
+
+The current respiratory distress may be attributed to the exacerbation of her COPD, possibly complicated by the new rib fractures which could have compromised her ability to fully expand her chest during respiration, thereby contributing to shortness of breath. The patient's condition warrants immediate attention with a thorough evaluation and appropriate intervention to address both her COPD exacerbation as well as any respiratory complications from the recent rib fracture.",prov-1001,"Leslie Miller, MD",DFT^P03,Radiology,demo

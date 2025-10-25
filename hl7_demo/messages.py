@@ -110,7 +110,7 @@ def build_adt(
     # Keep DG1 after the entire OBX group (your existing convention)
     if obs and obs.icd_code:
         dg1_dt = obs.completed_time or enc.admit_datetime
-        parts.append(seg_dg1(enc, icd_code=obs.icd_code, desc="", set_id=1, diag_type="A", diag_dt=dg1_dt))
+        parts.append(seg_dg1(enc, icd_code=obs.icd_code, desc=obs.icd_description, set_id=1, diag_type="A", diag_dt=dg1_dt))
 
     return "\r".join(parts)
 
@@ -137,7 +137,7 @@ def build_dft(p: Patient, enc: Encounter, txs: List[Transaction], obs_list: List
             icd = (o.icd_code or "").strip()
             if not icd or icd in seen: 
                 continue
-            parts.append(seg_dg1(enc, icd_code=icd, desc="", set_id=set_id, diag_type="F", diag_dt=o.completed_time))
+            parts.append(seg_dg1(enc, icd_code=icd, desc=getattr(o, "icd_description", ""), set_id=set_id, diag_type="F", diag_dt=o.completed_time))
             seen.add(icd); set_id += 1
 
     return "\r".join(parts)

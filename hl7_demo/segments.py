@@ -17,7 +17,7 @@ logger = get_logger(name="MediLacra", context={"component": "segments"})
 
 # --- Models & Utils (existing imports) ---
 from .models import Encounter, Observation, Transaction
-from .utils import ts_hl7, hl7_name_from_full, hl7_name_from_display, hl7_escape
+from .utils import ts_hl7, hl7_name_from_full, hl7_name_from_display, hl7_escape, get_next_control_id
 
 
 def seg_msh(
@@ -38,7 +38,9 @@ def seg_msh(
         structures = {"ADT^A01": "ADT_A01", "ORU^R01": "ORU_R01", "DFT^P03": "DFT_P03"}
         if "^" in message_type and message_type.count("^") == 1:
             message_type = f"{message_type}^{structures.get(message_type, '')}"
-        control_id = str(uuid.uuid4())
+        control_id = str(get_next_control_id())
+        print (f"MessageID= {control_id}")
+
         msh = (
             f"MSH|^~\\&|{sending_app}|{sending_facility}|{receiving_app}|{receiving_facility}|"
             f"{now}||{message_type}|{control_id}|P|2.5|||AL|NE||UNICODE UTF-8"
@@ -153,7 +155,7 @@ def seg_obr(enc: Encounter, obs: Optional[Observation]) -> str:
     """
     try:
         cpt = obs.cpt_code if obs else ""
-        desc = obs.procedure_description if obs else ""
+        desc = (getattr(obs, "cpt_description", "") or obs.procedure_description) if obs else ""
         usi = f"{cpt}^{desc}^CPT" if (cpt or desc) else ""
         when = ts_hl7(obs.completed_time if obs else enc.admit_datetime)
         ordering_nm = hl7_name_from_full(enc.ordering_provider_name)
@@ -178,7 +180,8 @@ def seg_obx(obs: Observation) -> str:
       OBX-15 = Producer's ID (site/service)
     """
     try:
-        ident = f"{obs.cpt_code}^{obs.procedure_description}^CPT"
+        ident = f"{obs.cpt_code}^{(getattr(obs,'cpt_description','') or obs.procedure_description)}^CPT"
+
         sub_id = obs.observation_sub_id or "1"
         value = obs.observation_text or ""
         status = obs.result_status or "F"
@@ -197,7 +200,7 @@ def seg_obx_lines(obs: Observation, start_set_id: int = 1, wrap_width: int = 200
       Each wrapped or newline-split chunk becomes OBX with incremented set/sub IDs.
     """
     try:
-        ident = f"{obs.cpt_code}^{obs.procedure_description}^CPT"
+        ident = f"{obs.cpt_code}^{(getattr(obs,'cpt_description','') or obs.procedure_description)}^CPT"
         status = obs.result_status or "F"
         producer = "MEDILACRAHS^DEPT1"
 

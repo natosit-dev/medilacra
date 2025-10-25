@@ -37,7 +37,9 @@ class Observation:
     encounter_id: str
     observation_id: str
     cpt_code: str
+    cpt_description: str
     icd_code: str
+    icd_description: str
     placer_order_number: str
     filler_order_number: str
     procedure_description: str

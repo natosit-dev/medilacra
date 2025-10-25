@@ -15,6 +15,26 @@ except Exception:
 logger = get_logger(name="MediLacra", context={"component": "utils"})
 logger.info("utils module loaded")
 
+import os
+
+COUNTER_FILE = "control_id_counter.txt"
+
+def get_next_control_id():
+    """
+    Returns the next integer control ID, incrementing and persisting between sessions.
+    Starts at 1 if the counter file does not exist.
+    """
+    if os.path.exists(COUNTER_FILE):
+        with open(COUNTER_FILE, "r") as f:
+            current = int(f.read().strip())
+    else:
+        current = 0
+
+    next_id = current + 1
+    with open(COUNTER_FILE, "w") as f:
+        f.write(str(next_id))
+    return next_id
+
 
 def ts_hl7(dt: Optional[datetime | str]) -> str:
     """
