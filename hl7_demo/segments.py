@@ -354,8 +354,8 @@ def _obx_cwe(
         obx23 = performing_org or ""  # OBX-23
 
         obx = (
-            f"OBX|{set_id}|CWE|{obx3_ce}|{sub_id}|{val_ce}||||||{status}||R|{_PRODUCER}|"
-            f"|{obx14}|{''}|{obx17}||||{obx23}"
+            f"OBX|{set_id}|CWE|{obx3_ce}|{sub_id}|{val_ce}||||||{status}|||{obx14}|{_PRODUCER}"
+            f"||{''}|{obx17}||||{obx23}"
         )
         logger.info("OBX built (CWE)", extra={"extra": {"obx3_code": obx3[0], "value_code": value[0], "set_id": set_id}})
         return obx

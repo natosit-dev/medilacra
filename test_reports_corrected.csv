@@ -31,3 +31,471 @@ The current respiratory distress may be attributed to the exacerbation of her CO
 Patient: A 60-year-old female presents with shortness of breath (sob), which is worsening and has persisted for several hours despite initial treatment. The patient's history includes a diagnosis of chronic obstructive pulmonary disease (COPD) and recent trauma resulting in rib fracture.
 
 The current respiratory distress may be attributed to the exacerbation of her COPD, possibly complicated by the new rib fractures which could have compromised her ability to fully expand her chest during respiration, thereby contributing to shortness of breath. The patient's condition warrants immediate attention with a thorough evaluation and appropriate intervention to address both her COPD exacerbation as well as any respiratory complications from the recent rib fracture.",prov-1001,"Leslie Miller, MD",DFT^P03,Radiology,demo
+b8ed606b-39f8-4243-91be-0fccd7cda949,,T14.8XXA,Metatarsal X-Ray,"Narrative Report:
+
+Patient: A 33-year-old male patient presented to the emergency department with a complaint of a fracture to his right middle finger. The injury occurred approximately one hour prior to presentation when he reportedly slipped and fell, resulting in significant bruising and swelling around the distal interphalangeal joint (DIP) of the right middle finger.
+
+On physical examination, there was evident deformity at the DIP joint with a palpable bony prominence. The patient exhibited significant pain upon passive motion of the affected digit and demonstrated inability to fully extend or flex the finger without experiencing discomfort. There were no signs of open wounds, but there was noticeable bruising extending into the nail bed.
+
+X-rays confirmed a fracture of the middle phalanx (middle bone) of the right middle finger at its distal end. The diagnosis is thus established as a mid-palm fracture or Colles' fracture involving the proximal phalanx of the right middle finger, with concomitant soft tissue injury and possible associated dorsal subluxation.
+
+Immediate treatment consisted of immobilization using a bulky bandage to support the affected digit while ensuring adequate circulation. The patient was also provided analgesics for pain management. He was advised on the importance of maintaining the immobilized position until further instructions from his primary care physician or surgeon, who will likely order imaging and possibly recommend surgical intervention if necessary.
+
+The patient is scheduled for follow-up in two weeks to assess healing progress and to consider potential surgical options based on clinical findings at that time.",prov-1001,"Leslie Miller, MD",DFT^P03,Radiology,demo
+c8da9a0d-0e57-4c7a-8bbb-b20e314506f1,,T14.8XXA,Metatarsal X-Ray,"Narrative Report:
+
+Patient: A 33-year-old male patient presented to the emergency department with a complaint of a fracture to his right middle finger. The injury occurred approximately one hour prior to presentation when he reportedly slipped and fell, resulting in significant bruising and swelling around the distal interphalangeal joint (DIP) of the right middle finger.
+
+On physical examination, there was evident deformity at the DIP joint with a palpable bony prominence. The patient exhibited significant pain upon passive motion of the affected digit and demonstrated inability to fully extend or flex the finger without experiencing discomfort. There were no signs of open wounds, but there was noticeable bruising extending into the nail bed.
+
+X-rays confirmed a fracture of the middle phalanx (middle bone) of the right middle finger at its distal end. The diagnosis is thus established as a mid-palm fracture or Colles' fracture involving the proximal phalanx of the right middle finger, with concomitant soft tissue injury and possible associated dorsal subluxation.
+
+Immediate treatment consisted of immobilization using a bulky bandage to support the affected digit while ensuring adequate circulation. The patient was also provided analgesics for pain management. He was advised on the importance of maintaining the immobilized position until further instructions from his primary care physician or surgeon, who will likely order imaging and possibly recommend surgical intervention if necessary.
+
+The patient is scheduled for follow-up in two weeks to assess healing progress and to consider potential surgical options based on clinical findings at that time.",prov-1001,"Leslie Miller, MD",DFT^P03,Radiology,demo
+3de1d4d2-1b94-411f-9643-5416eea7878e,71275,R06.02,Chest X-Ray,"Patient: A 65-year-old female presents with complaints of chest pain.
+
+Chief Complaint: The patient reports experiencing intermittent chest discomfort that has persisted for the past few days.
+
+History of Present Illness: The patient describes her chest pain as a dull, non-radiating sensation that occurs primarily during physical exertion and can also be triggered by stress. She notes it typically lasts from 30 seconds to several minutes and is relieved with rest or nitroglycerin tablets. The onset was gradual and has not been preceded by any prodromal symptoms.
+
+Family History: There is no significant family history that would be relevant to the current symptoms.
+
+Review of Systems: The patient reports occasional shortness of breath, but denies any recent gastrointestinal issues or neurological symptoms such as dizziness or numbness in extremities.
+
+Vital Signs: On admission, her vital signs were stable with a blood pressure of 130/85 mmHg, heart rate at 72 bpm, and respiratory rate at 16 breaths per minute. Oxygen saturation was 98% on room air. Temperature was normal.
+
+Physical Examination: The physical examination is notable for a soft systolic ejection murmur heard best at the left sternal border with no murmurs elsewhere. There are no signs of jugular venous distension, peripheral edema, or ascites noted. Cardiovascular assessment reveals a regular rhythm without any palpable thrill. The abdomen is non-tender and non-distended.
+
+Imaging Studies: Chest X-ray is ordered to rule out any pulmonary etiology for the chest pain.
+
+Diagnosis: The patient's symptoms are being evaluated in relation to possible causes of angina pectoris secondary to coronary artery disease, given her risk factors and history of hypertension, hyperlipidemia, and diabetes. Further diagnostic workup including ECG (Electrocardiogram), stress test, and possibly cardiac catheterization will be considered based on the results.
+
+Plan: The patient is scheduled for further evaluation with an outpatient cardiology appointment to discuss these findings and determine the next steps in her management, which may include pharmacological therapy or referral for interventional procedures if necessary. Immediate interventions such as nitroglycerin are not indicated at this time given the intermittent nature of her symptoms.
+
+Follow-Up: The patient will be followed up with a cardiologist for further evaluation and treatment planning based on the results of diagnostic studies.",prov-1001,"Leslie Miller, MD",DFT^P03,Radiology,demo
+3de1d4d2-1b94-411f-9643-5416eea7878e,71046,R06.02,Chest X-Ray,"Patient: A 65-year-old female presents with complaints of chest pain.
+
+Chief Complaint: The patient reports experiencing intermittent chest discomfort that has persisted for the past few days.
+
+History of Present Illness: The patient describes her chest pain as a dull, non-radiating sensation that occurs primarily during physical exertion and can also be triggered by stress. She notes it typically lasts from 30 seconds to several minutes and is relieved with rest or nitroglycerin tablets. The onset was gradual and has not been preceded by any prodromal symptoms.
+
+Family History: There is no significant family history that would be relevant to the current symptoms.
+
+Review of Systems: The patient reports occasional shortness of breath, but denies any recent gastrointestinal issues or neurological symptoms such as dizziness or numbness in extremities.
+
+Vital Signs: On admission, her vital signs were stable with a blood pressure of 130/85 mmHg, heart rate at 72 bpm, and respiratory rate at 16 breaths per minute. Oxygen saturation was 98% on room air. Temperature was normal.
+
+Physical Examination: The physical examination is notable for a soft systolic ejection murmur heard best at the left sternal border with no murmurs elsewhere. There are no signs of jugular venous distension, peripheral edema, or ascites noted. Cardiovascular assessment reveals a regular rhythm without any palpable thrill. The abdomen is non-tender and non-distended.
+
+Imaging Studies: Chest X-ray is ordered to rule out any pulmonary etiology for the chest pain.
+
+Diagnosis: The patient's symptoms are being evaluated in relation to possible causes of angina pectoris secondary to coronary artery disease, given her risk factors and history of hypertension, hyperlipidemia, and diabetes. Further diagnostic workup including ECG (Electrocardiogram), stress test, and possibly cardiac catheterization will be considered based on the results.
+
+Plan: The patient is scheduled for further evaluation with an outpatient cardiology appointment to discuss these findings and determine the next steps in her management, which may include pharmacological therapy or referral for interventional procedures if necessary. Immediate interventions such as nitroglycerin are not indicated at this time given the intermittent nature of her symptoms.
+
+Follow-Up: The patient will be followed up with a cardiologist for further evaluation and treatment planning based on the results of diagnostic studies.",prov-1001,"Leslie Miller, MD",DFT^P03,Radiology,demo
+9bc1c04e-f589-41e8-9b1d-694319217be5,71046,R06.02,Chest X-Ray,"Narrative Report:
+
+Patient: A 65-year-old female presents with complaints of chest pain accompanied by shortness of breath (sob). The patient reports the onset of these symptoms approximately one hour ago following a meal, and they have been persistent. She describes the chest pain as an acute sensation located in her central chest area, which radiates to her left arm but not to his neck or jaw.
+
+She also mentions experiencing shortness of breath that is exacerbated by lying down. The patient has no significant history of cardiac disease, hypertension, diabetes, or other chronic conditions. She does have a past medical history of mild osteoarthritis in the knees and shoulders with occasional joint pain, which she manages with over-the-counter analgesics.
+
+On physical examination, vital signs are within normal limits except for her blood pressure at 130/85 mmHg, heart rate at 92 beats per minute, and respiratory rate of 20 breaths per minute. The patient is noted to be slightly pale but otherwise in no acute distress. Her abdomen is soft without tenderness or hepatosplenomegaly.
+
+The chest examination reveals a diminished breath sounds bilaterally with the patient's lungs being clear. Auscultation of her heart does not reveal any murmurs, rubs, or gallops. The cardiac rhythm appears regular and rate is within normal limits.
+
+Given the patient’s age and symptoms, including the presence of chest pain and shortness of breath, a thorough evaluation for coronary artery disease (CAD) is warranted to rule out acute ischemic events such as angina pectoris or myocardial infarction. Further diagnostic workup may include electrocardiogram (ECG), cardiac enzymes, and possibly imaging studies like an echocardiogram or computed tomography angiography of the coronary arteries. Immediate intervention will be considered based on clinical assessment and test results.",prov-1001,"Leslie Miller, MD",DFT^P03,Radiology,demo
+9bc1c04e-f589-41e8-9b1d-694319217be5,99213,R06.02,Chest X-Ray,"Narrative Report:
+
+Patient: A 65-year-old female presents with complaints of chest pain accompanied by shortness of breath (sob). The patient reports the onset of these symptoms approximately one hour ago following a meal, and they have been persistent. She describes the chest pain as an acute sensation located in her central chest area, which radiates to her left arm but not to his neck or jaw.
+
+She also mentions experiencing shortness of breath that is exacerbated by lying down. The patient has no significant history of cardiac disease, hypertension, diabetes, or other chronic conditions. She does have a past medical history of mild osteoarthritis in the knees and shoulders with occasional joint pain, which she manages with over-the-counter analgesics.
+
+On physical examination, vital signs are within normal limits except for her blood pressure at 130/85 mmHg, heart rate at 92 beats per minute, and respiratory rate of 20 breaths per minute. The patient is noted to be slightly pale but otherwise in no acute distress. Her abdomen is soft without tenderness or hepatosplenomegaly.
+
+The chest examination reveals a diminished breath sounds bilaterally with the patient's lungs being clear. Auscultation of her heart does not reveal any murmurs, rubs, or gallops. The cardiac rhythm appears regular and rate is within normal limits.
+
+Given the patient’s age and symptoms, including the presence of chest pain and shortness of breath, a thorough evaluation for coronary artery disease (CAD) is warranted to rule out acute ischemic events such as angina pectoris or myocardial infarction. Further diagnostic workup may include electrocardiogram (ECG), cardiac enzymes, and possibly imaging studies like an echocardiogram or computed tomography angiography of the coronary arteries. Immediate intervention will be considered based on clinical assessment and test results.",prov-1001,"Leslie Miller, MD",DFT^P03,Radiology,demo
+9bc1c04e-f589-41e8-9b1d-694319217be5,71275,R06.02,Chest X-Ray,"Narrative Report:
+
+Patient: A 65-year-old female presents with complaints of chest pain accompanied by shortness of breath (sob). The patient reports the onset of these symptoms approximately one hour ago following a meal, and they have been persistent. She describes the chest pain as an acute sensation located in her central chest area, which radiates to her left arm but not to his neck or jaw.
+
+She also mentions experiencing shortness of breath that is exacerbated by lying down. The patient has no significant history of cardiac disease, hypertension, diabetes, or other chronic conditions. She does have a past medical history of mild osteoarthritis in the knees and shoulders with occasional joint pain, which she manages with over-the-counter analgesics.
+
+On physical examination, vital signs are within normal limits except for her blood pressure at 130/85 mmHg, heart rate at 92 beats per minute, and respiratory rate of 20 breaths per minute. The patient is noted to be slightly pale but otherwise in no acute distress. Her abdomen is soft without tenderness or hepatosplenomegaly.
+
+The chest examination reveals a diminished breath sounds bilaterally with the patient's lungs being clear. Auscultation of her heart does not reveal any murmurs, rubs, or gallops. The cardiac rhythm appears regular and rate is within normal limits.
+
+Given the patient’s age and symptoms, including the presence of chest pain and shortness of breath, a thorough evaluation for coronary artery disease (CAD) is warranted to rule out acute ischemic events such as angina pectoris or myocardial infarction. Further diagnostic workup may include electrocardiogram (ECG), cardiac enzymes, and possibly imaging studies like an echocardiogram or computed tomography angiography of the coronary arteries. Immediate intervention will be considered based on clinical assessment and test results.",prov-1001,"Leslie Miller, MD",DFT^P03,Radiology,demo
+9bc1c04e-f589-41e8-9b1d-694319217be5,71046,R07.9,Chest X-Ray,"Narrative Report:
+
+Patient: A 65-year-old female presents with complaints of chest pain accompanied by shortness of breath (sob). The patient reports the onset of these symptoms approximately one hour ago following a meal, and they have been persistent. She describes the chest pain as an acute sensation located in her central chest area, which radiates to her left arm but not to his neck or jaw.
+
+She also mentions experiencing shortness of breath that is exacerbated by lying down. The patient has no significant history of cardiac disease, hypertension, diabetes, or other chronic conditions. She does have a past medical history of mild osteoarthritis in the knees and shoulders with occasional joint pain, which she manages with over-the-counter analgesics.
+
+On physical examination, vital signs are within normal limits except for her blood pressure at 130/85 mmHg, heart rate at 92 beats per minute, and respiratory rate of 20 breaths per minute. The patient is noted to be slightly pale but otherwise in no acute distress. Her abdomen is soft without tenderness or hepatosplenomegaly.
+
+The chest examination reveals a diminished breath sounds bilaterally with the patient's lungs being clear. Auscultation of her heart does not reveal any murmurs, rubs, or gallops. The cardiac rhythm appears regular and rate is within normal limits.
+
+Given the patient’s age and symptoms, including the presence of chest pain and shortness of breath, a thorough evaluation for coronary artery disease (CAD) is warranted to rule out acute ischemic events such as angina pectoris or myocardial infarction. Further diagnostic workup may include electrocardiogram (ECG), cardiac enzymes, and possibly imaging studies like an echocardiogram or computed tomography angiography of the coronary arteries. Immediate intervention will be considered based on clinical assessment and test results.",prov-1001,"Leslie Miller, MD",DFT^P03,Radiology,demo
+9bc1c04e-f589-41e8-9b1d-694319217be5,99213,R07.9,Chest X-Ray,"Narrative Report:
+
+Patient: A 65-year-old female presents with complaints of chest pain accompanied by shortness of breath (sob). The patient reports the onset of these symptoms approximately one hour ago following a meal, and they have been persistent. She describes the chest pain as an acute sensation located in her central chest area, which radiates to her left arm but not to his neck or jaw.
+
+She also mentions experiencing shortness of breath that is exacerbated by lying down. The patient has no significant history of cardiac disease, hypertension, diabetes, or other chronic conditions. She does have a past medical history of mild osteoarthritis in the knees and shoulders with occasional joint pain, which she manages with over-the-counter analgesics.
+
+On physical examination, vital signs are within normal limits except for her blood pressure at 130/85 mmHg, heart rate at 92 beats per minute, and respiratory rate of 20 breaths per minute. The patient is noted to be slightly pale but otherwise in no acute distress. Her abdomen is soft without tenderness or hepatosplenomegaly.
+
+The chest examination reveals a diminished breath sounds bilaterally with the patient's lungs being clear. Auscultation of her heart does not reveal any murmurs, rubs, or gallops. The cardiac rhythm appears regular and rate is within normal limits.
+
+Given the patient’s age and symptoms, including the presence of chest pain and shortness of breath, a thorough evaluation for coronary artery disease (CAD) is warranted to rule out acute ischemic events such as angina pectoris or myocardial infarction. Further diagnostic workup may include electrocardiogram (ECG), cardiac enzymes, and possibly imaging studies like an echocardiogram or computed tomography angiography of the coronary arteries. Immediate intervention will be considered based on clinical assessment and test results.",prov-1001,"Leslie Miller, MD",DFT^P03,Radiology,demo
+9bc1c04e-f589-41e8-9b1d-694319217be5,71275,R07.9,Chest X-Ray,"Narrative Report:
+
+Patient: A 65-year-old female presents with complaints of chest pain accompanied by shortness of breath (sob). The patient reports the onset of these symptoms approximately one hour ago following a meal, and they have been persistent. She describes the chest pain as an acute sensation located in her central chest area, which radiates to her left arm but not to his neck or jaw.
+
+She also mentions experiencing shortness of breath that is exacerbated by lying down. The patient has no significant history of cardiac disease, hypertension, diabetes, or other chronic conditions. She does have a past medical history of mild osteoarthritis in the knees and shoulders with occasional joint pain, which she manages with over-the-counter analgesics.
+
+On physical examination, vital signs are within normal limits except for her blood pressure at 130/85 mmHg, heart rate at 92 beats per minute, and respiratory rate of 20 breaths per minute. The patient is noted to be slightly pale but otherwise in no acute distress. Her abdomen is soft without tenderness or hepatosplenomegaly.
+
+The chest examination reveals a diminished breath sounds bilaterally with the patient's lungs being clear. Auscultation of her heart does not reveal any murmurs, rubs, or gallops. The cardiac rhythm appears regular and rate is within normal limits.
+
+Given the patient’s age and symptoms, including the presence of chest pain and shortness of breath, a thorough evaluation for coronary artery disease (CAD) is warranted to rule out acute ischemic events such as angina pectoris or myocardial infarction. Further diagnostic workup may include electrocardiogram (ECG), cardiac enzymes, and possibly imaging studies like an echocardiogram or computed tomography angiography of the coronary arteries. Immediate intervention will be considered based on clinical assessment and test results.",prov-1001,"Leslie Miller, MD",DFT^P03,Radiology,demo
+49b57624-3dd1-4143-9723-b928c979fdaf,71046,J45.909,Chest X-ray 2 views,"Patient is a 45-year-old female presenting with shortness of breath (SOB). The patient reports difficulty in breathing that has been progressively worsening over the past few weeks, sometimes occurring during physical exertion and even at rest. This symptom is notably more pronounced when she engages in activities such as climbing stairs or walking uphill. Additionally, the patient mentions occasional episodes where she feels like she cannot get enough air, which can be distressing. She does not report any associated symptoms such as chest pain, cough, fever, or significant weight loss. The shortness of breath is noted to improve with a brief rest but recurs after resuming her usual activities. Given the patient's age and history of progressive onset of symptoms, it is important for further evaluation to determine the underlying cause.",prov-1001,"Leslie Miller, MD",DFT^P03,Radiology,demo
+52d221b5-0125-4ff0-b2ac-c75af51a694e,71046,R06.02,Chest X-ray 2 views,"Patient is a 45-year-old female presenting with shortness of breath (SOB). The patient reports difficulty in breathing that has been progressively worsening over the past few weeks, sometimes occurring during physical exertion and even at rest. This symptom is notably more pronounced when she engages in activities such as climbing stairs or walking uphill. Additionally, the patient mentions occasional episodes where she feels like she cannot get enough air, which can be distressing. She does not report any associated symptoms such as chest pain, cough, fever, or significant weight loss. The shortness of breath is noted to improve with a brief rest but recurs after resuming her usual activities. Given the patient's age and history of progressive onset of symptoms, it is important for further evaluation to determine the underlying cause.",prov-1001,"Leslie Miller, MD",DFT^P03,Radiology,demo
+6ded7ac3-a726-49a9-8898-00cb0126c49f,71046,R06.02,Chest X-ray 2 views,"Patient is a 45-year-old female presenting with shortness of breath (SOB). The patient reports difficulty in breathing that has been progressively worsening over the past few weeks, sometimes occurring during physical exertion and even at rest. This symptom is notably more pronounced when she engages in activities such as climbing stairs or walking uphill. Additionally, the patient mentions occasional episodes where she feels like she cannot get enough air, which can be distressing. She does not report any associated symptoms such as chest pain, cough, fever, or significant weight loss. The shortness of breath is noted to improve with a brief rest but recurs after resuming her usual activities. Given the patient's age and history of progressive onset of symptoms, it is important for further evaluation to determine the underlying cause.",prov-1001,"Leslie Miller, MD",DFT^P03,Radiology,demo
+6ded7ac3-a726-49a9-8898-00cb0126c49f,71046,J45.909,Chest X-ray 2 views,"Patient is a 45-year-old female presenting with shortness of breath (SOB). The patient reports difficulty in breathing that has been progressively worsening over the past few weeks, sometimes occurring during physical exertion and even at rest. This symptom is notably more pronounced when she engages in activities such as climbing stairs or walking uphill. Additionally, the patient mentions occasional episodes where she feels like she cannot get enough air, which can be distressing. She does not report any associated symptoms such as chest pain, cough, fever, or significant weight loss. The shortness of breath is noted to improve with a brief rest but recurs after resuming her usual activities. Given the patient's age and history of progressive onset of symptoms, it is important for further evaluation to determine the underlying cause.",prov-1001,"Leslie Miller, MD",DFT^P03,Radiology,demo
+b1de40be-c7e0-449f-b638-f176d10f2dac,71046,R06.02,Chest X-ray 2 views,"**Radiology Report:**
+
+Patient Information:
+- **Name:** John Doe
+- **Age:** 45 years
+- **Gender:** Male
+
+**Clinical Indication:** 
+The patient was referred for a chest X-ray to evaluate for any pulmonary abnormalities following symptoms of chronic cough and shortness of breath.
+
+**Technique:**
+- **Imaging Technique:** Chest X-ray (CXR)
+- **Positioning:** Posteroanterior view
+- **Exposure Settings:** Standard radiographic settings used in the department
+
+**Findings:**
+- The posteroanterior chest radiograph demonstrates a normal lung field distribution without any significant consolidation, pneumothorax, or pleural effusion.
+- Bilateral hilar shadows are noted but not considered to be abnormal for this age and gender. 
+- No evidence of cardiomegaly is observed.
+- There is no significant cardiac displacement.
+
+**Impression:**
+The chest X-ray appears normal with no significant findings that would suggest pulmonary pathology. The patient’s symptoms may require further evaluation, including a more detailed imaging study such as a computed tomography (CT) scan of the thorax or other diagnostic procedures to determine the cause of their chronic cough and shortness of breath.",prov-1001,"Leslie Miller, MD",DFT^P03,Radiology,demo
+c4a8faa3-7608-46cc-84d2-f0f744afb384,,T14.8XXA,,"Narrative Report:
+
+Patient: A 24-year-old male presents to the emergency department with a complaint of pain and swelling in his left wrist following an injury during physical activity.
+
+Upon examination, there is significant tenderness over the distal radius indicating a fracture. The patient exhibits inability to actively move the affected wrist, forearm muscles are atrophied, and there is noticeable deformity suggesting a Colles' fracture or similar type of distal radius fracture.
+
+The diagnosis made upon this presentation includes:
+
+1. Distal Radius Fracture (Colles' Fracture)
+2. Possible associated soft tissue injury
+
+Further diagnostic imaging such as X-ray is indicated to confirm the nature and extent of the fracture, which will guide subsequent treatment plans including immobilization via splint or cast, potential surgical intervention if necessary, and physiotherapy for recovery.
+
+Patient has been advised to avoid weight-bearing on the affected limb until further assessment. Pain management strategies have also been discussed with the patient, including over-the-counter analgesics as needed.
+
+Follow-up is scheduled for X-ray imaging and review of fracture healing progress.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+ee6f818e-0a73-4a5e-96db-a72f77e60355,73521,M84.459,,"Narrative Report:
+
+Patient: A 65-year-old female has presented with a diagnosis of hip fracture. The patient is currently in the acute care setting following an incident where she sustained a significant injury to her hip region.
+
+The primary complaint was related to sudden, severe pain and inability to bear weight on the affected lower extremity. Upon physical examination, there were findings consistent with a displaced femoral neck fracture, necessitating immediate intervention for stabilization and surgical planning.
+
+Further diagnostic workup included imaging studies such as an X-ray or possibly a CT scan of the hip, which confirmed the diagnosis of a displaced femoral neck fracture. The patient is now under the care of orthopedic surgeons who are preparing her for surgery to address this injury. Postoperative plans include rehabilitation and physical therapy aimed at restoring function and mobility while managing pain.
+
+The treatment plan also includes addressing potential complications such as deep vein thrombosis, infection, and ensuring proper nutrition to facilitate healing. The patient's family has been informed of the situation and is closely involved in her care decisions.
+
+Throughout this process, the healthcare team will continue to monitor the patient’s condition, adjust treatments as necessary, and provide comprehensive support services to ensure a positive outcome for recovery.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+b76052d4-cdd6-4070-9ea0-cc1821b45b0d,71047,J44.9,,"Patient Information: A 40-year-old female presenting with shortness of breath (SOB) and is identified as a current smoker.
+
+The patient reports experiencing difficulty breathing during physical activity and at rest, which has been progressively worsening over the past few months. She describes her symptoms as uncomfortable and affecting her daily activities such as walking up stairs or carrying groceries.
+
+Given her age, sex, and presentation of shortness of breath with a history of smoking, it is important to consider several potential causes including but not limited to chronic obstructive pulmonary disease (COPD), interstitial lung diseases, heart failure, anxiety, or other respiratory conditions. Further diagnostic evaluation will be necessary to determine the exact cause of her symptoms and appropriate management plan.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+b6461bfb-f592-45eb-9e4c-21d38ccf78d9,71046,R06.02,,"Patient Information: A 41-year-old female presenting with shortness of breath (SOB). The patient is identified as a current smoker.
+
+Clinical Note: The patient reports experiencing shortness of breath during physical activity and at rest, which has been worsening over the past few weeks. She describes it as difficulty in breathing that makes her feel winded quickly after walking up stairs or performing light household chores. Additionally, she notes episodes where she feels short of breath while sleeping, often waking up feeling like she needs to take a deep breath.
+
+Given the patient's age and history of smoking (current smoker), these symptoms may be indicative of conditions such as chronic obstructive pulmonary disease (COPD) or interstitial lung disease. Further evaluation including imaging studies and pulmonary function tests would be warranted to determine the underlying cause. Immediate attention is recommended, especially considering her reported worsening shortness of breath.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+0d3ac5c4-d171-4a2e-a83c-efa1dd620ab7,73521,M84.459,,"Narrative Report:
+
+Patient: A 65-year-old female with a history of osteoporosis presenting to the emergency department following an incident where she fell and landed on her hip.
+
+Upon examination, the patient was found to have significant deformity and pain in the right hip region. Imaging studies confirmed a displaced femoral neck fracture. The physician decided upon surgical intervention for fixation of the fracture, with the aim of restoring stability and preventing further complications such as avascular necrosis or dislocation.
+
+Throughout her hospital stay, the patient required close monitoring due to the complexity of her injury. She was administered pain management protocols, including intravenous analgesics, which were adjusted based on her clinical response and tolerance. Physical therapy was initiated early in her recovery process to help maintain muscle strength and joint mobility while ensuring that she could safely transition from bed rest to ambulation.
+
+The patient's dietary needs were managed with a high-calorie, high-protein diet to aid in healing and prevent malnutrition. She required assistance with activities of daily living initially but was encouraged to participate in therapeutic exercises designed to promote recovery.
+
+Post-discharge care included instructions on safe mobility techniques, use of assistive devices, and the importance of continued physical therapy sessions for strengthening and rehabilitation. The patient's follow-up appointments were scheduled to monitor her progress and adjust treatment plans as necessary.
+
+Throughout this process, the patient demonstrated resilience and a proactive approach towards her recovery, which was instrumental in achieving optimal outcomes.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+1356bc7d-fc9b-4389-99f7-3821de90f177,73521,M84.459,,"Narrative Report:
+
+Patient: A 65-year-old female with a history of osteoporosis presenting to the emergency department following an incident where she fell and landed on her hip.
+
+Upon examination, the patient was found to have significant deformity and pain in the right hip region. Imaging studies confirmed a displaced femoral neck fracture. The physician decided upon surgical intervention for fixation of the fracture, with the aim of restoring stability and preventing further complications such as avascular necrosis or dislocation.
+
+Throughout her hospital stay, the patient required close monitoring due to the complexity of her injury. She was administered pain management protocols, including intravenous analgesics, which were adjusted based on her clinical response and tolerance. Physical therapy was initiated early in her recovery process to help maintain muscle strength and joint mobility while ensuring that she could safely transition from bed rest to ambulation.
+
+The patient's dietary needs were managed with a high-calorie, high-protein diet to aid in healing and prevent malnutrition. She required assistance with activities of daily living initially but was encouraged to participate in therapeutic exercises designed to promote recovery.
+
+Post-discharge care included instructions on safe mobility techniques, use of assistive devices, and the importance of continued physical therapy sessions for strengthening and rehabilitation. The patient's follow-up appointments were scheduled to monitor her progress and adjust treatment plans as necessary.
+
+Throughout this process, the patient demonstrated resilience and a proactive approach towards her recovery, which was instrumental in achieving optimal outcomes.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+78f9488c-98a7-4290-bcb9-dde0028e441a,73610,M84.672,,"NARRATIVE REPORT
+
+Patient: A 55-year-old male patient presented to the emergency department with complaints of sudden onset pain and swelling in his left ankle following an incident where he stepped on a sharp object while walking.
+
+Upon examination, it was observed that there were significant signs of soft tissue injury around the left ankle. The patient exhibited marked tenderness over the medial malleolus, palpable crepitus upon passive dorsiflexion, and swelling in the region. There was no significant deformity or abnormal motion noted. X-rays revealed a fracture at the mid to distal third of the left tibia and fibula, confirming an ankle fracture.
+
+The patient is scheduled for immobilization with a below-knee splint to stabilize the injury and prevent further displacement. Post-operative care will include pain management, monitoring for signs of infection or compartment syndrome, and scheduling follow-up appointments for wound care and potential surgical intervention if necessary. The patient has been advised on activities that should be avoided until healing is complete.
+
+The medical team will also ensure comprehensive documentation in the electronic health record to inform continuity of care across different healthcare settings.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+78f9488c-98a7-4290-bcb9-dde0028e441a,S8451,M84.672,,"NARRATIVE REPORT
+
+Patient: A 55-year-old male patient presented to the emergency department with complaints of sudden onset pain and swelling in his left ankle following an incident where he stepped on a sharp object while walking.
+
+Upon examination, it was observed that there were significant signs of soft tissue injury around the left ankle. The patient exhibited marked tenderness over the medial malleolus, palpable crepitus upon passive dorsiflexion, and swelling in the region. There was no significant deformity or abnormal motion noted. X-rays revealed a fracture at the mid to distal third of the left tibia and fibula, confirming an ankle fracture.
+
+The patient is scheduled for immobilization with a below-knee splint to stabilize the injury and prevent further displacement. Post-operative care will include pain management, monitoring for signs of infection or compartment syndrome, and scheduling follow-up appointments for wound care and potential surgical intervention if necessary. The patient has been advised on activities that should be avoided until healing is complete.
+
+The medical team will also ensure comprehensive documentation in the electronic health record to inform continuity of care across different healthcare settings.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+0d3bd771-6801-4131-aced-aae6e1c2d62f,73610,M84.672,,"The patient is a 55-year-old male who presented to the emergency department with an ankle fracture. The patient reported falling from a height of approximately three feet while attempting to catch a ball. Upon arrival, the patient was experiencing significant pain in his right ankle and had limited range of motion.
+
+On physical examination, there was noticeable swelling and bruising around the ankle area. Palpation revealed tenderness over the lateral malleolus with no bony tenderness noted. There was a visible deformity at the site of injury, suggesting a possible displacement. The patient's dorsiflexion and plantarflexion were significantly limited due to pain.
+
+An X-ray was ordered and confirmed a displaced fracture involving the lateral malleolus of the right ankle. No other bony abnormalities or soft tissue injuries were noted on imaging.
+
+The patient was administered intravenous analgesics for pain management, and an orthopedic consultation was arranged. The plan is to proceed with closed reduction under anesthesia followed by immobilization in a cast. Further follow-up will be scheduled to monitor the healing process and ensure proper alignment of the fracture site.
+
+The patient's vital signs are stable at this time: blood pressure 130/85 mmHg, heart rate 78 bpm, respiratory rate 16 breaths per minute, and oxygen saturation 98% on room air. The patient is alert and oriented to person, place, and time.
+
+The patient was informed of the treatment plan and consented to proceed with the closed reduction under anesthesia as scheduled for tomorrow morning.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+0d3bd771-6801-4131-aced-aae6e1c2d62f,S8451,M84.672,,"The patient is a 55-year-old male who presented to the emergency department with an ankle fracture. The patient reported falling from a height of approximately three feet while attempting to catch a ball. Upon arrival, the patient was experiencing significant pain in his right ankle and had limited range of motion.
+
+On physical examination, there was noticeable swelling and bruising around the ankle area. Palpation revealed tenderness over the lateral malleolus with no bony tenderness noted. There was a visible deformity at the site of injury, suggesting a possible displacement. The patient's dorsiflexion and plantarflexion were significantly limited due to pain.
+
+An X-ray was ordered and confirmed a displaced fracture involving the lateral malleolus of the right ankle. No other bony abnormalities or soft tissue injuries were noted on imaging.
+
+The patient was administered intravenous analgesics for pain management, and an orthopedic consultation was arranged. The plan is to proceed with closed reduction under anesthesia followed by immobilization in a cast. Further follow-up will be scheduled to monitor the healing process and ensure proper alignment of the fracture site.
+
+The patient's vital signs are stable at this time: blood pressure 130/85 mmHg, heart rate 78 bpm, respiratory rate 16 breaths per minute, and oxygen saturation 98% on room air. The patient is alert and oriented to person, place, and time.
+
+The patient was informed of the treatment plan and consented to proceed with the closed reduction under anesthesia as scheduled for tomorrow morning.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+0d3bd771-6801-4131-aced-aae6e1c2d62f,73610,T14.8XXA,,"The patient is a 55-year-old male who presented to the emergency department with an ankle fracture. The patient reported falling from a height of approximately three feet while attempting to catch a ball. Upon arrival, the patient was experiencing significant pain in his right ankle and had limited range of motion.
+
+On physical examination, there was noticeable swelling and bruising around the ankle area. Palpation revealed tenderness over the lateral malleolus with no bony tenderness noted. There was a visible deformity at the site of injury, suggesting a possible displacement. The patient's dorsiflexion and plantarflexion were significantly limited due to pain.
+
+An X-ray was ordered and confirmed a displaced fracture involving the lateral malleolus of the right ankle. No other bony abnormalities or soft tissue injuries were noted on imaging.
+
+The patient was administered intravenous analgesics for pain management, and an orthopedic consultation was arranged. The plan is to proceed with closed reduction under anesthesia followed by immobilization in a cast. Further follow-up will be scheduled to monitor the healing process and ensure proper alignment of the fracture site.
+
+The patient's vital signs are stable at this time: blood pressure 130/85 mmHg, heart rate 78 bpm, respiratory rate 16 breaths per minute, and oxygen saturation 98% on room air. The patient is alert and oriented to person, place, and time.
+
+The patient was informed of the treatment plan and consented to proceed with the closed reduction under anesthesia as scheduled for tomorrow morning.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+0d3bd771-6801-4131-aced-aae6e1c2d62f,S8451,T14.8XXA,,"The patient is a 55-year-old male who presented to the emergency department with an ankle fracture. The patient reported falling from a height of approximately three feet while attempting to catch a ball. Upon arrival, the patient was experiencing significant pain in his right ankle and had limited range of motion.
+
+On physical examination, there was noticeable swelling and bruising around the ankle area. Palpation revealed tenderness over the lateral malleolus with no bony tenderness noted. There was a visible deformity at the site of injury, suggesting a possible displacement. The patient's dorsiflexion and plantarflexion were significantly limited due to pain.
+
+An X-ray was ordered and confirmed a displaced fracture involving the lateral malleolus of the right ankle. No other bony abnormalities or soft tissue injuries were noted on imaging.
+
+The patient was administered intravenous analgesics for pain management, and an orthopedic consultation was arranged. The plan is to proceed with closed reduction under anesthesia followed by immobilization in a cast. Further follow-up will be scheduled to monitor the healing process and ensure proper alignment of the fracture site.
+
+The patient's vital signs are stable at this time: blood pressure 130/85 mmHg, heart rate 78 bpm, respiratory rate 16 breaths per minute, and oxygen saturation 98% on room air. The patient is alert and oriented to person, place, and time.
+
+The patient was informed of the treatment plan and consented to proceed with the closed reduction under anesthesia as scheduled for tomorrow morning.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+367ebcd6-75a0-4b3f-adef-82f335f743a6,73610,M84.672,,"The patient is a 55-year-old male who presented to the emergency department with an ankle fracture. The patient reported falling from a height of approximately three feet while attempting to catch a ball. Upon arrival, the patient was experiencing significant pain in his right ankle and had limited range of motion.
+
+On physical examination, there was noticeable swelling and bruising around the ankle area. Palpation revealed tenderness over the lateral malleolus with no bony tenderness noted. There was a visible deformity at the site of injury, suggesting a possible displacement. The patient's dorsiflexion and plantarflexion were significantly limited due to pain.
+
+An X-ray was ordered and confirmed a displaced fracture involving the lateral malleolus of the right ankle. No other bony abnormalities or soft tissue injuries were noted on imaging.
+
+The patient was administered intravenous analgesics for pain management, and an orthopedic consultation was arranged. The plan is to proceed with closed reduction under anesthesia followed by immobilization in a cast. Further follow-up will be scheduled to monitor the healing process and ensure proper alignment of the fracture site.
+
+The patient's vital signs are stable at this time: blood pressure 130/85 mmHg, heart rate 78 bpm, respiratory rate 16 breaths per minute, and oxygen saturation 98% on room air. The patient is alert and oriented to person, place, and time.
+
+The patient was informed of the treatment plan and consented to proceed with the closed reduction under anesthesia as scheduled for tomorrow morning.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+367ebcd6-75a0-4b3f-adef-82f335f743a6,S8451,M84.672,,"The patient is a 55-year-old male who presented to the emergency department with an ankle fracture. The patient reported falling from a height of approximately three feet while attempting to catch a ball. Upon arrival, the patient was experiencing significant pain in his right ankle and had limited range of motion.
+
+On physical examination, there was noticeable swelling and bruising around the ankle area. Palpation revealed tenderness over the lateral malleolus with no bony tenderness noted. There was a visible deformity at the site of injury, suggesting a possible displacement. The patient's dorsiflexion and plantarflexion were significantly limited due to pain.
+
+An X-ray was ordered and confirmed a displaced fracture involving the lateral malleolus of the right ankle. No other bony abnormalities or soft tissue injuries were noted on imaging.
+
+The patient was administered intravenous analgesics for pain management, and an orthopedic consultation was arranged. The plan is to proceed with closed reduction under anesthesia followed by immobilization in a cast. Further follow-up will be scheduled to monitor the healing process and ensure proper alignment of the fracture site.
+
+The patient's vital signs are stable at this time: blood pressure 130/85 mmHg, heart rate 78 bpm, respiratory rate 16 breaths per minute, and oxygen saturation 98% on room air. The patient is alert and oriented to person, place, and time.
+
+The patient was informed of the treatment plan and consented to proceed with the closed reduction under anesthesia as scheduled for tomorrow morning.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+367ebcd6-75a0-4b3f-adef-82f335f743a6,73610,T14.8XXA,,"The patient is a 55-year-old male who presented to the emergency department with an ankle fracture. The patient reported falling from a height of approximately three feet while attempting to catch a ball. Upon arrival, the patient was experiencing significant pain in his right ankle and had limited range of motion.
+
+On physical examination, there was noticeable swelling and bruising around the ankle area. Palpation revealed tenderness over the lateral malleolus with no bony tenderness noted. There was a visible deformity at the site of injury, suggesting a possible displacement. The patient's dorsiflexion and plantarflexion were significantly limited due to pain.
+
+An X-ray was ordered and confirmed a displaced fracture involving the lateral malleolus of the right ankle. No other bony abnormalities or soft tissue injuries were noted on imaging.
+
+The patient was administered intravenous analgesics for pain management, and an orthopedic consultation was arranged. The plan is to proceed with closed reduction under anesthesia followed by immobilization in a cast. Further follow-up will be scheduled to monitor the healing process and ensure proper alignment of the fracture site.
+
+The patient's vital signs are stable at this time: blood pressure 130/85 mmHg, heart rate 78 bpm, respiratory rate 16 breaths per minute, and oxygen saturation 98% on room air. The patient is alert and oriented to person, place, and time.
+
+The patient was informed of the treatment plan and consented to proceed with the closed reduction under anesthesia as scheduled for tomorrow morning.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+367ebcd6-75a0-4b3f-adef-82f335f743a6,S8451,T14.8XXA,,"The patient is a 55-year-old male who presented to the emergency department with an ankle fracture. The patient reported falling from a height of approximately three feet while attempting to catch a ball. Upon arrival, the patient was experiencing significant pain in his right ankle and had limited range of motion.
+
+On physical examination, there was noticeable swelling and bruising around the ankle area. Palpation revealed tenderness over the lateral malleolus with no bony tenderness noted. There was a visible deformity at the site of injury, suggesting a possible displacement. The patient's dorsiflexion and plantarflexion were significantly limited due to pain.
+
+An X-ray was ordered and confirmed a displaced fracture involving the lateral malleolus of the right ankle. No other bony abnormalities or soft tissue injuries were noted on imaging.
+
+The patient was administered intravenous analgesics for pain management, and an orthopedic consultation was arranged. The plan is to proceed with closed reduction under anesthesia followed by immobilization in a cast. Further follow-up will be scheduled to monitor the healing process and ensure proper alignment of the fracture site.
+
+The patient's vital signs are stable at this time: blood pressure 130/85 mmHg, heart rate 78 bpm, respiratory rate 16 breaths per minute, and oxygen saturation 98% on room air. The patient is alert and oriented to person, place, and time.
+
+The patient was informed of the treatment plan and consented to proceed with the closed reduction under anesthesia as scheduled for tomorrow morning.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+a5366927-432c-47ab-804f-53ba8a461566,73610,M84.672,,"The patient is a 55-year-old male who presented to the emergency department with an ankle fracture. The patient reported falling from a height of approximately three feet while attempting to catch a ball. Upon arrival, the patient was experiencing significant pain in his right ankle and had limited range of motion.
+
+On physical examination, there was noticeable swelling and bruising around the ankle area. Palpation revealed tenderness over the lateral malleolus with no bony tenderness noted. There was a visible deformity at the site of injury, suggesting a possible displacement. The patient's dorsiflexion and plantarflexion were significantly limited due to pain.
+
+An X-ray was ordered and confirmed a displaced fracture involving the lateral malleolus of the right ankle. No other bony abnormalities or soft tissue injuries were noted on imaging.
+
+The patient was administered intravenous analgesics for pain management, and an orthopedic consultation was arranged. The plan is to proceed with closed reduction under anesthesia followed by immobilization in a cast. Further follow-up will be scheduled to monitor the healing process and ensure proper alignment of the fracture site.
+
+The patient's vital signs are stable at this time: blood pressure 130/85 mmHg, heart rate 78 bpm, respiratory rate 16 breaths per minute, and oxygen saturation 98% on room air. The patient is alert and oriented to person, place, and time.
+
+The patient was informed of the treatment plan and consented to proceed with the closed reduction under anesthesia as scheduled for tomorrow morning.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+a5366927-432c-47ab-804f-53ba8a461566,S8451,M84.672,,"The patient is a 55-year-old male who presented to the emergency department with an ankle fracture. The patient reported falling from a height of approximately three feet while attempting to catch a ball. Upon arrival, the patient was experiencing significant pain in his right ankle and had limited range of motion.
+
+On physical examination, there was noticeable swelling and bruising around the ankle area. Palpation revealed tenderness over the lateral malleolus with no bony tenderness noted. There was a visible deformity at the site of injury, suggesting a possible displacement. The patient's dorsiflexion and plantarflexion were significantly limited due to pain.
+
+An X-ray was ordered and confirmed a displaced fracture involving the lateral malleolus of the right ankle. No other bony abnormalities or soft tissue injuries were noted on imaging.
+
+The patient was administered intravenous analgesics for pain management, and an orthopedic consultation was arranged. The plan is to proceed with closed reduction under anesthesia followed by immobilization in a cast. Further follow-up will be scheduled to monitor the healing process and ensure proper alignment of the fracture site.
+
+The patient's vital signs are stable at this time: blood pressure 130/85 mmHg, heart rate 78 bpm, respiratory rate 16 breaths per minute, and oxygen saturation 98% on room air. The patient is alert and oriented to person, place, and time.
+
+The patient was informed of the treatment plan and consented to proceed with the closed reduction under anesthesia as scheduled for tomorrow morning.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+a5366927-432c-47ab-804f-53ba8a461566,73610,T14.8XXA,,"The patient is a 55-year-old male who presented to the emergency department with an ankle fracture. The patient reported falling from a height of approximately three feet while attempting to catch a ball. Upon arrival, the patient was experiencing significant pain in his right ankle and had limited range of motion.
+
+On physical examination, there was noticeable swelling and bruising around the ankle area. Palpation revealed tenderness over the lateral malleolus with no bony tenderness noted. There was a visible deformity at the site of injury, suggesting a possible displacement. The patient's dorsiflexion and plantarflexion were significantly limited due to pain.
+
+An X-ray was ordered and confirmed a displaced fracture involving the lateral malleolus of the right ankle. No other bony abnormalities or soft tissue injuries were noted on imaging.
+
+The patient was administered intravenous analgesics for pain management, and an orthopedic consultation was arranged. The plan is to proceed with closed reduction under anesthesia followed by immobilization in a cast. Further follow-up will be scheduled to monitor the healing process and ensure proper alignment of the fracture site.
+
+The patient's vital signs are stable at this time: blood pressure 130/85 mmHg, heart rate 78 bpm, respiratory rate 16 breaths per minute, and oxygen saturation 98% on room air. The patient is alert and oriented to person, place, and time.
+
+The patient was informed of the treatment plan and consented to proceed with the closed reduction under anesthesia as scheduled for tomorrow morning.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+a5366927-432c-47ab-804f-53ba8a461566,S8451,T14.8XXA,,"The patient is a 55-year-old male who presented to the emergency department with an ankle fracture. The patient reported falling from a height of approximately three feet while attempting to catch a ball. Upon arrival, the patient was experiencing significant pain in his right ankle and had limited range of motion.
+
+On physical examination, there was noticeable swelling and bruising around the ankle area. Palpation revealed tenderness over the lateral malleolus with no bony tenderness noted. There was a visible deformity at the site of injury, suggesting a possible displacement. The patient's dorsiflexion and plantarflexion were significantly limited due to pain.
+
+An X-ray was ordered and confirmed a displaced fracture involving the lateral malleolus of the right ankle. No other bony abnormalities or soft tissue injuries were noted on imaging.
+
+The patient was administered intravenous analgesics for pain management, and an orthopedic consultation was arranged. The plan is to proceed with closed reduction under anesthesia followed by immobilization in a cast. Further follow-up will be scheduled to monitor the healing process and ensure proper alignment of the fracture site.
+
+The patient's vital signs are stable at this time: blood pressure 130/85 mmHg, heart rate 78 bpm, respiratory rate 16 breaths per minute, and oxygen saturation 98% on room air. The patient is alert and oriented to person, place, and time.
+
+The patient was informed of the treatment plan and consented to proceed with the closed reduction under anesthesia as scheduled for tomorrow morning.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+3f3c3bfe-a1c0-41d6-a2e5-844e699308d9,73110,S62.185,,"Patient Information: Female, aged 25 years, presents with a history of wrist trauma resulting in a wrist fracture.
+
+Physical Examination: Upon examination, the patient exhibits significant swelling and bruising around the right wrist. There is marked tenderness upon palpation over the distal radius region. The range of motion for the wrist is restricted; active dorsiflexion, palmar flexion, radial deviation, ulnar deviation, and opposition are all limited in degree.
+
+Imaging: X-ray imaging confirms a diagnosis of a Colles' fracture (distal radius fracture) with evidence of angulation. The patient's right wrist appears to have displaced posteriorly due to the nature of the fracture pattern observed on radiographic images.
+
+Diagnosis: Distal Radius Fracture, specifically a Colles' fracture with associated displacement and soft tissue injury.
+
+Treatment Plan: Immediate immobilization is required for this patient in order to prevent further angulation and promote healing. The use of a cast or splint will be implemented by the healthcare provider. Additionally, referral to physical therapy may be necessary upon stabilization to ensure proper range of motion and strength restoration as the fracture heals.
+
+Follow-Up: Regular follow-up with the patient is essential for monitoring progress towards recovery and ensuring that the treatment plan is effective. Early intervention in the form of physiotherapy can significantly improve outcomes and reduce complications related to this type of injury.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+3f3c3bfe-a1c0-41d6-a2e5-844e699308d9,S8451,S62.185,,"Patient Information: Female, aged 25 years, presents with a history of wrist trauma resulting in a wrist fracture.
+
+Physical Examination: Upon examination, the patient exhibits significant swelling and bruising around the right wrist. There is marked tenderness upon palpation over the distal radius region. The range of motion for the wrist is restricted; active dorsiflexion, palmar flexion, radial deviation, ulnar deviation, and opposition are all limited in degree.
+
+Imaging: X-ray imaging confirms a diagnosis of a Colles' fracture (distal radius fracture) with evidence of angulation. The patient's right wrist appears to have displaced posteriorly due to the nature of the fracture pattern observed on radiographic images.
+
+Diagnosis: Distal Radius Fracture, specifically a Colles' fracture with associated displacement and soft tissue injury.
+
+Treatment Plan: Immediate immobilization is required for this patient in order to prevent further angulation and promote healing. The use of a cast or splint will be implemented by the healthcare provider. Additionally, referral to physical therapy may be necessary upon stabilization to ensure proper range of motion and strength restoration as the fracture heals.
+
+Follow-Up: Regular follow-up with the patient is essential for monitoring progress towards recovery and ensuring that the treatment plan is effective. Early intervention in the form of physiotherapy can significantly improve outcomes and reduce complications related to this type of injury.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+71c6a291-40a7-4a97-8240-4c49bf121937,73110,S52.362,,"NARRATIVE REPORT
+
+Patient: A 55-year-old male patient was admitted to the hospital following an incident where he sustained a wrist fracture.
+
+The patient presented with significant pain and swelling in his right wrist, which had occurred after falling on an outstretched hand. Physical examination revealed a palpable deformity of the wrist, evident crepitus upon movement, and marked limitation of motion. X-rays confirmed a distal radius fracture (Colles' fracture), confirming the diagnosis.
+
+Given the severity of the injury, surgical intervention was deemed necessary to ensure proper alignment and stabilization of the bone. The patient underwent open reduction and internal fixation with plates and screws in his right wrist. Post-operatively, the patient received analgesic management and physical therapy aimed at regaining range of motion and strength within their recovery period.
+
+The patient is currently stable and progressing well towards functional rehabilitation goals. His medical team will continue to monitor him for any complications related to surgical intervention or fracture healing.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+71c6a291-40a7-4a97-8240-4c49bf121937,S8451,S52.362,,"NARRATIVE REPORT
+
+Patient: A 55-year-old male patient was admitted to the hospital following an incident where he sustained a wrist fracture.
+
+The patient presented with significant pain and swelling in his right wrist, which had occurred after falling on an outstretched hand. Physical examination revealed a palpable deformity of the wrist, evident crepitus upon movement, and marked limitation of motion. X-rays confirmed a distal radius fracture (Colles' fracture), confirming the diagnosis.
+
+Given the severity of the injury, surgical intervention was deemed necessary to ensure proper alignment and stabilization of the bone. The patient underwent open reduction and internal fixation with plates and screws in his right wrist. Post-operatively, the patient received analgesic management and physical therapy aimed at regaining range of motion and strength within their recovery period.
+
+The patient is currently stable and progressing well towards functional rehabilitation goals. His medical team will continue to monitor him for any complications related to surgical intervention or fracture healing.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+e85c233b-5fc2-41ba-a15c-045257405d1b,73110,Y38.80,,"NARRATIVE REPORT
+
+Patient: A 55-year-old male patient was admitted to the hospital following an incident where he sustained a wrist fracture.
+
+The patient presented with significant pain and swelling in his right wrist, which had occurred after falling on an outstretched hand. Physical examination revealed a palpable deformity of the wrist, evident crepitus upon movement, and marked limitation of motion. X-rays confirmed a distal radius fracture (Colles' fracture), confirming the diagnosis.
+
+Given the severity of the injury, surgical intervention was deemed necessary to ensure proper alignment and stabilization of the bone. The patient underwent open reduction and internal fixation with plates and screws in his right wrist. Post-operatively, the patient received analgesic management and physical therapy aimed at regaining range of motion and strength within their recovery period.
+
+The patient is currently stable and progressing well towards functional rehabilitation goals. His medical team will continue to monitor him for any complications related to surgical intervention or fracture healing.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+e85c233b-5fc2-41ba-a15c-045257405d1b,S8451,Y38.80,,"NARRATIVE REPORT
+
+Patient: A 55-year-old male patient was admitted to the hospital following an incident where he sustained a wrist fracture.
+
+The patient presented with significant pain and swelling in his right wrist, which had occurred after falling on an outstretched hand. Physical examination revealed a palpable deformity of the wrist, evident crepitus upon movement, and marked limitation of motion. X-rays confirmed a distal radius fracture (Colles' fracture), confirming the diagnosis.
+
+Given the severity of the injury, surgical intervention was deemed necessary to ensure proper alignment and stabilization of the bone. The patient underwent open reduction and internal fixation with plates and screws in his right wrist. Post-operatively, the patient received analgesic management and physical therapy aimed at regaining range of motion and strength within their recovery period.
+
+The patient is currently stable and progressing well towards functional rehabilitation goals. His medical team will continue to monitor him for any complications related to surgical intervention or fracture healing.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+deebc477-c76f-4da1-84d3-f738f7a4a96f,73110,S62.185,,"NARRATIVE REPORT
+
+Patient: A 34-year-old female presents with a history of trauma to her left wrist. The patient reports experiencing sudden pain and inability to move the wrist following an accidental fall onto an outstretched hand.
+
+Upon examination, the patient is found to have significant tenderness over the distal radius, indicative of a Colles' fracture. There are visible deformities suggesting angulation with possible displacement of the bone fragments. The patient's ability to actively extend and flex her fingers is limited, further supporting the diagnosis of wrist injury.
+
+Given the clinical presentation and physical examination findings, it is determined that the patient has sustained a left distal radius fracture (wrist fracture). Immediate orthopedic consultation is recommended for definitive management, which may include immobilization with a cast or splint to prevent displacement of bone fragments and promote proper healing. Pain management strategies should also be initiated as per the patient's comfort level.
+
+Further investigation such as X-rays will be necessary to confirm the diagnosis and assess the extent of fracture, including whether any other bones are involved (e.g., ulna). Early intervention is crucial for optimal recovery from this type of injury.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+73244bc0-af97-442a-bd6c-dec43db66dbc,73110,S62.185,,"Patient Information: A 33-year-old male has presented to the emergency department with complaints of a wrist injury sustained approximately two hours prior. The patient describes experiencing sudden pain and inability to move his right wrist following an accidental fall onto an outstretched hand.
+
+Upon examination, significant swelling is observed around the right wrist, particularly on the dorsum (back) of the wrist. There are visible deformities consistent with a fracture, including angulation and loss of normal contour. The patient exhibits significant pain upon passive manipulation of the wrist joint, further supporting a diagnosis of a wrist fracture.
+
+X-rays have confirmed the presence of a distal radius fracture, specifically a Colles' fracture (extension type). Given the nature of this injury, surgical intervention is not immediately indicated; however, it is essential to ensure proper alignment and immobilization. The patient has been advised on appropriate splinting techniques for home use until definitive orthopedic care can be arranged.
+
+The patient is currently stable with no signs of compartment syndrome or other associated injuries. Post-discharge instructions include monitoring for any changes in skin color, temperature, or pulse around the wrist as these could indicate potential complications such as ischemia or infection. Additionally, regular follow-up appointments are scheduled to monitor healing progress and ensure proper rehabilitation.
+
+In summary, a 33-year-old male patient presents with a distal radius fracture (Colles' fracture) of his right wrist following an accidental fall. The injury is appropriately immobilized and the patient is under medical supervision for monitoring and appropriate care moving forward.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+3d6224b0-d5a4-45cb-ab9c-780ae718b17f,71047,J44.9,,"Patient Information: Female, 66 years of age
+
+Chief Complaint: Shortness of Breath (SOB)
+
+Medical History: The patient presents with complaints of shortness of breath, which has been progressively worsening over the past few months. She reports that her breathing difficulties have become more pronounced during physical activity and at night when she lies down.
+
+Diagnosis: Chronic Obstructive Pulmonary Disease (COPD) is suspected based on her symptoms and medical history. COPD is a progressive disease characterized by airflow limitation in the lungs, typically due to chronic bronchitis or emphysema. Given her age and reported progression of shortness of breath, these clinical features are consistent with the diagnosis of COPD.
+
+Current Management: The patient's condition should be closely monitored, and she will require regular follow-up appointments for evaluation and management. Treatment options may include medications such as bronchodilators to help open up airways, inhaled corticosteroids if there is evidence of inflammation, and possibly oxygen therapy if her symptoms are significantly impacted by low blood oxygen levels.
+
+Follow-Up: The patient should be advised on the importance of adhering to prescribed medications, maintaining a healthy lifestyle including quitting smoking (if applicable), engaging in regular physical activity as tolerated, and attending all scheduled appointments for ongoing management and monitoring.",prov-1001,"Leslie Miller, MD",,Radiology,demo
+3d6224b0-d5a4-45cb-ab9c-780ae718b17f,71047,R06.02,,"Patient Information: Female, 66 years of age
+
+Chief Complaint: Shortness of Breath (SOB)
+
+Medical History: The patient presents with complaints of shortness of breath, which has been progressively worsening over the past few months. She reports that her breathing difficulties have become more pronounced during physical activity and at night when she lies down.
+
+Diagnosis: Chronic Obstructive Pulmonary Disease (COPD) is suspected based on her symptoms and medical history. COPD is a progressive disease characterized by airflow limitation in the lungs, typically due to chronic bronchitis or emphysema. Given her age and reported progression of shortness of breath, these clinical features are consistent with the diagnosis of COPD.
+
+Current Management: The patient's condition should be closely monitored, and she will require regular follow-up appointments for evaluation and management. Treatment options may include medications such as bronchodilators to help open up airways, inhaled corticosteroids if there is evidence of inflammation, and possibly oxygen therapy if her symptoms are significantly impacted by low blood oxygen levels.
+
+Follow-Up: The patient should be advised on the importance of adhering to prescribed medications, maintaining a healthy lifestyle including quitting smoking (if applicable), engaging in regular physical activity as tolerated, and attending all scheduled appointments for ongoing management and monitoring.",prov-1001,"Leslie Miller, MD",,Radiology,demo

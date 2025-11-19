@@ -245,33 +245,92 @@ class HeuristicCoder:
         return icd, cpt
 
 
-class BertCoderTorch:
-    """Multi-label coder over a clinical BERT encoder (requires fine-tuned heads)."""
+# --- BERT backend (drop-in replacement) ---
 
-    def __init__(self, base_model: str, icd_labels: List[str], cpt_labels: List[str]):
+class BertCoderTorch:
+    """Multi-label coder over a clinical BERT encoder with sliding-window chunking."""
+    def __init__(self, base_model: str, icd_labels: List[str], cpt_labels: List[str],
+                 max_len: int = 512, stride: int = 128):
         if not TRANSFORMERS_AVAILABLE:
             raise RuntimeError("transformers/torch not installed")
         self.encoder = AutoModel.from_pretrained(base_model)
         self.tokenizer = AutoTokenizer.from_pretrained(base_model)
+        self.max_len = min(max_len, 512)  # Bio_ClinicalBERT cannot exceed 512
+        self.stride = int(stride)
         hidden = self.encoder.config.hidden_size
-        self.icd_labels = icd_labels
-        self.cpt_labels = cpt_labels
+        self.icd_labels = list(dict.fromkeys(icd_labels))  # unique & stable order
+        self.cpt_labels = list(dict.fromkeys(cpt_labels))
         self.icd_head = torch.nn.Linear(hidden, len(self.icd_labels))
         self.cpt_head = torch.nn.Linear(hidden, len(self.cpt_labels))
         self.encoder.eval(); self.icd_head.eval(); self.cpt_head.eval()
 
     @torch.no_grad()
     def predict(self, text: str) -> Tuple[List[Tuple[str, float]], List[Tuple[str, float]]]:
-        toks = self.tokenizer([text], padding=True, truncation=True, return_tensors="pt")
-        out = self.encoder(**toks)
-        pooled = out.pooler_output if hasattr(out, 'pooler_output') and out.pooler_output is not None else out.last_hidden_state.mean(dim=1)
-        icd_scores = torch.sigmoid(self.icd_head(pooled)).squeeze(0).tolist()
-        cpt_scores = torch.sigmoid(self.cpt_head(pooled)).squeeze(0).tolist()
-        icd = list(zip(self.icd_labels, icd_scores))
-        cpt = list(zip(self.cpt_labels, cpt_scores))
+        """
+        Robust to any note length:
+        - Tokenize with truncation + overflow windows (<=512 each, with special tokens).
+        - Score each window and max-pool per label across all windows.
+        """
+        if not isinstance(text, str):
+            text = str(text or "")
+
+        # Create overflowing windows; tokenizer handles special tokens per window.
+        enc = self.tokenizer(
+            text,
+            return_tensors="pt",
+            truncation=True,
+            max_length=self.max_len,
+            stride=self.stride,
+            return_overflowing_tokens=True,
+            padding=False  # no padding needed per-window
+        )
+
+        # If the tokenizer doesn't overflow (short note), we still get one window.
+        n_windows = enc["input_ids"].shape[0]
+
+        icd_accum = None
+        cpt_accum = None
+
+        for i in range(n_windows):
+            inputs = {
+                "input_ids": enc["input_ids"][i].unsqueeze(0),
+                "attention_mask": enc["attention_mask"][i].unsqueeze(0),
+            }
+            # Some models provide token_type_ids; include if present
+            if "token_type_ids" in enc:
+                inputs["token_type_ids"] = enc["token_type_ids"][i].unsqueeze(0)
+
+            out = self.encoder(**inputs)
+            if getattr(out, "pooler_output", None) is not None:
+                pooled = out.pooler_output  # [1, hidden]
+            else:
+                # Mean-pool with attention mask
+                last = out.last_hidden_state      # [1, seq, hidden]
+                mask = inputs["attention_mask"]   # [1, seq]
+                mask = mask.unsqueeze(-1).type_as(last)  # [1, seq, 1]
+                summed = (last * mask).sum(dim=1)        # [1, hidden]
+                denom = mask.sum(dim=1).clamp(min=1e-6)  # [1, 1]
+                pooled = summed / denom                  # [1, hidden]
+
+            icd_scores = torch.sigmoid(self.icd_head(pooled)).squeeze(0)  # [L_icd]
+            cpt_scores = torch.sigmoid(self.cpt_head(pooled)).squeeze(0)  # [L_cpt]
+
+            if icd_accum is None:
+                icd_accum = icd_scores
+                cpt_accum = cpt_scores
+            else:
+                icd_accum = torch.maximum(icd_accum, icd_scores)
+                cpt_accum = torch.maximum(cpt_accum, cpt_scores)
+
+        # Convert to sorted lists
+        icd = list(zip(self.icd_labels, icd_accum.tolist()))
+        cpt = list(zip(self.cpt_labels, cpt_accum.tolist()))
         icd.sort(key=lambda x: x[1], reverse=True)
         cpt.sort(key=lambda x: x[1], reverse=True)
         return icd, cpt
+
+
+
 
 
 # ---------------------------
@@ -298,7 +357,7 @@ def analyze_report(
     backend: str = "heuristic",
     icd_labels: List[str] = None,
     cpt_labels: List[str] = None,
-    base_model: str = "emilyalsentzer/Bio_ClinicalBERT",
+    base_model: str = "models/Bio_ClinicalBERT",
     icd_threshold: float = 0.35,
     cpt_threshold: float = 0.35,
 ) -> Tuple[List[Tuple[str, float]], List[Tuple[str, float]]]:
@@ -310,16 +369,17 @@ def analyze_report(
     """
     if backend == "bert":
         if not TRANSFORMERS_AVAILABLE or not icd_labels or not cpt_labels:
-            coder = HeuristicCoder()
-            return coder.predict(report_text)
-        coder = BertCoderTorch(base_model, icd_labels, cpt_labels)
+            return HeuristicCoder().predict(report_text)
+
+        # Ensure unique, stable label order once here too:
+        icd_labels = list(dict.fromkeys(icd_labels))
+        cpt_labels = list(dict.fromkeys(cpt_labels))
+
+        coder = BertCoderTorch(base_model, icd_labels, cpt_labels, max_len=512, stride=128)
         icd_raw, cpt_raw = coder.predict(report_text)
-        icd_preds = [(code, conf) for code, conf in icd_raw if conf >= icd_threshold]
-        cpt_preds = [(code, conf) for code, conf in cpt_raw if conf >= cpt_threshold]
-        if not icd_preds:
-            icd_preds = icd_raw[:5]
-        if not cpt_preds:
-            cpt_preds = cpt_raw[:5]
+
+        icd_preds = [(code, conf) for code, conf in icd_raw if conf >= icd_threshold] or icd_raw[:5]
+        cpt_preds = [(code, conf) for code, conf in cpt_raw if conf >= cpt_threshold] or cpt_raw[:5]
         return icd_preds, cpt_preds
     else:
         coder = HeuristicCoder()

@@ -12,6 +12,9 @@ dev/
 data/scenario_profiles/
 data/*.yaml
 control_id_counter.txt
+ref/
+data/
+icd-10-cm-tabular-2025.xml
 
 
 
