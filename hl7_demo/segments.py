@@ -1,23 +1,202 @@
 # segments.py
+#
 # HL7 v2.5 segment builders used across MediLacra.
-# Behavior is unchanged; only structured logging and explanatory comments were added.
+#
+# The goal of this module is to keep HL7 generation straightforward:
+#   - MediLacra entities contain readable canonical values.
+#   - This module translates those values into HL7 v2.5 fields.
+#   - Fields are populated by explicit HL7 field number wherever possible.
+#
+# Using indexed field lists makes it much easier to see exactly where
+# a value lands in the HL7 segment and avoids errors caused by manually
+# counting pipe delimiters.
 
-import uuid
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Tuple
 import textwrap
 
-# --- Logging (structured) ---
+# --- Logging -------------------------------------------------------------
+
 try:
     from utils.log_utils import get_logger
 except Exception:
     from log_utils import get_logger  # type: ignore
 
-logger = get_logger(name="MediLacra", context={"component": "segments"})
+logger = get_logger(
+    name="MediLacra",
+    context={"component": "segments"},
+)
 
-# --- Models & Utils (existing imports) ---
-from .models import Encounter, Observation, Transaction
-from .utils import ts_hl7, hl7_name_from_full, hl7_name_from_display, hl7_escape, get_next_control_id
+
+# --- Models & utilities --------------------------------------------------
+
+from .models import Patient, Encounter, Observation, Transaction
+from .utils import (
+    ts_hl7,
+    hl7_name_from_full,
+    hl7_name_from_display,
+    hl7_escape,
+    get_next_control_id,
+)
+
+
+# =========================================================================
+# Simple HL7 value mappings
+# =========================================================================
+#
+# MediLacra stores human-readable values in its entity model.
+# These small dictionaries translate those values into common HL7 v2
+# codes when the message is rendered.
+
+
+# PV1-2 Patient Class
+PATIENT_CLASS_CODES = {
+    "INPATIENT": "I",
+    "OUTPATIENT": "O",
+    "EMERGENCY": "E",
+}
+
+
+# PID-15 Primary Language
+LANGUAGE_CODES = {
+    "English": ("en", "English"),
+    "Spanish": ("es", "Spanish"),
+    "Portuguese": ("pt", "Portuguese"),
+    "French": ("fr", "French"),
+    "Chinese": ("zh", "Chinese"),
+}
+
+
+# PID-16 Marital Status
+MARITAL_STATUS_CODES = {
+    "Single": ("S", "Single"),
+    "Married": ("M", "Married"),
+    "Divorced": ("D", "Divorced"),
+    "Widowed": ("W", "Widowed"),
+}
+
+
+# PID-22 Ethnic Group
+ETHNICITY_CODES = {
+    "Hispanic or Latino": ("H", "Hispanic or Latino"),
+    "Not Hispanic or Latino": ("N", "Not Hispanic or Latino"),
+}
+
+
+# HL7 relationship values used in GT1 and IN1.
+RELATIONSHIP_CODES = {
+    "SELF": ("SEL", "Self"),
+    "SPOUSE": ("SPO", "Spouse"),
+    "CHILD": ("CHD", "Child"),
+    "PARENT": ("PAR", "Parent"),
+    "GUARDIAN": ("GRD", "Guardian"),
+    "OTHER": ("OTH", "Other"),
+}
+
+
+# PV1-14 Admit Source.
+#
+# These correspond to the standard suggested values where possible.
+# "Self Referral" does not have a direct value in the standard table,
+# so MediLacra uses a local demo value of "SR".
+ADMIT_SOURCE_CODES = {
+    "Physician Referral": "1",
+    "Clinic Referral": "2",
+    "Transfer": "4",
+    "Emergency Department": "7",
+    "Self Referral": "SR",
+}
+
+
+# PV1-36 Discharge Disposition.
+DISCHARGE_DISPOSITION_CODES = {
+    "Home": "01",
+    "Home with Services": "06",
+    "Skilled Nursing Facility": "03",
+    "Transfer to Another Facility": "02",
+}
+
+
+# =========================================================================
+# Small formatting helpers
+# =========================================================================
+
+
+def _ce(
+    code: str,
+    text: str,
+    coding_system: str,
+) -> str:
+    """
+    Build a simple HL7 CE-style value.
+
+    Example:
+        M^Married^HL70002
+    """
+    if not code and not text:
+        return ""
+
+    return (
+        f"{hl7_escape(str(code))}^"
+        f"{hl7_escape(str(text))}^"
+        f"{coding_system}"
+    )
+
+
+def _relationship_ce(value: str) -> str:
+    """
+    Convert a readable MediLacra relationship into an HL7 CE value.
+
+    Example:
+        SELF -> SEL^Self^HL70063
+    """
+    code, description = RELATIONSHIP_CODES.get(
+        (value or "").upper(),
+        ("OTH", "Other"),
+    )
+
+    return _ce(
+        code,
+        description,
+        "HL70063",
+    )
+
+
+def _provider_xcn(
+    provider_id: str,
+    provider_name: str,
+) -> str:
+    """
+    Build the basic portion of an XCN provider value.
+
+    MediLacra currently stores:
+        provider ID
+        display name
+
+    Example:
+        P123456^SMITH^JANE
+    """
+    if not provider_id and not provider_name:
+        return ""
+
+    formatted_name = (
+        hl7_name_from_full(provider_name)
+        if provider_name
+        else ""
+    )
+
+    if provider_id and formatted_name:
+        return f"{provider_id}^{formatted_name}"
+
+    if provider_id:
+        return provider_id
+
+    return f"^{formatted_name}"
+
+
+# =========================================================================
+# MSH - Message Header
+# =========================================================================
 
 
 def seg_msh(
@@ -29,262 +208,1460 @@ def seg_msh(
     receiving_facility: str = "STAGE",
 ) -> str:
     """
-    MSH - Message Header (v2.5)
-      Accepts optional sender/receiver. Defaults preserve prior behavior.
+    Build an HL7 v2.5 MSH segment.
+
+    MSH-3  Sending Application
+    MSH-4  Sending Facility
+    MSH-5  Receiving Application
+    MSH-6  Receiving Facility
+    MSH-7  Message Date/Time
+    MSH-9  Message Type / Trigger Event / Structure
+    MSH-10 Message Control ID
+    MSH-11 Processing ID
+    MSH-12 Version
     """
     try:
-        logger.info("Building MSH", extra={"extra": {"input_message_type": message_type}})
+        logger.info(
+            "Building MSH",
+            extra={
+                "extra": {
+                    "input_message_type": message_type,
+                }
+            },
+        )
+
         now = datetime.now().strftime("%Y%m%d%H%M%S")
-        structures = {"ADT^A01": "ADT_A01", "ORU^R01": "ORU_R01", "DFT^P03": "DFT_P03"}
+
+        structures = {
+            "ADT^A01": "ADT_A01",
+            "ORU^R01": "ORU_R01",
+            "DFT^P03": "DFT_P03",
+            "ORM^O01": "ORM_O01",
+        }
+
+        # If the caller supplies only message type + trigger event,
+        # append the standard message structure when known.
         if "^" in message_type and message_type.count("^") == 1:
-            message_type = f"{message_type}^{structures.get(message_type, '')}"
-        control_id = str(get_next_control_id())
-        print (f"MessageID= {control_id}")
+            structure = structures.get(message_type)
+
+            if structure:
+                message_type = (
+                    f"{message_type}^{structure}"
+                )
+
+        control_id = str(
+            get_next_control_id()
+        )
 
         msh = (
-            f"MSH|^~\\&|{sending_app}|{sending_facility}|{receiving_app}|{receiving_facility}|"
-            f"{now}||{message_type}|{control_id}|P|2.5|||AL|NE||UNICODE UTF-8"
+            f"MSH|^~\\&|"
+            f"{sending_app}|"
+            f"{sending_facility}|"
+            f"{receiving_app}|"
+            f"{receiving_facility}|"
+            f"{now}||"
+            f"{message_type}|"
+            f"{control_id}|"
+            f"P|2.5|||AL|NE||UNICODE UTF-8"
         )
-        logger.info("MSH built", extra={"extra": {"message_type": message_type, "control_id": control_id}})
+
+        logger.info(
+            "MSH built",
+            extra={
+                "extra": {
+                    "message_type": message_type,
+                    "control_id": control_id,
+                }
+            },
+        )
+
         return msh
+
     except Exception as e:
-        logger.error("Error building MSH", extra={"extra": {"error": str(e)}})
+        logger.error(
+            "Error building MSH",
+            extra={
+                "extra": {
+                    "error": str(e),
+                }
+            },
+        )
         raise
 
 
+# =========================================================================
+# EVN - Event Type
+# =========================================================================
 
-def seg_evn(enc: Encounter, event_type: str = "A01") -> str:
+
+def seg_evn(
+    enc: Encounter,
+    event_type: str = "A01",
+) -> str:
     """
-    EVN - Event Type
-      EVN-1 = Event Type Code (e.g., A01)
-      EVN-2/6 = Recorded Date/Time (admit time for demo)
+    Build an EVN segment.
+
+    EVN-1 Event Type Code
+    EVN-2 Recorded Date/Time
+    EVN-6 Event Occurred Date/Time
     """
     try:
-        evn_ts = ts_hl7(enc.admit_datetime)
-        evn = f"EVN|{event_type}|{evn_ts}||||{evn_ts}"
-        logger.info("EVN built", extra={"extra": {"event_type": event_type, "timestamp": evn_ts}})
+        evn_ts = ts_hl7(
+            enc.admit_datetime
+        )
+
+        fields = [""] * 7
+
+        fields[1] = event_type
+        fields[2] = evn_ts
+        fields[6] = evn_ts
+
+        evn = (
+            "EVN|"
+            + "|".join(fields[1:])
+        )
+
+        logger.info(
+            "EVN built",
+            extra={
+                "extra": {
+                    "event_type": event_type,
+                    "timestamp": evn_ts,
+                }
+            },
+        )
+
         return evn
+
     except Exception as e:
-        logger.error("Error building EVN", extra={"extra": {"error": str(e)}})
+        logger.error(
+            "Error building EVN",
+            extra={
+                "extra": {
+                    "error": str(e),
+                }
+            },
+        )
         raise
 
 
-def seg_pid(p) -> str:
+# =========================================================================
+# PID - Patient Identification
+# =========================================================================
+
+
+def seg_pid(p: Patient) -> str:
     """
-    PID - Patient Identification
-      PID-3 = Patient Identifier (internal synthetic ID)
-      PID-5 = Patient Name (HL7 formatted)
-      PID-7 = DOB, PID-8 = Sex, PID-10 = Race, PID-11 = Address, PID-13 = Phone
-      PID-19 = SSN (synthetic)
+    Build a PID segment from the canonical Patient entity.
+
+    Currently populated:
+
+    PID-1   Set ID
+    PID-3   Patient Identifier
+    PID-5   Patient Name
+    PID-7   Date of Birth
+    PID-8   Administrative Sex
+    PID-10  Race
+    PID-11  Address
+    PID-13  Phone / Email
+    PID-15  Primary Language
+    PID-16  Marital Status
+    PID-19  SSN
+    PID-22  Ethnic Group
+
+    The patient's synthetic email is emitted as a second PID-13
+    repetition using the XTN datatype.
     """
     try:
-        # Import within function to avoid circulars in some run contexts
         from .utils import one_line
 
-        street = one_line(p.address)  # street only
-        phone = one_line(p.phone)
-        addr_comp = f"{street}^^{p.city}^{p.state}^{p.zip_code}"  # PID-11.3 city, 11.4 state, 11.5 zip
+        # Allocate through PID-22.
+        # Index 0 is intentionally unused so the index equals
+        # the HL7 field number.
+        fields = [""] * 23
+
+        # PID-1 Set ID
+        fields[1] = "1"
+
+        # PID-3 Patient Identifier List
+        fields[3] = str(
+            p.patient_id
+        )
+
+        # PID-5 Patient Name
+        fields[5] = (
+            hl7_name_from_display(
+                p.patient_name
+            )
+        )
+
+        # PID-7 Date/Time of Birth
+        fields[7] = ts_hl7(
+            p.date_of_birth
+        )
+
+        # PID-8 Administrative Sex
+        fields[8] = str(
+            p.sex
+        )
+
+        # PID-10 Race
+        fields[10] = hl7_escape(
+            str(p.race)
+        )
+
+        # PID-11 Patient Address
+        street = one_line(
+            p.address
+        )
+
+        fields[11] = (
+            f"{hl7_escape(street)}^^"
+            f"{hl7_escape(str(p.city))}^"
+            f"{hl7_escape(str(p.state))}^"
+            f"{hl7_escape(str(p.zip_code))}"
+        )
+
+        # PID-13 Phone Number - Home
+        #
+        # XTN repetition 1 = phone.
+        # XTN repetition 2 = email.
+        #
+        # The first XTN component is retained for the phone because
+        # MediLacra's generated phone value may contain formatting.
+        phone = one_line(
+            p.phone
+        )
+
+        phone_xtn = (
+            f"{hl7_escape(phone)}^PRN^PH"
+        )
+
+        email = getattr(
+            p,
+            "email",
+            "",
+        )
+
+        if email:
+            # XTN:
+            #   component 1 blank
+            #   component 2 NET
+            #   component 3 Internet
+            #   component 4 email
+            email_xtn = (
+                f"^NET^Internet^"
+                f"{hl7_escape(email)}"
+            )
+
+            fields[13] = (
+                f"{phone_xtn}~{email_xtn}"
+            )
+
+        else:
+            fields[13] = phone_xtn
+
+        # PID-15 Primary Language
+        language = LANGUAGE_CODES.get(
+            getattr(
+                p,
+                "language",
+                "",
+            )
+        )
+
+        if language:
+            fields[15] = _ce(
+                language[0],
+                language[1],
+                "ISO639",
+            )
+
+        # PID-16 Marital Status
+        marital_status = (
+            MARITAL_STATUS_CODES.get(
+                getattr(
+                    p,
+                    "marital_status",
+                    "",
+                )
+            )
+        )
+
+        if marital_status:
+            fields[16] = _ce(
+                marital_status[0],
+                marital_status[1],
+                "HL70002",
+            )
+
+        # PID-19 SSN Number - Patient
+        fields[19] = str(
+            getattr(
+                p,
+                "ssn",
+                "",
+            )
+        )
+
+        # PID-22 Ethnic Group
+        ethnicity = ETHNICITY_CODES.get(
+            getattr(
+                p,
+                "ethnicity",
+                "",
+            )
+        )
+
+        if ethnicity:
+            fields[22] = _ce(
+                ethnicity[0],
+                ethnicity[1],
+                "HL70189",
+            )
 
         pid = (
-            f"PID|1||{p.patient_id}||{hl7_name_from_display(p.patient_name)}||"
-            f"{ts_hl7(p.date_of_birth)}|{p.sex}||{p.race}|{addr_comp}||{phone}||||||{p.ssn}"
+            "PID|"
+            + "|".join(fields[1:])
         )
+
         logger.info(
             "PID built",
-            extra={"extra": {"patient_id": getattr(p, "patient_id", None), "zip": getattr(p, "zip_code", None)}},
+            extra={
+                "extra": {
+                    "patient_id": getattr(
+                        p,
+                        "patient_id",
+                        None,
+                    ),
+                    "zip": getattr(
+                        p,
+                        "zip_code",
+                        None,
+                    ),
+                    "language": getattr(
+                        p,
+                        "language",
+                        None,
+                    ),
+                    "email": getattr(
+                        p,
+                        "email",
+                        None,
+                    ),
+                }
+            },
         )
+
         return pid
+
     except Exception as e:
-        logger.error("Error building PID", extra={"extra": {"error": str(e)}})
+        logger.error(
+            "Error building PID",
+            extra={
+                "extra": {
+                    "error": str(e),
+                }
+            },
+        )
         raise
+
+
+# =========================================================================
+# PV1 - Patient Visit
+# =========================================================================
 
 
 def seg_pv1(enc: Encounter) -> str:
     """
-    PV1 - Patient Visit
-      PV1-2  Patient Class (e.g., OUTPATIENT)
-      PV1-3  Assigned Patient Location
-      PV1-7  Attending Doctor (ID^Name)
-      PV1-19 Visit Number
-      PV1-44/45 Admit/Discharge Date/Time
+    Build a PV1 segment from the canonical Encounter entity.
+
+    Currently populated:
+
+    PV1-1   Set ID
+    PV1-2   Patient Class
+    PV1-3   Assigned Patient Location
+    PV1-7   Attending Doctor
+    PV1-8   Referring Doctor
+    PV1-10  Hospital Service
+    PV1-14  Admit Source
+    PV1-19  Visit Number
+    PV1-36  Discharge Disposition
+    PV1-44  Admit Date/Time
+    PV1-45  Discharge Date/Time
+    PV1-52  Other Healthcare Provider
+
+    MediLacra currently uses PV1-52 for its mid-level provider.
     """
     try:
-        admit = ts_hl7(enc.admit_datetime)
-        disch = ts_hl7(enc.discharge_datetime)
-        attending_nm = hl7_name_from_full(enc.attending_provider_name)
-        pv1 = (
-            f"PV1|1|{enc.patient_class}|{enc.assigned_patient_location}||||{enc.attending_provider_id}^{attending_nm}"
-            f"||{enc.hospital_service}||||||||||{enc.visit_number}|||||||||||||||||||||||||{admit}|{disch}"
+        # PV1 contains 52 fields in v2.5.
+        fields = [""] * 53
+
+        # PV1-1 Set ID
+        fields[1] = "1"
+
+        # PV1-2 Patient Class
+        fields[2] = (
+            PATIENT_CLASS_CODES.get(
+                (
+                    enc.patient_class
+                    or ""
+                ).upper(),
+                enc.patient_class,
+            )
         )
+
+        # PV1-3 Assigned Patient Location
+        fields[3] = str(
+            enc.assigned_patient_location
+        )
+
+        # PV1-7 Attending Doctor
+        fields[7] = _provider_xcn(
+            enc.attending_provider_id,
+            enc.attending_provider_name,
+        )
+
+        # PV1-8 Referring Doctor
+        fields[8] = _provider_xcn(
+            getattr(
+                enc,
+                "referring_provider_id",
+                "",
+            ),
+            getattr(
+                enc,
+                "referring_provider_name",
+                "",
+            ),
+        )
+
+        # PV1-10 Hospital Service
+        fields[10] = str(
+            enc.hospital_service
+        )
+
+        # PV1-14 Admit Source
+        admit_source = getattr(
+            enc,
+            "admit_source",
+            "",
+        )
+
+        fields[14] = (
+            ADMIT_SOURCE_CODES.get(
+                admit_source,
+                admit_source,
+            )
+        )
+
+        # PV1-19 Visit Number
+        fields[19] = str(
+            enc.visit_number
+        )
+
+        # PV1-36 Discharge Disposition
+        discharge_disposition = getattr(
+            enc,
+            "discharge_disposition",
+            "",
+        )
+
+        fields[36] = (
+            DISCHARGE_DISPOSITION_CODES.get(
+                discharge_disposition,
+                discharge_disposition,
+            )
+        )
+
+        # PV1-44 Admit Date/Time
+        fields[44] = ts_hl7(
+            enc.admit_datetime
+        )
+
+        # PV1-45 Discharge Date/Time
+        fields[45] = ts_hl7(
+            enc.discharge_datetime
+        )
+
+        # PV1-52 Other Healthcare Provider
+        mid_level_id = getattr(
+            enc,
+            "mid_level_provider_id",
+            "",
+        )
+
+        mid_level_name = getattr(
+            enc,
+            "mid_level_provider_name",
+            "",
+        )
+
+        if (
+            mid_level_id
+            or mid_level_name
+        ):
+            fields[52] = _provider_xcn(
+                mid_level_id,
+                mid_level_name,
+            )
+
+        pv1 = (
+            "PV1|"
+            + "|".join(fields[1:])
+        )
+
         logger.info(
             "PV1 built",
-            extra={"extra": {"visit_number": getattr(enc, "visit_number", None), "admit": admit, "discharge": disch}},
+            extra={
+                "extra": {
+                    "visit_number": getattr(
+                        enc,
+                        "visit_number",
+                        None,
+                    ),
+                    "patient_class": fields[2],
+                    "admit_source": fields[14],
+                    "discharge_disposition": fields[36],
+                    "admit": fields[44],
+                    "discharge": fields[45],
+                }
+            },
         )
+
         return pv1
+
     except Exception as e:
-        logger.error("Error building PV1", extra={"extra": {"error": str(e)}})
+        logger.error(
+            "Error building PV1",
+            extra={
+                "extra": {
+                    "error": str(e),
+                }
+            },
+        )
         raise
+
+
+# =========================================================================
+# GT1 - Guarantor
+# =========================================================================
+
+
+def seg_gt1(
+    tx: Transaction,
+    *,
+    set_id: int = 1,
+) -> str:
+    """
+    Build a basic GT1 Guarantor segment.
+
+    Currently populated:
+
+    GT1-1   Set ID
+    GT1-3   Guarantor Name
+    GT1-11  Guarantor Relationship
+
+    The MediLacra Transaction currently contains only guarantor name
+    and relationship, so the segment intentionally remains simple.
+    """
+    try:
+        fields = [""] * 12
+
+        # GT1-1 Set ID
+        fields[1] = str(
+            set_id
+        )
+
+        # GT1-3 Guarantor Name
+        guarantor_name = getattr(
+            tx,
+            "guarantor_name",
+            "",
+        )
+
+        if guarantor_name:
+            fields[3] = (
+                hl7_name_from_display(
+                    guarantor_name
+                )
+            )
+
+        # GT1-11 Guarantor Relationship
+        fields[11] = _relationship_ce(
+            getattr(
+                tx,
+                "guarantor_relationship",
+                "",
+            )
+        )
+
+        gt1 = (
+            "GT1|"
+            + "|".join(fields[1:])
+        )
+
+        logger.info(
+            "GT1 built",
+            extra={
+                "extra": {
+                    "guarantor_name": (
+                        guarantor_name
+                    ),
+                    "relationship": getattr(
+                        tx,
+                        "guarantor_relationship",
+                        None,
+                    ),
+                }
+            },
+        )
+
+        return gt1
+
+    except Exception as e:
+        logger.error(
+            "Error building GT1",
+            extra={
+                "extra": {
+                    "error": str(e),
+                }
+            },
+        )
+        raise
+
+
+# =========================================================================
+# IN1 - Insurance
+# =========================================================================
+
+
+def seg_in1(
+    tx: Transaction,
+    *,
+    set_id: int = 1,
+) -> str:
+    """
+    Build a basic IN1 Insurance segment.
+
+    Currently populated:
+
+    IN1-1   Set ID
+    IN1-2   Insurance Plan ID
+    IN1-8   Group Number
+    IN1-14  Authorization Information
+    IN1-15  Plan Type
+    IN1-17  Insured's Relationship to Patient
+    IN1-49  Insured's ID Number
+
+    MediLacra currently stores insurance plan information directly on
+    the Transaction rather than using a separate Coverage entity.
+    """
+    try:
+        # Allocate through IN1-49.
+        fields = [""] * 50
+
+        # IN1-1 Set ID
+        fields[1] = str(
+            set_id
+        )
+
+        # IN1-2 Insurance Plan ID
+        #
+        # Keep the human-readable plan name alongside the synthetic
+        # plan identifier.
+        fields[2] = _ce(
+            getattr(
+                tx,
+                "insurance_plan_id",
+                "",
+            ),
+            getattr(
+                tx,
+                "insurance_plan_name",
+                "",
+            ),
+            "L",
+        )
+
+        # IN1-8 Group Number
+        fields[8] = str(
+            getattr(
+                tx,
+                "group_number",
+                "",
+            )
+        )
+
+        # IN1-14 Authorization Information
+        #
+        # AUI components:
+        #   Authorization Number ^ Date ^ Source
+        #
+        # MediLacra currently only models the authorization number.
+        fields[14] = str(
+            getattr(
+                tx,
+                "authorization_number",
+                "",
+            )
+        )
+
+        # IN1-15 Plan Type
+        fields[15] = str(
+            getattr(
+                tx,
+                "plan_type",
+                "",
+            )
+        )
+
+        # IN1-17 Insured's Relationship to Patient
+        fields[17] = _relationship_ce(
+            getattr(
+                tx,
+                "subscriber_relationship",
+                "",
+            )
+        )
+
+        # IN1-49 Insured's ID Number
+        #
+        # member_id is currently MediLacra's canonical identifier
+        # for the insured/member.
+        fields[49] = str(
+            getattr(
+                tx,
+                "member_id",
+                "",
+            )
+        )
+
+        in1 = (
+            "IN1|"
+            + "|".join(fields[1:])
+        )
+
+        logger.info(
+            "IN1 built",
+            extra={
+                "extra": {
+                    "insurance_plan_id": getattr(
+                        tx,
+                        "insurance_plan_id",
+                        None,
+                    ),
+                    "insurance_plan_name": getattr(
+                        tx,
+                        "insurance_plan_name",
+                        None,
+                    ),
+                    "group_number": getattr(
+                        tx,
+                        "group_number",
+                        None,
+                    ),
+                    "plan_type": getattr(
+                        tx,
+                        "plan_type",
+                        None,
+                    ),
+                }
+            },
+        )
+
+        return in1
+
+    except Exception as e:
+        logger.error(
+            "Error building IN1",
+            extra={
+                "extra": {
+                    "error": str(e),
+                }
+            },
+        )
+        raise
+
+
+# =========================================================================
+# ORC - Common Order
+# =========================================================================
 
 
 def seg_orc(enc: Encounter) -> str:
     """
-    ORC - Common Order
-      ORC-1 = RE (Observation Result)
-      ORC-2/3 = Placer/Filler Order Numbers
-      ORC-12 = Ordering Provider (ID^Name)
+    Build an ORC Common Order segment.
+
+    ORC-1  Order Control
+    ORC-2  Placer Order Number
+    ORC-3  Filler Order Number
+    ORC-5  Order Status
+    ORC-12 Ordering Provider
     """
     try:
-        ordering_nm = hl7_name_from_full(enc.ordering_provider_name)
-        orc = f"ORC|RE|{enc.placer_order_number}|{enc.filler_order_number}||CM|||||{enc.ordering_provider_id}^{ordering_nm}"
+        fields = [""] * 13
+
+        # ORC-1 Order Control
+        fields[1] = "RE"
+
+        # ORC-2 / ORC-3 Order Numbers
+        fields[2] = str(
+            enc.placer_order_number
+        )
+
+        fields[3] = str(
+            enc.filler_order_number
+        )
+
+        # ORC-5 Order Status
+        fields[5] = "CM"
+
+        # ORC-12 Ordering Provider
+        fields[12] = _provider_xcn(
+            enc.ordering_provider_id,
+            enc.ordering_provider_name,
+        )
+
+        orc = (
+            "ORC|"
+            + "|".join(fields[1:])
+        )
+
         logger.info(
             "ORC built",
-            extra={"extra": {"placer": getattr(enc, "placer_order_number", None), "filler": getattr(enc, "filler_order_number", None)}},
+            extra={
+                "extra": {
+                    "placer": getattr(
+                        enc,
+                        "placer_order_number",
+                        None,
+                    ),
+                    "filler": getattr(
+                        enc,
+                        "filler_order_number",
+                        None,
+                    ),
+                }
+            },
         )
+
         return orc
+
     except Exception as e:
-        logger.error("Error building ORC", extra={"extra": {"error": str(e)}})
+        logger.error(
+            "Error building ORC",
+            extra={
+                "extra": {
+                    "error": str(e),
+                }
+            },
+        )
         raise
 
 
-def seg_obr(enc: Encounter, obs: Optional[Observation]) -> str:
+# =========================================================================
+# OBR - Observation Request
+# =========================================================================
+
+
+def seg_obr(
+    enc: Encounter,
+    obs: Optional[Observation],
+) -> str:
     """
-    OBR - Observation Request
-      OBR-4  Universal Service ID (CPT^Text^CPT when available)
-      OBR-7  Observation Date/Time
-      OBR-16 Ordering Provider (ID^Name)
+    Build an OBR Observation Request segment.
+
+    OBR-1  Set ID
+    OBR-2  Placer Order Number
+    OBR-3  Filler Order Number
+    OBR-4  Universal Service ID
+    OBR-7  Observation Date/Time
+    OBR-16 Ordering Provider
     """
     try:
-        cpt = obs.cpt_code if obs else ""
-        desc = (getattr(obs, "cpt_description", "") or obs.procedure_description) if obs else ""
-        usi = f"{cpt}^{desc}^CPT" if (cpt or desc) else ""
-        when = ts_hl7(obs.completed_time if obs else enc.admit_datetime)
-        ordering_nm = hl7_name_from_full(enc.ordering_provider_name)
-        obr = f"OBR|1|{enc.placer_order_number}|{enc.filler_order_number}|{usi}|R|||{when}||||||||{enc.ordering_provider_id}^{ordering_nm}"
+        fields = [""] * 17
+
+        # OBR-1 Set ID
+        fields[1] = "1"
+
+        # OBR-2 / OBR-3 Order Numbers
+        fields[2] = str(
+            enc.placer_order_number
+        )
+
+        fields[3] = str(
+            enc.filler_order_number
+        )
+
+        # OBR-4 Universal Service ID
+        cpt = (
+            obs.cpt_code
+            if obs
+            else ""
+        )
+
+        description = ""
+
+        if obs:
+            description = (
+                getattr(
+                    obs,
+                    "cpt_description",
+                    "",
+                )
+                or obs.procedure_description
+            )
+
+        if cpt or description:
+            fields[4] = _ce(
+                cpt,
+                description,
+                "CPT",
+            )
+
+        # OBR-7 Observation Date/Time
+        observation_time = (
+            obs.completed_time
+            if obs
+            else enc.admit_datetime
+        )
+
+        fields[7] = ts_hl7(
+            observation_time
+        )
+
+        # OBR-16 Ordering Provider
+        fields[16] = _provider_xcn(
+            enc.ordering_provider_id,
+            enc.ordering_provider_name,
+        )
+
+        obr = (
+            "OBR|"
+            + "|".join(fields[1:])
+        )
+
         logger.info(
             "OBR built",
-            extra={"extra": {"placer": getattr(enc, "placer_order_number", None), "filler": getattr(enc, "filler_order_number", None), "when": when}},
+            extra={
+                "extra": {
+                    "placer": getattr(
+                        enc,
+                        "placer_order_number",
+                        None,
+                    ),
+                    "filler": getattr(
+                        enc,
+                        "filler_order_number",
+                        None,
+                    ),
+                    "when": fields[7],
+                    "cpt": cpt,
+                }
+            },
         )
+
         return obr
+
     except Exception as e:
-        logger.error("Error building OBR", extra={"extra": {"error": str(e)}})
+        logger.error(
+            "Error building OBR",
+            extra={
+                "extra": {
+                    "error": str(e),
+                }
+            },
+        )
         raise
+
+
+# =========================================================================
+# OBX - Observation Result
+# =========================================================================
 
 
 def seg_obx(obs: Observation) -> str:
     """
-    OBX - Observation Result (single text value)
-      OBX-2 = TX (text)
-      OBX-3 = Identifier (CPT^Text^CPT)
-      OBX-5 = Value (escaped)
-      OBX-11 = Result Status (default F)
-      OBX-15 = Producer's ID (site/service)
+    Build one text OBX result.
+
+    OBX-1  Set ID
+    OBX-2  Value Type
+    OBX-3  Observation Identifier
+    OBX-4  Observation Sub-ID
+    OBX-5  Observation Value
+    OBX-11 Observation Result Status
+    OBX-14 Date/Time of Observation
+    OBX-15 Producer's ID
     """
     try:
-        ident = f"{obs.cpt_code}^{(getattr(obs,'cpt_description','') or obs.procedure_description)}^CPT"
+        fields = [""] * 16
 
-        sub_id = obs.observation_sub_id or "1"
-        value = obs.observation_text or ""
-        status = obs.result_status or "F"
-        producer = "MEDILACRAHS^DEPT1"
-        obx = f"OBX|1|TX|{ident}|{sub_id}|{hl7_escape(value)}|||||||{status}|||{producer}"
-        logger.info("OBX built (TX)", extra={"extra": {"cpt": getattr(obs, "cpt_code", None), "status": status}})
+        fields[1] = "1"
+        fields[2] = "TX"
+
+        description = (
+            getattr(
+                obs,
+                "cpt_description",
+                "",
+            )
+            or obs.procedure_description
+        )
+
+        fields[3] = _ce(
+            obs.cpt_code,
+            description,
+            "CPT",
+        )
+
+        fields[4] = (
+            obs.observation_sub_id
+            or "1"
+        )
+
+        fields[5] = hl7_escape(
+            obs.observation_text
+            or ""
+        )
+
+        fields[11] = (
+            obs.result_status
+            or "F"
+        )
+
+        if getattr(
+            obs,
+            "completed_time",
+            "",
+        ):
+            fields[14] = ts_hl7(
+                obs.completed_time
+            )
+
+        fields[15] = (
+            "MEDILACRAHS^DEPT1"
+        )
+
+        obx = (
+            "OBX|"
+            + "|".join(fields[1:])
+        )
+
+        logger.info(
+            "OBX built (TX)",
+            extra={
+                "extra": {
+                    "cpt": getattr(
+                        obs,
+                        "cpt_code",
+                        None,
+                    ),
+                    "status": fields[11],
+                }
+            },
+        )
+
         return obx
+
     except Exception as e:
-        logger.error("Error building OBX (TX)", extra={"extra": {"error": str(e)}})
+        logger.error(
+            "Error building OBX (TX)",
+            extra={
+                "extra": {
+                    "error": str(e),
+                }
+            },
+        )
         raise
 
 
-def seg_obx_lines(obs: Observation, start_set_id: int = 1, wrap_width: int = 200) -> List[str]:
+def seg_obx_lines(
+    obs: Observation,
+    start_set_id: int = 1,
+    wrap_width: int = 200,
+) -> List[str]:
     """
-    OBX - Multi-line text as sequential OBX|TX segments.
-      Each wrapped or newline-split chunk becomes OBX with incremented set/sub IDs.
+    Split a report into sequential text OBX segments.
+
+    Each source line or wrapped line becomes its own OBX.
+
+    OBX-1 increments for every segment.
+    OBX-4 increments as the observation sub-ID.
     """
     try:
-        ident = f"{obs.cpt_code}^{(getattr(obs,'cpt_description','') or obs.procedure_description)}^CPT"
-        status = obs.result_status or "F"
-        producer = "MEDILACRAHS^DEPT1"
+        description = (
+            getattr(
+                obs,
+                "cpt_description",
+                "",
+            )
+            or obs.procedure_description
+        )
 
-        norm = (obs.observation_text or "").replace("\r\n", "\n").replace("\r", "\n")
-        raw_lines = norm.split("\n")
+        identifier = _ce(
+            obs.cpt_code,
+            description,
+            "CPT",
+        )
 
-        # Wrap lines without breaking words/hyphens
-        lines = []
-        for ln in raw_lines:
-            ln = (ln or "").strip()
-            if not ln:
+        status = (
+            obs.result_status
+            or "F"
+        )
+
+        producer = (
+            "MEDILACRAHS^DEPT1"
+        )
+
+        normalized = (
+            obs.observation_text
+            or ""
+        ).replace(
+            "\r\n",
+            "\n",
+        ).replace(
+            "\r",
+            "\n",
+        )
+
+        raw_lines = normalized.split(
+            "\n"
+        )
+
+        lines: List[str] = []
+
+        # Preserve meaningful line boundaries while wrapping very
+        # long report lines to a manageable size.
+        for line in raw_lines:
+            line = (
+                line
+                or ""
+            ).strip()
+
+            if not line:
                 lines.append("")
                 continue
-            if len(ln) > wrap_width:
-                lines.extend(
-                    textwrap.wrap(ln, width=wrap_width, break_long_words=False, break_on_hyphens=False)
-                )
-            else:
-                lines.append(ln)
 
-        segs: List[str] = []
+            if len(line) > wrap_width:
+                lines.extend(
+                    textwrap.wrap(
+                        line,
+                        width=wrap_width,
+                        break_long_words=False,
+                        break_on_hyphens=False,
+                    )
+                )
+
+            else:
+                lines.append(line)
+
+        segments: List[str] = []
+
         set_id = start_set_id
         sub_id = 1
-        for ln in lines:
-            val = hl7_escape(ln)
-            segs.append(f"OBX|{set_id}|TX|{ident}|{sub_id}|{val}||||||{status}|||{producer}")
+
+        for line in lines:
+            fields = [""] * 16
+
+            fields[1] = str(
+                set_id
+            )
+
+            fields[2] = "TX"
+            fields[3] = identifier
+            fields[4] = str(
+                sub_id
+            )
+
+            fields[5] = hl7_escape(
+                line
+            )
+
+            fields[11] = status
+
+            if getattr(
+                obs,
+                "completed_time",
+                "",
+            ):
+                fields[14] = ts_hl7(
+                    obs.completed_time
+                )
+
+            fields[15] = producer
+
+            segment = (
+                "OBX|"
+                + "|".join(fields[1:])
+            )
+
+            segments.append(
+                segment
+            )
+
             set_id += 1
             sub_id += 1
 
         logger.info(
             "OBX lines built",
-            extra={"extra": {"segments": len(segs), "start_set_id": start_set_id, "wrap_width": wrap_width}},
+            extra={
+                "extra": {
+                    "segments": len(
+                        segments
+                    ),
+                    "start_set_id": (
+                        start_set_id
+                    ),
+                    "wrap_width": (
+                        wrap_width
+                    ),
+                }
+            },
         )
-        return segs
+
+        return segments
+
     except Exception as e:
-        logger.error("Error building OBX lines", extra={"extra": {"error": str(e)}})
+        logger.error(
+            "Error building OBX lines",
+            extra={
+                "extra": {
+                    "error": str(e),
+                }
+            },
+        )
         raise
 
 
-def seg_ft1(tx: Transaction, obs: Optional[Observation]) -> str:
+# =========================================================================
+# FT1 - Financial Transaction
+# =========================================================================
+
+
+def seg_ft1(
+    tx: Transaction,
+    obs: Optional[Observation],
+) -> str:
     """
-    FT1 - Financial Transaction
-      FT1-4/5  Transaction/Posting dates
-      FT1-7    Transaction Type (CG = charge)
-      FT1-8/9  CPT/Description (from observation when present)
-      FT1-10   Quantity
-      FT1-11   Unit Price
-      FT1-12   Total Amount
-      FT1-19   Insurance Plan ID
-      FT1-20   Fee Schedule
+    Build an FT1 Financial Transaction segment.
+
+    Currently populated:
+
+    FT1-1  Set ID
+    FT1-2  Transaction ID
+    FT1-4  Transaction Date
+    FT1-5  Transaction Posting Date
+    FT1-6  Transaction Type
+    FT1-7  Transaction Code
+    FT1-8  Transaction Description
+    FT1-10 Transaction Quantity
+    FT1-11 Transaction Amount - Extended
+    FT1-12 Transaction Amount - Unit
+    FT1-14 Insurance Plan ID
+    FT1-17 Fee Schedule
+    FT1-19 Diagnosis Code
+    FT1-20 Performed By
+    FT1-22 Unit Cost
+    FT1-25 Procedure Code
     """
     try:
-        tx_dt = ts_hl7(tx.transaction_date)
-        post = tx_dt
-        cpt = obs.cpt_code if obs else ""
-        desc = obs.procedure_description if obs else "CHARGE"
-        qty = tx.transaction_quantity
-        unit = tx.unit_cost
-        amt = tx.transaction_amount
-        plan = tx.insurance_plan_id
-        fee = tx.fee_schedule
-        dept = "RAD"
-        ptype = "OUTPATIENT"
-        ft1 = (
-            f"FT1|1|{tx.transaction_id}| |{tx_dt}|{post}|CG|{cpt}|{desc}|{qty}|{unit}|{amt}|USD|{plan}|{fee}|{dept}|{ptype}| |{cpt}||"
+        fields = [""] * 26
+
+        transaction_date = ts_hl7(
+            tx.transaction_date
         )
+
+        cpt = (
+            obs.cpt_code
+            if obs
+            else ""
+        )
+
+        description = (
+            obs.procedure_description
+            if obs
+            else "CHARGE"
+        )
+
+        # FT1-1 Set ID
+        fields[1] = "1"
+
+        # FT1-2 Transaction ID
+        fields[2] = str(
+            tx.transaction_id
+        )
+
+        # FT1-4 Transaction Date
+        fields[4] = (
+            transaction_date
+        )
+
+        # FT1-5 Transaction Posting Date
+        fields[5] = (
+            transaction_date
+        )
+
+        # FT1-6 Transaction Type
+        fields[6] = "CG"
+
+        # FT1-7 Transaction Code
+        if cpt or description:
+            fields[7] = _ce(
+                cpt,
+                description,
+                "CPT",
+            )
+
+        # FT1-8 Transaction Description
+        fields[8] = hl7_escape(
+            description
+        )
+
+        # FT1-10 Transaction Quantity
+        fields[10] = str(
+            tx.transaction_quantity
+        )
+
+        # FT1-11 Transaction Amount - Extended
+        #
+        # CP contains a monetary amount. For the current demo we
+        # represent the MO portion as quantity&currency.
+        fields[11] = (
+            f"{tx.transaction_amount}&USD"
+        )
+
+        # FT1-12 Transaction Amount - Unit
+        fields[12] = (
+            f"{tx.unit_cost}&USD"
+        )
+
+        # FT1-14 Insurance Plan ID
+        fields[14] = _ce(
+            getattr(
+                tx,
+                "insurance_plan_id",
+                "",
+            ),
+            getattr(
+                tx,
+                "insurance_plan_name",
+                "",
+            ),
+            "L",
+        )
+
+        # FT1-17 Fee Schedule
+        fields[17] = str(
+            tx.fee_schedule
+        )
+
+        if obs:
+            # FT1-19 Diagnosis Code
+            if getattr(
+                obs,
+                "icd_code",
+                "",
+            ):
+                fields[19] = _ce(
+                    obs.icd_code,
+                    getattr(
+                        obs,
+                        "icd_description",
+                        "",
+                    ),
+                    "ICD-10-CM",
+                )
+
+            # FT1-20 Performed By
+            if (
+                getattr(
+                    obs,
+                    "performing_provider_id",
+                    "",
+                )
+                or getattr(
+                    obs,
+                    "performing_provider_name",
+                    "",
+                )
+            ):
+                fields[20] = (
+                    _provider_xcn(
+                        getattr(
+                            obs,
+                            "performing_provider_id",
+                            "",
+                        ),
+                        getattr(
+                            obs,
+                            "performing_provider_name",
+                            "",
+                        ),
+                    )
+                )
+
+        # FT1-22 Unit Cost
+        fields[22] = (
+            f"{tx.unit_cost}&USD"
+        )
+
+        # FT1-25 Procedure Code
+        if cpt:
+            fields[25] = _ce(
+                cpt,
+                description,
+                "CPT",
+            )
+
+        ft1 = (
+            "FT1|"
+            + "|".join(fields[1:])
+        )
+
         logger.info(
             "FT1 built",
             extra={
                 "extra": {
-                    "transaction_id": getattr(tx, "transaction_id", None),
-                    "amount": amt,
+                    "transaction_id": getattr(
+                        tx,
+                        "transaction_id",
+                        None,
+                    ),
+                    "amount": getattr(
+                        tx,
+                        "transaction_amount",
+                        None,
+                    ),
                     "cpt": cpt,
-                    "quantity": qty,
+                    "quantity": getattr(
+                        tx,
+                        "transaction_quantity",
+                        None,
+                    ),
                 }
             },
         )
+
         return ft1
+
     except Exception as e:
-        logger.error("Error building FT1", extra={"extra": {"error": str(e)}})
+        logger.error(
+            "Error building FT1",
+            extra={
+                "extra": {
+                    "error": str(e),
+                }
+            },
+        )
         raise
 
 
-# Add near your other segment builders
+# =========================================================================
+# DG1 - Diagnosis
+# =========================================================================
+
+
 def seg_dg1(
     enc: Encounter,
     icd_code: str,
@@ -296,34 +1673,83 @@ def seg_dg1(
     diag_dt: Optional[str] = None,
 ) -> str:
     """
-    DG1 - Diagnosis
-      DG1-1  Set ID
-      DG1-3  Diagnosis Code (CE) -> <code>^<text>^<coding system>
-      DG1-5  Diagnosis Date/Time
-      DG1-6  Diagnosis Type (W=Working, F=Final, A=Admitting, ...)
+    Build a DG1 Diagnosis segment.
+
+    DG1-1 Set ID
+    DG1-3 Diagnosis Code
+    DG1-5 Diagnosis Date/Time
+    DG1-6 Diagnosis Type
     """
     try:
-        # When to timestamp the diagnosis: prefer observation completion time, else admit time
-        if diag_dt is None:
-            diag_dt = getattr(enc, "admit_datetime", None)
-        dt_hl7 = ts_hl7(diag_dt) if diag_dt else ""
+        fields = [""] * 7
 
-        # Put display text in CE.2; keep DG1-4 blank (common pattern)
-        ce = f"{icd_code}^{hl7_escape(desc)}^{coding_system}" if icd_code else "^^"
-        dg1 = f"DG1|{set_id}||{ce}||{dt_hl7}|{diag_type}"
-        logger.info("DG1 built", extra={"extra": {"icd": icd_code, "diag_type": diag_type, "datetime": dt_hl7}})
+        # DG1-1 Set ID
+        fields[1] = str(
+            set_id
+        )
+
+        # DG1-3 Diagnosis Code
+        if icd_code:
+            fields[3] = _ce(
+                icd_code,
+                desc,
+                coding_system,
+            )
+
+        # DG1-5 Diagnosis Date/Time
+        if diag_dt is None:
+            diag_dt = getattr(
+                enc,
+                "admit_datetime",
+                None,
+            )
+
+        if diag_dt:
+            fields[5] = ts_hl7(
+                diag_dt
+            )
+
+        # DG1-6 Diagnosis Type
+        fields[6] = diag_type
+
+        dg1 = (
+            "DG1|"
+            + "|".join(fields[1:])
+        )
+
+        logger.info(
+            "DG1 built",
+            extra={
+                "extra": {
+                    "icd": icd_code,
+                    "diag_type": diag_type,
+                    "datetime": fields[5],
+                }
+            },
+        )
+
         return dg1
+
     except Exception as e:
-        logger.error("Error building DG1", extra={"extra": {"error": str(e)}})
+        logger.error(
+            "Error building DG1",
+            extra={
+                "extra": {
+                    "error": str(e),
+                }
+            },
+        )
         raise
 
 
-# --- Gender Harmony & SPCU CWE OBX builders (keep semantics; add logging) ---
+# =========================================================================
+# Gender Harmony / SPCU OBX helpers
+# =========================================================================
 
-from typing import Optional, Tuple  # keep existing pattern
-from .utils import ts_hl7, hl7_escape  # re-imports retained for compatibility
 
-_PRODUCER = "MEDILACRAHS^DEPT1"  # keep consistent with seg_obx/seg_obx_lines
+_PRODUCER = (
+    "MEDILACRAHS^DEPT1"
+)
 
 
 def _obx_cwe(
@@ -333,113 +1759,257 @@ def _obx_cwe(
     value: Tuple[str, str, str],
     sub_id: int = 1,
     status: str = "F",
-    effective_dt: Optional[str] = None,  # "YYYY-MM-DD HH:MM:SS" or None
-    method: Optional[Tuple[str, str, str]] = None,  # OBX-17 (e.g., source)
-    performing_org: Optional[str] = None,  # OBX-23
+    effective_dt: Optional[str] = None,
+    method: Optional[
+        Tuple[str, str, str]
+    ] = None,
+    performing_org: Optional[str] = None,
 ) -> str:
     """
-    Generic OBX builder for CWE values in v2.5.
-      OBX-3: (code, text, coding_system)
-      OBX-5: (code, text, coding_system)
-      OBX-14: Effective Date/Time
-      OBX-17: Method/Provenance (optional CWE)
-      OBX-23: Performing Organization (text)
+    Build a generic CWE-valued OBX.
+
+    OBX-1  Set ID
+    OBX-2  Value Type
+    OBX-3  Observation Identifier
+    OBX-4  Observation Sub-ID
+    OBX-5  Observation Value
+    OBX-11 Result Status
+    OBX-14 Date/Time of Observation
+    OBX-15 Producer's ID
+    OBX-17 Observation Method
+    OBX-23 Performing Organization Name
     """
     try:
-        obx3_ce = f"{obx3[0]}^{hl7_escape(obx3[1])}^{obx3[2]}"
-        val_ce = f"{value[0]}^{hl7_escape(value[1])}^{value[2]}"
+        fields = [""] * 24
 
-        obx14 = ts_hl7(effective_dt) if effective_dt else ""  # OBX-14
-        obx17 = f"{method[0]}^{hl7_escape(method[1])}^{method[2]}" if method else ""  # OBX-17
-        obx23 = performing_org or ""  # OBX-23
+        # OBX-1
+        fields[1] = str(
+            set_id
+        )
+
+        # OBX-2
+        fields[2] = "CWE"
+
+        # OBX-3
+        fields[3] = _ce(
+            obx3[0],
+            obx3[1],
+            obx3[2],
+        )
+
+        # OBX-4
+        fields[4] = str(
+            sub_id
+        )
+
+        # OBX-5
+        fields[5] = _ce(
+            value[0],
+            value[1],
+            value[2],
+        )
+
+        # OBX-11
+        fields[11] = status
+
+        # OBX-14
+        if effective_dt:
+            fields[14] = ts_hl7(
+                effective_dt
+            )
+
+        # OBX-15
+        fields[15] = _PRODUCER
+
+        # OBX-17
+        if method:
+            fields[17] = _ce(
+                method[0],
+                method[1],
+                method[2],
+            )
+
+        # OBX-23
+        if performing_org:
+            fields[23] = str(
+                performing_org
+            )
 
         obx = (
-            f"OBX|{set_id}|CWE|{obx3_ce}|{sub_id}|{val_ce}||||||{status}|||{obx14}|{_PRODUCER}"
-            f"||{''}|{obx17}||||{obx23}"
+            "OBX|"
+            + "|".join(fields[1:])
         )
-        logger.info("OBX built (CWE)", extra={"extra": {"obx3_code": obx3[0], "value_code": value[0], "set_id": set_id}})
+
+        logger.info(
+            "OBX built (CWE)",
+            extra={
+                "extra": {
+                    "obx3_code": obx3[0],
+                    "value_code": value[0],
+                    "set_id": set_id,
+                }
+            },
+        )
+
         return obx
+
     except Exception as e:
-        logger.error("Error building OBX (CWE)", extra={"extra": {"error": str(e)}})
+        logger.error(
+            "Error building OBX (CWE)",
+            extra={
+                "extra": {
+                    "error": str(e),
+                }
+            },
+        )
         raise
 
 
 def seg_obx_gender_identity(
     *,
     set_id: int,
-    gi_code: str = "446151000124109",  # SNOMED CT Male (example default)
+    gi_code: str = (
+        "446151000124109"
+    ),
     gi_text: str = "Male",
     gi_system: str = "SCT",
     effective_dt: Optional[str] = None,
-    method: Optional[Tuple[str, str, str]] = None,
+    method: Optional[
+        Tuple[str, str, str]
+    ] = None,
     performing_org: Optional[str] = None,
 ) -> str:
-    """OBX for LOINC 76691-5 (Gender identity)"""
+    """
+    Build the existing Gender Identity OBX.
+
+    Observation:
+        LOINC 76691-5
+    """
     try:
-        obx3 = ("76691-5", "Gender identity", "LN")
-        value = (gi_code, gi_text, gi_system)
         return _obx_cwe(
             set_id=set_id,
-            obx3=obx3,
-            value=value,
+            obx3=(
+                "76691-5",
+                "Gender identity",
+                "LN",
+            ),
+            value=(
+                gi_code,
+                gi_text,
+                gi_system,
+            ),
             effective_dt=effective_dt,
             method=method,
             performing_org=performing_org,
         )
+
     except Exception as e:
-        logger.error("Error building GI OBX", extra={"extra": {"error": str(e)}})
+        logger.error(
+            "Error building GI OBX",
+            extra={
+                "extra": {
+                    "error": str(e),
+                }
+            },
+        )
         raise
 
 
 def seg_obx_pronouns(
     *,
     set_id: int,
-    pronoun_code: str = "LA29520-6",  # they/them (example default)
-    pronoun_text: str = "they/them/their/theirs/themselves",
-    pronoun_system: str = "LN",  # LOINC answer list codes
+    pronoun_code: str = (
+        "LA29520-6"
+    ),
+    pronoun_text: str = (
+        "they/them/their/theirs/"
+        "themselves"
+    ),
+    pronoun_system: str = "LN",
     effective_dt: Optional[str] = None,
-    method: Optional[Tuple[str, str, str]] = None,
+    method: Optional[
+        Tuple[str, str, str]
+    ] = None,
     performing_org: Optional[str] = None,
 ) -> str:
-    """OBX for LOINC 90778-2 (Personal pronouns - Reported)"""
+    """
+    Build the existing Personal Pronouns OBX.
+
+    Observation:
+        LOINC 90778-2
+    """
     try:
-        obx3 = ("90778-2", "Personal pronouns - Reported", "LN")
-        value = (pronoun_code, pronoun_text, pronoun_system)
         return _obx_cwe(
             set_id=set_id,
-            obx3=obx3,
-            value=value,
+            obx3=(
+                "90778-2",
+                "Personal pronouns - Reported",
+                "LN",
+            ),
+            value=(
+                pronoun_code,
+                pronoun_text,
+                pronoun_system,
+            ),
             effective_dt=effective_dt,
             method=method,
             performing_org=performing_org,
         )
+
     except Exception as e:
-        logger.error("Error building Pronouns OBX", extra={"extra": {"error": str(e)}})
+        logger.error(
+            "Error building Pronouns OBX",
+            extra={
+                "extra": {
+                    "error": str(e),
+                }
+            },
+        )
         raise
 
 
 def seg_obx_spcu(
     *,
     set_id: int,
-    spcu_code: str = "F-T",  # example: "Apply female-typical settings"
-    spcu_text: str = "Apply female-typical settings",
-    spcu_system: str = "HL7",  # use your chosen THO/HL7 system id
+    spcu_code: str = "F-T",
+    spcu_text: str = (
+        "Apply female-typical settings"
+    ),
+    spcu_system: str = "HL7",
     effective_dt: Optional[str] = None,
-    method: Optional[Tuple[str, str, str]] = None,
+    method: Optional[
+        Tuple[str, str, str]
+    ] = None,
     performing_org: Optional[str] = None,
 ) -> str:
-    """OBX for SPCU (Sex Parameter for Clinical Use) in v2.5"""
+    """
+    Build the existing Sex Parameter for Clinical Use OBX.
+    """
     try:
-        obx3 = ("SPCU", "Sex parameter for clinical use", "HL7")
-        value = (spcu_code, spcu_text, spcu_system)
         return _obx_cwe(
             set_id=set_id,
-            obx3=obx3,
-            value=value,
+            obx3=(
+                "SPCU",
+                "Sex parameter for clinical use",
+                "HL7",
+            ),
+            value=(
+                spcu_code,
+                spcu_text,
+                spcu_system,
+            ),
             effective_dt=effective_dt,
             method=method,
             performing_org=performing_org,
         )
+
     except Exception as e:
-        logger.error("Error building SPCU OBX", extra={"extra": {"error": str(e)}})
+        logger.error(
+            "Error building SPCU OBX",
+            extra={
+                "extra": {
+                    "error": str(e),
+                }
+            },
+        )
         raise
