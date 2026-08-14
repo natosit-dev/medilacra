@@ -14,6 +14,7 @@ import pandas as pd
 
 
 COGNITION_INTRO_VERSION = "1.1"
+COGNITION_DISPLAY_VERSION = "1.0"
 REACTION_BASELINE_VERSION = "1.0"
 REACTION_BASELINE_PRACTICE_TRIALS = 1
 REACTION_BASELINE_MEASURED_TRIALS = 5
@@ -66,6 +67,16 @@ def _short(value: object, width: int = 14) -> str:
         return text
     half = max(4, (width - 1) // 2)
     return f"{text[:half]}…{text[-half:]}"
+
+
+def _clear_screen() -> None:
+    """Give each measured relational trial its own visual field."""
+
+    command = "cls" if os.name == "nt" else "clear"
+    result = os.system(command)
+    if result != 0:
+        # ANSI fallback for terminals where the shell clear command is unavailable.
+        print("\033[2J\033[H", end="", flush=True)
 
 
 def _observation_provider_records(cases: Iterable[object]) -> list[ObservationProviderRecord]:
@@ -453,9 +464,10 @@ def run_cognition_session(
 
     Returns a results dataframe plus session metadata. The intro/key calibration
     is untimed. A simple visual reaction-time baseline is measured next, then the
-    relational lookup trials begin. Invalid responses during relational trials
-    do not reset the reaction timer. Keyboard interrupt/EOF preserves completed
-    relational answers.
+    relational lookup trials begin. Each relational trial receives a clean
+    terminal screen before its timer starts. Invalid responses during relational
+    trials do not reset the reaction timer. Keyboard interrupt/EOF preserves
+    completed relational answers.
     """
 
     if questions_per_layout < 1:
@@ -473,6 +485,7 @@ def run_cognition_session(
             "questions_completed": 0,
             "questions_requested": total_questions,
             "intro_version": COGNITION_INTRO_VERSION,
+            "display_version": COGNITION_DISPLAY_VERSION,
             "calibration_completed": False,
             "calibration_invalid_attempts": 0,
             "reaction_baseline": {
@@ -517,9 +530,15 @@ def run_cognition_session(
         reaction_baseline_meta = _run_simple_reaction_baseline()
 
         for layout in layouts:
-            print(f"--- {layout.upper()} BLOCK ---")
             for within_layout, stimulus in enumerate(stimulus_sets[layout], start=1):
                 presentation_order += 1
+                _clear_screen()
+                print("=" * 64)
+                print(
+                    f"QUESTION {presentation_order}/{total_questions} "
+                    f"| {layout.upper()}"
+                )
+                print("=" * 64)
                 print()
                 print(_render_stimulus(stimulus, layout), flush=True)
                 started = perf_counter()
@@ -541,6 +560,7 @@ def run_cognition_session(
                     if correct
                     else f"Incorrect. Correct answer: {stimulus.correct_option}."
                 )
+                sleep(0.4)
 
                 rows.append(
                     {
@@ -583,6 +603,7 @@ def run_cognition_session(
         "seed": seed,
         "task": "observation_to_attending_provider",
         "intro_version": COGNITION_INTRO_VERSION,
+        "display_version": COGNITION_DISPLAY_VERSION,
         "calibration_completed": calibration_completed,
         "calibration_invalid_attempts": calibration_invalid_attempts,
         "reaction_baseline": reaction_baseline_meta,
