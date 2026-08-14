@@ -14,7 +14,7 @@ import pandas as pd
 
 
 COGNITION_INTRO_VERSION = "1.1"
-COGNITION_DISPLAY_VERSION = "1.0"
+COGNITION_DISPLAY_VERSION = "1.1"
 REACTION_BASELINE_VERSION = "1.0"
 REACTION_BASELINE_PRACTICE_TRIALS = 1
 REACTION_BASELINE_MEASURED_TRIALS = 5
@@ -75,7 +75,6 @@ def _clear_screen() -> None:
     command = "cls" if os.name == "nt" else "clear"
     result = os.system(command)
     if result != 0:
-        # ANSI fallback for terminals where the shell clear command is unavailable.
         print("\033[2J\033[H", end="", flush=True)
 
 
@@ -103,11 +102,13 @@ def _build_stimuli(
     total_questions: int,
     seed: int,
 ) -> tuple[list[CognitionStimulus], str | None]:
-    """Build a controlled relational lookup task from generated MediLacra state.
+    """Build unambiguous relational-lookup stimuli from generated state.
 
-    Each trial asks which attending provider is associated with one observation.
-    Canonical presentation requires observation -> encounter -> provider traversal;
-    bespoke presentation shows the same relation already materialized on one row.
+    The participant only sees shortened identifiers, so every record displayed
+    within a trial must have a unique visible observation key and a unique
+    visible encounter key. Target observation keys are also unique across the
+    session. This prevents a question from having multiple visually supported
+    answers even when source observation IDs legitimately recur across encounters.
     """
 
     rng = random.Random(seed)
@@ -134,32 +135,66 @@ def _build_stimuli(
 
     targets = list(records)
     rng.shuffle(targets)
-    if len(targets) < total_questions:
-        return [], (
-            f"Cognition test requires at least {total_questions} observations for "
-            "non-repeated targets. Increase generated grain or use --skip-cognition."
-        )
 
     stimuli: list[CognitionStimulus] = []
-    used_target_ids: set[tuple[str, str]] = set()
+    used_target_observation_keys: set[str] = set()
 
     for target in targets:
-        target_key = (target.encounter_id, target.observation_id)
-        if target_key in used_target_ids:
+        target_observation_key = _short(target.observation_id)
+        target_encounter_key = _short(target.encounter_id)
+
+        if target_observation_key in used_target_observation_keys:
             continue
 
-        distractor_reps = [
-            rep
-            for rep in encounter_reps
-            if rep.encounter_id != target.encounter_id
-            and rep.provider_label != target.provider_label
+        candidates = [
+            record
+            for record in records
+            if record.encounter_id != target.encounter_id
+            and record.provider_label != target.provider_label
+            and _short(record.observation_id) != target_observation_key
+            and _short(record.encounter_id) != target_encounter_key
         ]
-        if len(distractor_reps) < 3:
+        rng.shuffle(candidates)
+
+        chosen: list[ObservationProviderRecord] = [target]
+        seen_encounters = {target.encounter_id}
+        seen_providers = {target.provider_label}
+        seen_observation_keys = {target_observation_key}
+        seen_encounter_keys = {target_encounter_key}
+
+        for candidate in candidates:
+            observation_key = _short(candidate.observation_id)
+            encounter_key = _short(candidate.encounter_id)
+
+            if candidate.encounter_id in seen_encounters:
+                continue
+            if candidate.provider_label in seen_providers:
+                continue
+            if observation_key in seen_observation_keys:
+                continue
+            if encounter_key in seen_encounter_keys:
+                continue
+
+            chosen.append(candidate)
+            seen_encounters.add(candidate.encounter_id)
+            seen_providers.add(candidate.provider_label)
+            seen_observation_keys.add(observation_key)
+            seen_encounter_keys.add(encounter_key)
+
+            if len(chosen) == 4:
+                break
+
+        if len(chosen) < 4:
             continue
 
-        chosen = [target] + rng.sample(distractor_reps, 3)
-        rng.shuffle(chosen)
+        # Defensive assertion: if rendering could make the question ambiguous,
+        # reject the trial rather than record a false cognition error.
+        if len({_short(record.observation_id) for record in chosen}) != 4:
+            continue
+        if len({_short(record.encounter_id) for record in chosen}) != 4:
+            continue
 
+        rng.shuffle(chosen)
         option_labels = [record.provider_label for record in chosen]
         shuffled_options = list(option_labels)
         rng.shuffle(shuffled_options)
@@ -173,14 +208,16 @@ def _build_stimuli(
                 correct_option=correct_option,
             )
         )
-        used_target_ids.add(target_key)
+        used_target_observation_keys.add(target_observation_key)
+
         if len(stimuli) >= total_questions:
             break
 
     if len(stimuli) < total_questions:
         return [], (
-            "Could not construct enough non-repeated cognition trials with four "
-            "distinct provider options from this generated reality."
+            "Could not construct enough unambiguous cognition trials with four "
+            "distinct providers and unique visible observation/encounter keys. "
+            "Increase generated grain or use --skip-cognition."
         )
 
     return stimuli, None
@@ -225,12 +262,7 @@ def _render_stimulus(stimulus: CognitionStimulus, layout: str) -> str:
 
 
 def _run_intro_calibration() -> int:
-    """Orient the participant and calibrate the four response keys.
-
-    This stage is deliberately untimed. It reduces startup/orientation cost in
-    the first measured trial and confirms that 1-4 input works as expected.
-    Returns the number of incorrect calibration key presses for QA metadata.
-    """
+    """Orient the participant and calibrate the four response keys."""
 
     print("\nCOGNITION TEST")
     print(
@@ -299,7 +331,6 @@ def _read_single_key() -> str:
         import msvcrt
 
         key = msvcrt.getwch()
-        # Windows function/navigation keys can arrive as a two-character sequence.
         if key in {"\x00", "\xe0"} and msvcrt.kbhit():
             msvcrt.getwch()
     else:
@@ -316,15 +347,7 @@ def _drain_key_buffer() -> None:
 
 
 def _run_simple_reaction_baseline() -> dict[str, object]:
-    """Measure simple visual-to-key reaction time before relational cognition.
-
-    One practice trial is followed by five measured trials. Each signal is
-    preceded by a random 1.5-4.0 second delay. Premature keypresses are treated
-    as false starts and the same trial is retried with a new random delay.
-
-    Raw trial measurements and summary statistics are returned in metadata.
-    They are not subtracted from the relational-cognition reaction times.
-    """
+    """Measure simple visual-to-key reaction time before relational cognition."""
 
     baseline_seed = random.SystemRandom().randrange(0, 2**32)
     rng = random.Random(baseline_seed)
@@ -460,15 +483,7 @@ def run_cognition_session(
     seed: int = 143,
     layout_order: str = "random",
 ) -> tuple[pd.DataFrame, dict[str, object]]:
-    """Run the interactive human cognition portion of the experiment.
-
-    Returns a results dataframe plus session metadata. The intro/key calibration
-    is untimed. A simple visual reaction-time baseline is measured next, then the
-    relational lookup trials begin. Each relational trial receives a clean
-    terminal screen before its timer starts. Invalid responses during relational
-    trials do not reset the reaction timer. Keyboard interrupt/EOF preserves
-    completed relational answers.
-    """
+    """Run the interactive human cognition portion of the experiment."""
 
     if questions_per_layout < 1:
         raise ValueError("questions_per_layout must be at least 1")
