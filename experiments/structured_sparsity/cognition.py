@@ -9,6 +9,8 @@ from typing import Iterable
 import pandas as pd
 
 
+COGNITION_INTRO_VERSION = "1.0"
+
 RESULT_COLUMNS = [
     "layout",
     "layout_order",
@@ -202,6 +204,42 @@ def _render_stimulus(stimulus: CognitionStimulus, layout: str) -> str:
     return "\n".join(lines)
 
 
+def _run_intro_calibration() -> int:
+    """Orient the participant and calibrate the four response keys.
+
+    This stage is deliberately untimed. It reduces startup/orientation cost in
+    the first measured trial and confirms that 1-4 input works as expected.
+    Returns the number of incorrect calibration key presses for QA metadata.
+    """
+
+    print("\nCOGNITION TEST")
+    print(
+        "\n"
+        "You will see a series of very simple lookup questions.\n"
+        "For each one, find the requested relationship in the data shown and\n"
+        "answer with 1, 2, 3, or 4.\n\n"
+        "This is not an intelligence quiz, and there is no score to beat.\n"
+        "The questions are intentionally simple. We are measuring how the\n"
+        "representation interacts with a basic lookup task, not how smart or\n"
+        "fast you are.\n\n"
+        "Take one slow breath, get comfortable, and answer naturally. There is\n"
+        "no need to rush. The timed measurements begin only after this setup.\n\n"
+        "First, calibrate the response keys by pressing 1, 2, 3, and 4 in order.\n"
+    )
+
+    invalid_attempts = 0
+    for expected in ("1", "2", "3", "4"):
+        while True:
+            raw = input(f"Press {expected}: ").strip()
+            if raw == expected:
+                break
+            invalid_attempts += 1
+            print(f"Please press {expected}.", flush=True)
+
+    print("\nCalibration complete. Timed questions begin now.\n", flush=True)
+    return invalid_attempts
+
+
 def run_cognition_session(
     cases: Iterable[object],
     questions_per_layout: int = 5,
@@ -210,8 +248,9 @@ def run_cognition_session(
 ) -> tuple[pd.DataFrame, dict[str, object]]:
     """Run the interactive human cognition portion of the experiment.
 
-    Returns a results dataframe plus session metadata. Invalid responses do not
-    reset the reaction timer. Keyboard interrupt/EOF preserves partial results.
+    Returns a results dataframe plus session metadata. The intro/key calibration
+    is untimed. Invalid responses during measured trials do not reset the
+    reaction timer. Keyboard interrupt/EOF preserves partial results.
     """
 
     if questions_per_layout < 1:
@@ -228,6 +267,9 @@ def run_cognition_session(
             "reason": skip_reason,
             "questions_completed": 0,
             "questions_requested": total_questions,
+            "intro_version": COGNITION_INTRO_VERSION,
+            "calibration_completed": False,
+            "calibration_invalid_attempts": 0,
         }
 
     rng.shuffle(stimuli)
@@ -248,18 +290,17 @@ def run_cognition_session(
         "bespoke": bespoke_stimuli,
     }
 
-    print("\nCOGNITION TEST")
-    print(
-        "Answer each mapping question with 1-4. The timer starts after the "
-        "question is printed. Invalid keys do not reset the timer.\n"
-    )
-
     rows: list[dict[str, object]] = []
     presentation_order = 0
     status = "complete"
     reason: str | None = None
+    calibration_completed = False
+    calibration_invalid_attempts = 0
 
     try:
+        calibration_invalid_attempts = _run_intro_calibration()
+        calibration_completed = True
+
         for layout in layouts:
             print(f"--- {layout.upper()} BLOCK ---")
             for within_layout, stimulus in enumerate(stimulus_sets[layout], start=1):
@@ -317,5 +358,8 @@ def run_cognition_session(
         "questions_per_layout": questions_per_layout,
         "seed": seed,
         "task": "observation_to_attending_provider",
+        "intro_version": COGNITION_INTRO_VERSION,
+        "calibration_completed": calibration_completed,
+        "calibration_invalid_attempts": calibration_invalid_attempts,
     }
     return results, metadata
