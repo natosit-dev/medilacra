@@ -143,7 +143,29 @@ experiment_config_20260813T224100-0400.json
 
 After machine measurements are complete, the runner can conduct a small interactive human relational-cognition test. Human think-time never contaminates machine timing.
 
-The initial cognition task is intentionally basic and should be answerable in a few seconds. It asks which attending provider is associated with a target observation.
+### Orientation and key calibration
+
+Before any measured human task, the participant sees a short orientation explaining that the task is intentionally simple and is not an intelligence quiz. The participant then presses `1`, `2`, `3`, and `4` in order. This stage is untimed and is intended to remove startup/orientation and response-key confusion from the first measured trial.
+
+### Simple reaction-time baseline
+
+After orientation, the runner measures a basic visual-to-key reaction baseline with no relational reasoning. It presents one practice trial followed by five measured trials:
+
+```text
+READY
+
+[random 1.5-4.0 second delay]
+
+NOW!
+```
+
+The participant presses any key when `NOW!` appears; Enter is not required. A premature keypress is treated as a false start and that trial is retried with a new random delay.
+
+The reaction baseline records the raw practice/measured trials, signal delays, false starts, and measured reaction times, plus median, mean, minimum, and maximum reaction time. These values are stored under `cognition.reaction_baseline` in `experiment_config`. They remain separate from relational reaction times; the runner does not subtract or normalize them automatically.
+
+### Relational lookup sensor
+
+The initial relational task is intentionally basic and should be answerable in a few seconds. It asks which attending provider is associated with a target observation.
 
 The underlying semantic relationship is the same in both layouts:
 
@@ -163,7 +185,7 @@ Each layout receives five multiple-choice trials by default. The runner:
 - records correctness
 - records reaction time in milliseconds
 - records invalid input attempts
-- preserves partial results if the cognition session is interrupted
+- preserves partial relational results if the cognition session is interrupted
 
 The cognition test requires enough generated state to construct four distinct provider options and ten non-repeated target observations. The planned 1/5/5/5 run satisfies that requirement under normal generation.
 
@@ -203,4 +225,4 @@ This experiment does **not** establish that database schemas behave like oscilla
 
 > How does changing the topology of relationships affect behavior when the represented state is held constant?
 
-The baseline established a tradeoff between read-time relationship traversal and maintenance-time state coupling. The grain phase asks how that tradeoff changes when the underlying reality has multiple child facts at different grains. The cognition phase asks whether the same representational difference also changes the effort required for a human to recover a simple relationship.
+The baseline established a tradeoff between read-time relationship traversal and maintenance-time state coupling. The grain phase asks how that tradeoff changes when the underlying reality has multiple child facts at different grains. The cognition phase asks whether the same representational difference also changes the effort required for a human to recover a simple relationship. The simple reaction baseline provides a session-level measure of basic response speed without assuming that it should be subtracted from relational cognition time.
