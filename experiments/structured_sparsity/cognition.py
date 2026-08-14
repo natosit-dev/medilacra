@@ -1,15 +1,24 @@
 from __future__ import annotations
 
 import json
+import os
 import random
+import select
+import sys
+from contextlib import contextmanager
 from dataclasses import dataclass
-from time import perf_counter
-from typing import Iterable
+from time import perf_counter, sleep
+from typing import Iterable, Iterator
 
 import pandas as pd
 
 
-COGNITION_INTRO_VERSION = "1.0"
+COGNITION_INTRO_VERSION = "1.1"
+REACTION_BASELINE_VERSION = "1.0"
+REACTION_BASELINE_PRACTICE_TRIALS = 1
+REACTION_BASELINE_MEASURED_TRIALS = 5
+REACTION_DELAY_MIN_SECONDS = 1.5
+REACTION_DELAY_MAX_SECONDS = 4.0
 
 RESULT_COLUMNS = [
     "layout",
@@ -223,7 +232,7 @@ def _run_intro_calibration() -> int:
         "representation interacts with a basic lookup task, not how smart or\n"
         "fast you are.\n\n"
         "Take one slow breath, get comfortable, and answer naturally. There is\n"
-        "no need to rush. The timed measurements begin only after this setup.\n\n"
+        "no need to rush. Nothing is timed until after this setup.\n\n"
         "First, calibrate the response keys by pressing 1, 2, 3, and 4 in order.\n"
     )
 
@@ -236,8 +245,202 @@ def _run_intro_calibration() -> int:
             invalid_attempts += 1
             print(f"Please press {expected}.", flush=True)
 
-    print("\nCalibration complete. Timed questions begin now.\n", flush=True)
+    print(
+        "\nCalibration complete. Next is a simple reaction-time baseline.\n",
+        flush=True,
+    )
     return invalid_attempts
+
+
+@contextmanager
+def _single_key_mode() -> Iterator[None]:
+    """Temporarily make stdin return one keypress without requiring Enter."""
+
+    if os.name == "nt":
+        yield
+        return
+
+    import termios
+
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    new_settings = termios.tcgetattr(fd)
+    new_settings[3] &= ~(termios.ICANON | termios.ECHO)
+    termios.tcsetattr(fd, termios.TCSADRAIN, new_settings)
+    try:
+        yield
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+
+def _key_available() -> bool:
+    if os.name == "nt":
+        import msvcrt
+
+        return bool(msvcrt.kbhit())
+
+    readable, _, _ = select.select([sys.stdin], [], [], 0)
+    return bool(readable)
+
+
+def _read_single_key() -> str:
+    if os.name == "nt":
+        import msvcrt
+
+        key = msvcrt.getwch()
+        # Windows function/navigation keys can arrive as a two-character sequence.
+        if key in {"\x00", "\xe0"} and msvcrt.kbhit():
+            msvcrt.getwch()
+    else:
+        key = sys.stdin.read(1)
+
+    if key == "\x03":
+        raise KeyboardInterrupt
+    return key
+
+
+def _drain_key_buffer() -> None:
+    while _key_available():
+        _read_single_key()
+
+
+def _run_simple_reaction_baseline() -> dict[str, object]:
+    """Measure simple visual-to-key reaction time before relational cognition.
+
+    One practice trial is followed by five measured trials. Each signal is
+    preceded by a random 1.5-4.0 second delay. Premature keypresses are treated
+    as false starts and the same trial is retried with a new random delay.
+
+    Raw trial measurements and summary statistics are returned in metadata.
+    They are not subtracted from the relational-cognition reaction times.
+    """
+
+    baseline_seed = random.SystemRandom().randrange(0, 2**32)
+    rng = random.Random(baseline_seed)
+    rows: list[dict[str, object]] = []
+    total_false_starts = 0
+
+    print(
+        "SIMPLE REACTION-TIME BASELINE\n\n"
+        "This is not a reasoning task.\n"
+        "When READY appears, wait.\n"
+        "When NOW! appears, press any key as soon as you notice it.\n"
+        "You do not need to press Enter.\n\n"
+        "There will be one practice trial, then five measured trials.\n"
+        "The delay before NOW! changes each time, so wait for the signal.\n"
+    )
+
+    trials = [
+        ("practice", 1),
+        *[
+            ("measured", trial_number)
+            for trial_number in range(1, REACTION_BASELINE_MEASURED_TRIALS + 1)
+        ],
+    ]
+
+    with _single_key_mode():
+        for trial_kind, trial_number in trials:
+            false_starts = 0
+
+            while True:
+                _drain_key_buffer()
+                if trial_kind == "practice":
+                    print("Practice trial")
+                else:
+                    print(
+                        f"Measured trial {trial_number}/"
+                        f"{REACTION_BASELINE_MEASURED_TRIALS}"
+                    )
+                print("READY", flush=True)
+
+                delay_seconds = rng.uniform(
+                    REACTION_DELAY_MIN_SECONDS,
+                    REACTION_DELAY_MAX_SECONDS,
+                )
+                wait_started = perf_counter()
+                false_start = False
+
+                while perf_counter() - wait_started < delay_seconds:
+                    if _key_available():
+                        _read_single_key()
+                        _drain_key_buffer()
+                        false_starts += 1
+                        total_false_starts += 1
+                        false_start = True
+                        print(
+                            "\nToo early — wait for NOW!. Retrying this trial.\n",
+                            flush=True,
+                        )
+                        sleep(0.25)
+                        break
+                    sleep(0.005)
+
+                if false_start:
+                    continue
+
+                print("NOW!", flush=True)
+                started = perf_counter()
+                key = _read_single_key()
+                reaction_ms = (perf_counter() - started) * 1000.0
+                _drain_key_buffer()
+
+                rows.append(
+                    {
+                        "trial_kind": trial_kind,
+                        "trial_number": trial_number,
+                        "delay_ms": round(delay_seconds * 1000.0, 3),
+                        "reaction_time_ms": round(reaction_ms, 3),
+                        "false_starts_before_trial": false_starts,
+                        "key": repr(key),
+                    }
+                )
+
+                if trial_kind == "practice":
+                    print("\nPractice complete.\n", flush=True)
+                else:
+                    print("\nRecorded.\n", flush=True)
+                break
+
+    measured = [
+        float(row["reaction_time_ms"])
+        for row in rows
+        if row["trial_kind"] == "measured"
+    ]
+
+    if measured:
+        series = pd.Series(measured, dtype="float64")
+        summary = {
+            "median_ms": round(float(series.median()), 3),
+            "mean_ms": round(float(series.mean()), 3),
+            "min_ms": round(float(series.min()), 3),
+            "max_ms": round(float(series.max()), 3),
+        }
+    else:
+        summary = {
+            "median_ms": None,
+            "mean_ms": None,
+            "min_ms": None,
+            "max_ms": None,
+        }
+
+    print(
+        "Reaction baseline complete. The relational lookup questions begin now.\n",
+        flush=True,
+    )
+
+    return {
+        "version": REACTION_BASELINE_VERSION,
+        "status": "complete",
+        "seed": baseline_seed,
+        "practice_trials_requested": REACTION_BASELINE_PRACTICE_TRIALS,
+        "measured_trials_requested": REACTION_BASELINE_MEASURED_TRIALS,
+        "measured_trials_completed": len(measured),
+        "delay_min_seconds": REACTION_DELAY_MIN_SECONDS,
+        "delay_max_seconds": REACTION_DELAY_MAX_SECONDS,
+        "false_starts": total_false_starts,
+        **summary,
+        "trials": rows,
+    }
 
 
 def run_cognition_session(
@@ -249,8 +452,10 @@ def run_cognition_session(
     """Run the interactive human cognition portion of the experiment.
 
     Returns a results dataframe plus session metadata. The intro/key calibration
-    is untimed. Invalid responses during measured trials do not reset the
-    reaction timer. Keyboard interrupt/EOF preserves partial results.
+    is untimed. A simple visual reaction-time baseline is measured next, then the
+    relational lookup trials begin. Invalid responses during relational trials
+    do not reset the reaction timer. Keyboard interrupt/EOF preserves completed
+    relational answers.
     """
 
     if questions_per_layout < 1:
@@ -270,6 +475,11 @@ def run_cognition_session(
             "intro_version": COGNITION_INTRO_VERSION,
             "calibration_completed": False,
             "calibration_invalid_attempts": 0,
+            "reaction_baseline": {
+                "version": REACTION_BASELINE_VERSION,
+                "status": "skipped",
+                "reason": skip_reason,
+            },
         }
 
     rng.shuffle(stimuli)
@@ -296,10 +506,15 @@ def run_cognition_session(
     reason: str | None = None
     calibration_completed = False
     calibration_invalid_attempts = 0
+    reaction_baseline_meta: dict[str, object] = {
+        "version": REACTION_BASELINE_VERSION,
+        "status": "pending",
+    }
 
     try:
         calibration_invalid_attempts = _run_intro_calibration()
         calibration_completed = True
+        reaction_baseline_meta = _run_simple_reaction_baseline()
 
         for layout in layouts:
             print(f"--- {layout.upper()} BLOCK ---")
@@ -321,7 +536,11 @@ def run_cognition_session(
 
                 reaction_ms = (perf_counter() - started) * 1000.0
                 correct = selected_option == stimulus.correct_option
-                print("Correct." if correct else f"Incorrect. Correct answer: {stimulus.correct_option}.")
+                print(
+                    "Correct."
+                    if correct
+                    else f"Incorrect. Correct answer: {stimulus.correct_option}."
+                )
 
                 rows.append(
                     {
@@ -346,6 +565,11 @@ def run_cognition_session(
     except (KeyboardInterrupt, EOFError):
         status = "interrupted"
         reason = "Cognition session interrupted by user or terminal EOF."
+        if reaction_baseline_meta.get("status") == "pending":
+            reaction_baseline_meta = {
+                **reaction_baseline_meta,
+                "status": "interrupted",
+            }
         print("\nCognition session interrupted; preserving completed answers.")
 
     results = pd.DataFrame(rows, columns=RESULT_COLUMNS)
@@ -361,5 +585,6 @@ def run_cognition_session(
         "intro_version": COGNITION_INTRO_VERSION,
         "calibration_completed": calibration_completed,
         "calibration_invalid_attempts": calibration_invalid_attempts,
+        "reaction_baseline": reaction_baseline_meta,
     }
     return results, metadata
