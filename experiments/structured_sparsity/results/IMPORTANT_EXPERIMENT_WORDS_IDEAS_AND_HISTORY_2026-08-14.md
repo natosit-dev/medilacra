@@ -946,7 +946,7 @@ The earlier saved experiment documents preserve selected prompt histories rather
 
 ### P29
 
-> Lol I'm still waking up a bit, I smoked a lot of weed yesterday 🤣. But I think we should add an intro to the testing. Instead of dropping right in, print the basic instructions, tell the user to take a breath, tell them this isn't an intelligence quiz and that they can relax, then have them press 1 2 3 4 in order to begin
+> Lol I'm still waking up a bit 🤣. But I think we should add an intro to the testing. Instead of dropping right in, print the basic instructions, tell the user to take a breath, tell them this isn't an intelligence quiz and that they can relax, then have them press 1 2 3 4 in order to begin
 
 ### P30
 
