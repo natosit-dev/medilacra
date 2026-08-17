@@ -84,6 +84,10 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _pct(count: int, total: int) -> float:
+    return (count / total * 100.0) if total else 0.0
+
+
 def main() -> None:
     configure_logging()
     args = build_parser().parse_args()
@@ -121,6 +125,44 @@ def main() -> None:
     print(f"  DFT:          {counts['DFT']:,}")
     print(f"  ORM labs:     {counts['ORM']:,}")
     print(f"  ORU labs:     {counts['ORU_LABS']:,}")
+
+    print("PID Sex Distribution:")
+    sex_distribution = counts["PID_SEX_DISTRIBUTION"]
+    sex_total = sum(sex_distribution.values())
+    for value, count in sorted(sex_distribution.items()):
+        print(f"  {value}: {count:,} ({_pct(count, sex_total):.1f}%)")
+
+    print("Top 5 Diagnoses:")
+    top_diagnoses = counts["TOP_DIAGNOSES"]
+    if top_diagnoses:
+        for (code, description), count in top_diagnoses:
+            label = f"{code} - {description}" if description else code
+            print(f"  {label}: {count:,}")
+    else:
+        print("  (none)")
+
+    print("Gender Harmony Distribution:")
+    gh_distribution = counts["GENDER_HARMONY_DISTRIBUTION"]
+    if args.no_gender_harmony:
+        print("  disabled")
+    else:
+        for heading, key in (
+            ("Gender Identity", "gender_identity"),
+            ("Pronouns", "pronouns"),
+            ("SPCU", "spcu"),
+        ):
+            distribution = gh_distribution[key]
+            total = sum(distribution.values())
+            print(f"  {heading}:")
+            for value, count in sorted(
+                distribution.items(), key=lambda item: (-item[1], item[0][1])
+            ):
+                code, text, system = value
+                print(
+                    f"    {text} [{code}^{system}]: "
+                    f"{count:,} ({_pct(count, total):.1f}%)"
+                )
+
     print("Performance:")
     print(f"  elapsed:      {elapsed:.3f}s")
     print(f"  entity rate:  {throughput:,.0f}/s")
