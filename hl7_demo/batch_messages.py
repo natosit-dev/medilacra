@@ -1,18 +1,15 @@
 """Network-free message builders used by MediLacra batch experiments.
 
-These mirror the current ORU/DFT/lab projections without importing
-``hl7_demo.messages``, which imports the legacy SDOH API module.
+These mirror the current ORU/DFT/lab projections without invoking legacy
+SDOH API lookups.
 """
 
 from __future__ import annotations
 
-from typing import List
+import random
+from typing import Dict, List
 
-from .labs import (
-    build_lab_orm as _build_lab_orm,
-    build_lab_oru as _build_lab_oru,
-    predict_labs_for_patient,
-)
+from .labs import LABS_SPEC, build_lab_orm as _build_lab_orm, build_lab_oru as _build_lab_oru
 from .models import Encounter, Observation, Patient, Transaction
 from .segments import (
     seg_dg1,
@@ -26,6 +23,40 @@ from .segments import (
     seg_pid,
     seg_pv1,
 )
+
+
+def _predict_labs_offline() -> Dict[str, Dict]:
+    """Generate the existing synthetic lab panel without SDOH API inputs.
+
+    Poverty=0 and AQI=50 match the fallback values already used by the legacy
+    predictor when enrichment is unavailable.
+    """
+
+    poverty = 0.0
+    aqi = 50.0
+    results: Dict[str, Dict] = {}
+
+    for loinc, spec in LABS_SPEC.items():
+        base = random.gauss(spec["mean"], spec["sd"])
+        shift = poverty * spec["poverty_beta"] + aqi * spec["aqi_beta"]
+        noisy = base + random.gauss(shift, spec["sd"] * 0.05)
+
+        low, high = spec["ref"]
+        value = max(low - (high - low), min(high + (high - low), noisy))
+        flag = "L" if value < low else "H" if value > high else "N"
+
+        results[loinc] = {
+            "loinc": loinc,
+            "name": spec["name"],
+            "value": round(value, 2),
+            "units": spec["units"],
+            "ref_low": low,
+            "ref_high": high,
+            "abnormal_flag": flag,
+            "status": "F",
+        }
+
+    return results
 
 
 def build_oru_batch(
@@ -104,7 +135,7 @@ def build_oru_labs_batch(
     order_code: str = "SYN_LABS",
     order_text: str = "Synthetic Lab Panel",
 ) -> str:
-    labs = predict_labs_for_patient(p)
+    labs = _predict_labs_offline()
     return _build_lab_oru(
         p,
         enc,
