@@ -1,13 +1,12 @@
 """Experiment-oriented MediLacra batch generation.
 
-This path keeps the current entity generators and message builders, while
+This path keeps the current entity generators and message structure, while
 exposing explicit cardinality controls similar to the structured-sparsity
 experiments. External SDOH enrichment is intentionally excluded.
 """
 
 from __future__ import annotations
 
-import os
 import random
 import re
 from datetime import datetime
@@ -16,8 +15,13 @@ from typing import Dict, Optional
 
 from faker import Faker
 
+from .batch_messages import (
+    build_dft_batch,
+    build_orm_labs_batch,
+    build_oru_batch,
+    build_oru_labs_batch,
+)
 from .generators import gen_encounter, gen_observation, gen_patient, gen_transaction
-from .messages import build_dft, build_orm_labs, build_oru, build_oru_labs
 from .offline_adt import build_adt_offline
 from .reports import load_reports
 
@@ -134,13 +138,18 @@ def run_batch_pipeline(
                     include_vitals=include_vitals,
                     include_gender_harmony=include_gender_harmony,
                 ),
-                "ORU": build_oru(patient, encounter, observations),
-                "DFT": build_dft(patient, encounter, transactions, observations),
+                "ORU": build_oru_batch(patient, encounter, observations),
+                "DFT": build_dft_batch(
+                    patient,
+                    encounter,
+                    transactions,
+                    observations,
+                ),
             }
 
             if include_labs:
-                messages["ORM"] = build_orm_labs(patient, encounter)
-                messages["ORU_LABS"] = build_oru_labs(
+                messages["ORM"] = build_orm_labs_batch(patient, encounter)
+                messages["ORU_LABS"] = build_oru_labs_batch(
                     patient,
                     encounter,
                     start_set_id=20,
