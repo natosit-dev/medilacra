@@ -35,12 +35,17 @@ def build_adt_offline(
     *,
     include_vitals: bool = True,
     include_gender_harmony: bool = True,
+    gender_values: dict | None = None,
 ) -> str:
     """Build ADT^A01 without network/API enrichment.
 
     The existing vitals model historically falls back to poverty=0 and AQI=50
     when SDOH lookups return nothing. Batch mode uses those same fallback
     inputs directly, so no AirNow/Census/PLACES/BLS request can occur.
+
+    ``gender_values`` lets the batch pipeline select Gender Harmony values
+    once, count the exact generated distribution, and pass the same values
+    into the HL7 projection without a second random draw.
     """
 
     parts = [
@@ -65,10 +70,11 @@ def build_adt_offline(
 
     if include_gender_harmony:
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        gender_values = choose_gender_harmony_values(
-            getattr(p, "sex", ""),
-            match_bias=0.95,
-        )
+        if gender_values is None:
+            gender_values = choose_gender_harmony_values(
+                getattr(p, "sex", ""),
+                match_bias=0.95,
+            )
 
         gi_code, gi_text, gi_system = gender_values["gi"]
         parts.append(
