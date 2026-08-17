@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import logging
 from time import perf_counter
-
-from .batch_pipeline import run_batch_pipeline
-from .config import configure_logging
 
 
 def positive_int(value: str) -> int:
@@ -81,6 +79,14 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Skip Gender Identity, Pronouns, and SPCU OBXs.",
     )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help=(
+            "Enable detailed MediLacra INFO logging. Batch runs are quiet "
+            "by default so logging overhead does not distort benchmarks."
+        ),
+    )
     return parser
 
 
@@ -89,8 +95,25 @@ def _pct(count: int, total: int) -> float:
 
 
 def main() -> None:
-    configure_logging()
     args = build_parser().parse_args()
+
+    # Batch mode is performance-oriented. Disable Python logging before
+    # importing the MediLacra generator stack so module-load and per-entity /
+    # per-segment INFO messages cannot distort benchmark timings. --verbose
+    # restores the existing diagnostic behavior when needed.
+    if not args.verbose:
+        logging.disable(logging.CRITICAL)
+
+    from .config import configure_logging
+
+    configure_logging()
+
+    # configure_logging may create handlers, so reassert the global cutoff
+    # after configuration in quiet mode.
+    if not args.verbose:
+        logging.disable(logging.CRITICAL)
+
+    from .batch_pipeline import run_batch_pipeline
 
     started = perf_counter()
     counts = run_batch_pipeline(
