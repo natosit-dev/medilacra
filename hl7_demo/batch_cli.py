@@ -15,6 +15,13 @@ def positive_int(value: str) -> int:
     return parsed
 
 
+def nonnegative_int(value: str) -> int:
+    parsed = int(value)
+    if parsed < 0:
+        raise argparse.ArgumentTypeError("value must be >= 0")
+    return parsed
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
@@ -30,12 +37,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--observations-per-encounter",
-        type=positive_int,
+        type=nonnegative_int,
         default=1,
     )
     parser.add_argument(
         "--transactions-per-encounter",
-        type=positive_int,
+        type=nonnegative_int,
         default=1,
     )
     parser.add_argument(
