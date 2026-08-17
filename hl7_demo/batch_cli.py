@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from time import perf_counter
 
 from .batch_pipeline import run_batch_pipeline
 from .config import configure_logging
@@ -87,6 +88,7 @@ def main() -> None:
     configure_logging()
     args = build_parser().parse_args()
 
+    started = perf_counter()
     counts = run_batch_pipeline(
         patients=args.patients,
         encounters_per_patient=args.encounters_per_patient,
@@ -100,6 +102,13 @@ def main() -> None:
         include_vitals=not args.no_vitals,
         include_gender_harmony=not args.no_gender_harmony,
     )
+    elapsed = perf_counter() - started
+
+    entity_count = sum(
+        counts[key]
+        for key in ("PATIENT", "ENCOUNTER", "OBSERVATION", "TRANSACTION")
+    )
+    throughput = entity_count / elapsed if elapsed > 0 else 0.0
 
     print("Generated:")
     print(f"  patients:     {counts['PATIENT']:,}")
@@ -112,6 +121,9 @@ def main() -> None:
     print(f"  DFT:          {counts['DFT']:,}")
     print(f"  ORM labs:     {counts['ORM']:,}")
     print(f"  ORU labs:     {counts['ORU_LABS']:,}")
+    print("Performance:")
+    print(f"  elapsed:      {elapsed:.3f}s")
+    print(f"  entity rate:  {throughput:,.0f}/s")
     print(f"Output: {args.out_dir}")
 
 
