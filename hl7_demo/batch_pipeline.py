@@ -32,6 +32,12 @@ def _positive(name: str, value: int) -> int:
     return value
 
 
+def _nonnegative(name: str, value: int) -> int:
+    if value < 0:
+        raise ValueError(f"{name} must be >= 0; got {value}")
+    return value
+
+
 def _safe_id(value: str) -> str:
     return re.sub(r"[^A-Za-z0-9_\-]", "_", value)
 
@@ -71,10 +77,10 @@ def run_batch_pipeline(
     encounters_per_patient = _positive(
         "encounters_per_patient", encounters_per_patient
     )
-    observations_per_encounter = _positive(
+    observations_per_encounter = _nonnegative(
         "observations_per_encounter", observations_per_encounter
     )
-    transactions_per_encounter = _positive(
+    transactions_per_encounter = _nonnegative(
         "transactions_per_encounter", transactions_per_encounter
     )
 
@@ -118,15 +124,18 @@ def run_batch_pipeline(
             ]
             counts["TRANSACTION"] += len(transactions)
 
-            replace = observations_per_encounter > len(reports)
-            sampled_reports = reports.sample(
-                n=observations_per_encounter,
-                replace=replace,
-            )
-            observations = [
-                gen_observation(encounter, report_row)
-                for _, report_row in sampled_reports.iterrows()
-            ]
+            if observations_per_encounter:
+                replace = observations_per_encounter > len(reports)
+                sampled_reports = reports.sample(
+                    n=observations_per_encounter,
+                    replace=replace,
+                )
+                observations = [
+                    gen_observation(encounter, report_row)
+                    for _, report_row in sampled_reports.iterrows()
+                ]
+            else:
+                observations = []
             counts["OBSERVATION"] += len(observations)
 
             messages = {
