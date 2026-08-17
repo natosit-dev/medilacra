@@ -9,9 +9,10 @@ from __future__ import annotations
 
 import random
 import re
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from faker import Faker
 
@@ -21,7 +22,13 @@ from .batch_messages import (
     build_oru_batch,
     build_oru_labs_batch,
 )
-from .generators import gen_encounter, gen_observation, gen_patient, gen_transaction
+from .generators import (
+    choose_gender_harmony_values,
+    gen_encounter,
+    gen_observation,
+    gen_patient,
+    gen_transaction,
+)
 from .offline_adt import build_adt_offline
 from .reports import load_reports
 
@@ -65,12 +72,16 @@ def run_batch_pipeline(
     include_vitals: bool = True,
     include_gender_harmony: bool = True,
     scenario_profile: dict | None = None,
-) -> Dict[str, int]:
+) -> Dict[str, Any]:
     """Generate linked MediLacra data using explicit cardinalities.
 
     One ADT, narrative ORU, and DFT is emitted per encounter. ORU and DFT
     aggregate the requested observations/transactions for that encounter.
     Optional lab ORM/ORU messages remain one pair per encounter.
+
+    Lightweight counters are accumulated during generation so the caller can
+    report PID sex, diagnosis, and Gender Harmony distributions without a
+    second pass over the generated HL7 files.
     """
 
     patients = _positive("patients", patients)
@@ -93,7 +104,7 @@ def run_batch_pipeline(
     out_path.mkdir(parents=True, exist_ok=True)
 
     run_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    counts: Dict[str, int] = {
+    counts: Dict[str, Any] = {
         "PATIENT": 0,
         "ENCOUNTER": 0,
         "OBSERVATION": 0,
@@ -105,6 +116,12 @@ def run_batch_pipeline(
         "ORU_LABS": 0,
     }
 
+    pid_sex = Counter()
+    diagnoses = Counter()
+    gender_identity = Counter()
+    pronouns = Counter()
+    spcu = Counter()
+
     bulk_paths = {
         name: out_path / f"{name}_{run_ts}.hl7"
         for name in ("ADT", "ORU", "DFT", "ORM", "ORU_LABS")
@@ -113,6 +130,7 @@ def run_batch_pipeline(
     for _ in range(patients):
         patient = gen_patient()
         counts["PATIENT"] += 1
+        pid_sex[getattr(patient, "sex", "") or "(blank)"] += 1
 
         for _ in range(encounters_per_patient):
             encounter = gen_encounter(patient.patient_id, profile=scenario_profile)
@@ -138,6 +156,24 @@ def run_batch_pipeline(
                 observations = []
             counts["OBSERVATION"] += len(observations)
 
+            for observation in observations:
+                code = (getattr(observation, "icd_code", "") or "").strip()
+                description = (
+                    getattr(observation, "icd_description", "") or ""
+                ).strip()
+                if code:
+                    diagnoses[(code, description)] += 1
+
+            gender_values = None
+            if include_gender_harmony:
+                gender_values = choose_gender_harmony_values(
+                    getattr(patient, "sex", ""),
+                    match_bias=0.95,
+                )
+                gender_identity[gender_values["gi"]] += 1
+                pronouns[gender_values["pro"]] += 1
+                spcu[gender_values["spcu"]] += 1
+
             messages = {
                 "ADT": build_adt_offline(
                     patient,
@@ -146,6 +182,7 @@ def run_batch_pipeline(
                     obs=observations[0] if observations else None,
                     include_vitals=include_vitals,
                     include_gender_harmony=include_gender_harmony,
+                    gender_values=gender_values,
                 ),
                 "ORU": build_oru_batch(patient, encounter, observations),
                 "DFT": build_dft_batch(
@@ -178,5 +215,13 @@ def run_batch_pipeline(
                         append=True,
                     )
                 counts[message_type] += 1
+
+    counts["PID_SEX_DISTRIBUTION"] = dict(pid_sex)
+    counts["TOP_DIAGNOSES"] = diagnoses.most_common(5)
+    counts["GENDER_HARMONY_DISTRIBUTION"] = {
+        "gender_identity": dict(gender_identity),
+        "pronouns": dict(pronouns),
+        "spcu": dict(spcu),
+    }
 
     return counts
