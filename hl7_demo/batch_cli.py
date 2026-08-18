@@ -80,6 +80,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Skip Gender Identity, Pronouns, and SPCU OBXs.",
     )
     parser.add_argument(
+        "--no-progress",
+        action="store_true",
+        help="Disable the interactive patient-level progress bar.",
+    )
+    parser.add_argument(
         "--verbose",
         action="store_true",
         help=(
@@ -128,6 +133,7 @@ def main() -> None:
         include_labs=not args.no_labs,
         include_vitals=not args.no_vitals,
         include_gender_harmony=not args.no_gender_harmony,
+        show_progress=not args.no_progress,
     )
     elapsed = perf_counter() - started
 
