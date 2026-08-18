@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from faker import Faker
+from rich.progress import track
 
 from .batch_messages import (
     build_dft_batch,
@@ -71,6 +72,7 @@ def run_batch_pipeline(
     include_labs: bool = True,
     include_vitals: bool = True,
     include_gender_harmony: bool = True,
+    show_progress: bool = True,
     scenario_profile: dict | None = None,
 ) -> Dict[str, Any]:
     """Generate linked MediLacra data using explicit cardinalities.
@@ -127,7 +129,16 @@ def run_batch_pipeline(
         for name in ("ADT", "ORU", "DFT", "ORM", "ORU_LABS")
     }
 
-    for _ in range(patients):
+    patient_iter = range(patients)
+    if show_progress:
+        patient_iter = track(
+            patient_iter,
+            total=patients,
+            description="MediLacra batch",
+            transient=False,
+        )
+
+    for _ in patient_iter:
         patient = gen_patient()
         counts["PATIENT"] += 1
         pid_sex[getattr(patient, "sex", "") or "(blank)"] += 1
