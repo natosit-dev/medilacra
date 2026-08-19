@@ -1,12 +1,16 @@
-# MediLacra Batch Generation — Branch Documentation
+# MediLacra Data Dumper — Branch Documentation
 
+**Working folder / project name:** `medilacra_data_dumper`  
+**GitHub repository:** `natosit-dev/medilacra`  
 **Branch:** `agent/connectathon-fast-generation-prep`  
 **Status:** Active experiment / performance-prep branch  
-**Updated:** 2026-08-18
+**Updated:** 2026-08-19
 
 ## Purpose
 
 This branch adds an experiment-oriented batch generation path to MediLacra without replacing the existing pipeline.
+
+The working name for this branch effort is now **MediLacra Data Dumper**, with the local repository folder named `medilacra_data_dumper`. The upstream GitHub repository and Python module names are intentionally unchanged for now. The new name describes the actual root behavior more clearly: generate a synthetic healthcare reality at configurable scale and dump linked representations to usable output files.
 
 The immediate goal is simple: make MediLacra capable of generating large, linked synthetic healthcare datasets with experiment-style CLI controls, while preserving the existing Patient / Encounter / Observation / Transaction generators and the HL7 message-building behavior.
 
@@ -60,6 +64,18 @@ A Rich patient-level progress bar was added, with `--no-progress` available for 
 > “Ok, make the updates to the repo. I'll try a smaller batch run to test the changes when it's ready”
 
 Bulk output was changed from repeated open/append/close cycles to persistent file handles, with periodic flushing. This optimization is committed but still pending a fresh benchmark at the time of this documentation update.
+
+> “Give me a suite of CLI commands for various testing scenarios and separate ones for scale”
+
+This produced a repeatable CLI test suite covering smoke, regression, sparse/missing-data shapes, feature isolation, determinism, verbose debugging, clean benchmarking, and a 10K → 1M scale ladder.
+
+> “Add them all to an MD and drop it in the branch”
+
+The full command suite was added as `BATCH_TEST_SCENARIOS.md` so testing can be repeated without reconstructing commands from conversation history.
+
+> “Let's leave everything else the same, but we're going to change the name of this to medilacra_data_dumper for the repo folder. You can note the update in the documentation decision log. The old name was boring and didn't explain the root of what it does. Names are important. Also update the prompt history with the latest prompts in the main documentation”
+
+This changed the working folder/project name to `medilacra_data_dumper` while intentionally leaving the upstream GitHub repository, branch, package/module paths, and functional behavior unchanged. The name now describes the primitive directly: MediLacra generates linked synthetic healthcare data and dumps representations for downstream use and experimentation.
 
 ---
 
@@ -457,6 +473,7 @@ Confirmed:
 - million-entity generation on a local workstation
 - routine batch logging suppression
 - progress-bar implementation
+- reusable CLI test suite documented in `BATCH_TEST_SCENARIOS.md`
 
 Implemented but awaiting a fresh run:
 
@@ -484,3 +501,49 @@ Validate:
 5. Output files visibly grow during the run after periodic flushes.
 
 If this passes, the branch has a clean before/after baseline for the bulk-write optimization and is ready for another million-entity benchmark if desired.
+
+---
+
+# Decision Log
+
+## 2026-08-17 — Create a separate batch-generation path
+
+**Decision:** Add experiment-style batch generation beside the existing MediLacra pipeline rather than refactoring the legacy path in place.
+
+**Reason:** Preserve existing behavior while creating a fast, disposable test harness with explicit cardinality controls.
+
+## 2026-08-17 — Remove external SDOH API dependency from batch execution
+
+**Decision:** Batch mode does not call AirNow, Census ACS, PLACES, or BLS. Local fallback inputs are used for vitals and labs.
+
+**Reason:** High-volume synthetic data generation should be deterministic, network-independent, and not bottlenecked by enrichment APIs.
+
+## 2026-08-17 — Preserve Gender Harmony complexity
+
+**Decision:** Keep Gender Identity, Pronouns, and SPCU enabled by default and preserve deliberately non-1:1 combinations.
+
+**Reason:** These distinctions are useful semantic test material and should not be normalized away just to simplify generation.
+
+## 2026-08-17 — Treat one million linked entities as a meaningful scale benchmark
+
+**Decision:** Use the 1:2:10:4 Patient / Encounter / Observation / Transaction ratio and target approximately one million total entities.
+
+**Reason:** This mirrors the scale-testing style used in the earlier structured-sparsity experiment while exercising a much richer healthcare representation.
+
+## 2026-08-17 — Suppress routine logging and add human-visible progress
+
+**Decision:** Batch mode is quiet by default, with `--verbose` for debugging and a patient-level Rich progress bar for interactive runs.
+
+**Reason:** Per-record INFO logging distorted performance and made large runs unreadable; complete silence made long runs hard to trust operationally.
+
+## 2026-08-17 — Keep bulk output files open during generation
+
+**Decision:** Replace per-message open/append/close cycles with persistent handles and periodic flushes in bulk mode.
+
+**Reason:** The first million-entity run produced 588,240 HL7 messages, making repeated file-open operations an obvious mechanical source of avoidable overhead.
+
+## 2026-08-19 — Rename the working project/folder to `medilacra_data_dumper`
+
+**Decision:** Use `medilacra_data_dumper` as the local repository folder and **MediLacra Data Dumper** as the working name for this branch effort. Leave the upstream `natosit-dev/medilacra` repository, branch name, Python modules, CLI entry point, and functional behavior unchanged.
+
+**Reason:** “Batch generation” described an implementation detail but not the root primitive. “Data Dumper” says what the thing actually does: generate synthetic healthcare reality at configurable scale and dump linked representations for downstream systems, tests, and experiments. Names are part of the interface; the clearer name makes the purpose legible without explanation.
