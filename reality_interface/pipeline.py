@@ -31,8 +31,8 @@ class FinalizedRun:
     fhir_message_type: str
 
 
-def _convert_oru_with_msh_alignment(hl7_message: str) -> tuple[dict[str, Any], str]:
-    """Use the existing ORU converter while restoring the omitted MSH-1 slot."""
+def convert_reality_oru_to_fhir(hl7_message: str) -> tuple[dict[str, Any], str]:
+    """Reuse the existing ORU converter while restoring the omitted MSH-1 slot."""
 
     parsed = parse_hl7(hl7_message)
     if not parsed.get("MSH"):
@@ -106,7 +106,7 @@ def finalize_run(
     )
     analysis.artifacts.hl7_path.write_text(hl7_message + "\n", encoding="utf-8")
 
-    fhir_bundle, message_type = _convert_oru_with_msh_alignment(hl7_message)
+    fhir_bundle, message_type = convert_reality_oru_to_fhir(hl7_message)
     write_json(analysis.artifacts.fhir_path, fhir_bundle)
 
     return FinalizedRun(
