@@ -4,17 +4,21 @@ import argparse
 import csv
 import json
 import random
-from dataclasses import asdict
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 import duckdb
 from faker import Faker
 
-from hl7_demo.generators import gen_encounter, gen_patient
-from hl7_demo.segments import seg_evn, seg_msh, seg_pid, seg_pv1
-
 ROOT = Path(__file__).resolve().parent
+REPO_ROOT = ROOT.parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from hl7_demo.generators import gen_encounter, gen_patient  # noqa: E402
+from hl7_demo.segments import seg_evn, seg_msh, seg_pid, seg_pv1  # noqa: E402
+
 REGISTRY_PATH = ROOT / "source_registry.json"
 
 
