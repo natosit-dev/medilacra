@@ -133,6 +133,12 @@ if finalized is not None:
 
     st.subheader("HL7 v2 ORU^R01")
     st.code(finalized.hl7_message.replace("\r", "\n"), language="text")
+    st.download_button(
+        "Download HL7 v2 ORU^R01",
+        data=(finalized.hl7_message.rstrip("\r\n") + "\r").encode("utf-8"),
+        file_name=f"reality_interface_{analysis.artifacts.run_id}.hl7",
+        mime="text/plain",
+    )
 
     st.subheader("FHIR Bundle")
     st.json(finalized.fhir_bundle)
