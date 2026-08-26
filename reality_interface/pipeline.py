@@ -6,7 +6,13 @@ from typing import Any
 
 from fhir.fhir_convert_backend import convert_oru, parse_hl7
 
-from .artifacts import RunArtifacts, create_run, write_json, write_manifest
+from .artifacts import (
+    RunArtifacts,
+    create_run,
+    create_run_from_bytes,
+    write_json,
+    write_manifest,
+)
 from .audio import AudioSignal, load_wav
 from .binding import ClinicalBinding, bind_to_synthetic_context
 from .hl7 import build_reality_oru
@@ -45,15 +51,13 @@ def convert_reality_oru_to_fhir(hl7_message: str) -> tuple[dict[str, Any], str]:
     return convert_oru(parsed), "ORU^R01"
 
 
-def analyze_source(
-    source_path: str | Path,
+def analyze_artifacts(
+    artifacts: RunArtifacts,
     *,
-    artifacts_root: str | Path = "artifacts/reality_interface",
     acquisition_band_hz: tuple[int, int] | None = (10, 300),
 ) -> AnalysisRun:
-    """Persist a source WAV, analyze it, and write the initial manifest."""
+    """Analyze an already-persisted run source and write its manifest."""
 
-    artifacts = create_run(source_path, artifacts_root=artifacts_root)
     audio = load_wav(artifacts.source_path)
     measurement = analyze_periodicity(audio)
 
@@ -74,6 +78,31 @@ def analyze_source(
     )
 
     return AnalysisRun(artifacts=artifacts, audio=audio, measurement=measurement)
+
+
+def analyze_source(
+    source_path: str | Path,
+    *,
+    artifacts_root: str | Path = "artifacts/reality_interface",
+    acquisition_band_hz: tuple[int, int] | None = (10, 300),
+) -> AnalysisRun:
+    artifacts = create_run(source_path, artifacts_root=artifacts_root)
+    return analyze_artifacts(artifacts, acquisition_band_hz=acquisition_band_hz)
+
+
+def analyze_uploaded_bytes(
+    filename: str,
+    data: bytes,
+    *,
+    artifacts_root: str | Path = "artifacts/reality_interface",
+    acquisition_band_hz: tuple[int, int] | None = (10, 300),
+) -> AnalysisRun:
+    artifacts = create_run_from_bytes(
+        filename,
+        data,
+        artifacts_root=artifacts_root,
+    )
+    return analyze_artifacts(artifacts, acquisition_band_hz=acquisition_band_hz)
 
 
 def finalize_run(
