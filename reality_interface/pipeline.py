@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from fhir.fhir_convert_backend import convert_message_to_bundle
+from fhir.fhir_convert_backend import convert_oru, parse_hl7
 
 from .artifacts import RunArtifacts, create_run, write_json, write_manifest
 from .audio import AudioSignal, load_wav
@@ -29,6 +29,20 @@ class FinalizedRun:
     hl7_message: str
     fhir_bundle: dict[str, Any]
     fhir_message_type: str
+
+
+def _convert_oru_with_msh_alignment(hl7_message: str) -> tuple[dict[str, Any], str]:
+    """Use the existing ORU converter while restoring the omitted MSH-1 slot."""
+
+    parsed = parse_hl7(hl7_message)
+    if not parsed.get("MSH"):
+        raise ValueError("HL7 message does not contain an MSH segment")
+
+    msh_fields = parsed["MSH"][0]["_fields"]
+    if not msh_fields or msh_fields[0] != "|":
+        parsed["MSH"][0]["_fields"] = ["|"] + msh_fields
+
+    return convert_oru(parsed), "ORU^R01"
 
 
 def analyze_source(
@@ -92,7 +106,7 @@ def finalize_run(
     )
     analysis.artifacts.hl7_path.write_text(hl7_message + "\n", encoding="utf-8")
 
-    fhir_bundle, message_type = convert_message_to_bundle(hl7_message)
+    fhir_bundle, message_type = _convert_oru_with_msh_alignment(hl7_message)
     write_json(analysis.artifacts.fhir_path, fhir_bundle)
 
     return FinalizedRun(
