@@ -1,8 +1,8 @@
 from hl7_demo.models import Encounter, Patient
-from fhir.fhir_convert_backend import convert_message_to_bundle
 
 from reality_interface.binding import ClinicalBinding
 from reality_interface.hl7 import build_reality_oru
+from reality_interface.pipeline import convert_reality_oru_to_fhir
 from reality_interface.validation import HumanValidation, MachineMeasurement, ValidatedMeasurement
 
 
@@ -90,8 +90,8 @@ def test_validated_rate_survives_hl7_to_fhir():
     assert "OBX|1|NM|8867-4^Heart rate^LN||75|/min" in hl7
     assert "Nat_heart_8.25.wav" in hl7
 
-    bundle, message_type = convert_message_to_bundle(hl7)
-    assert message_type.startswith("ORU^")
+    bundle, message_type = convert_reality_oru_to_fhir(hl7)
+    assert message_type == "ORU^R01"
 
     observations = [
         entry["resource"]
