@@ -1,0 +1,24 @@
+{
+  "alpha_csv": {
+    "adapter": "csv",
+    "path": "source_alpha.csv",
+    "id_field": "record_id",
+    "payload_field": "payload",
+    "timestamp_field": "received_at"
+  },
+  "beta_jsonl": {
+    "adapter": "jsonl",
+    "path": "source_beta.jsonl",
+    "id_field": "message_id",
+    "payload_field": "message_text",
+    "timestamp_field": "created_at"
+  },
+  "gamma_duckdb": {
+    "adapter": "duckdb",
+    "path": "source_gamma.duckdb",
+    "table": "inbound_messages",
+    "id_field": "raw_id",
+    "payload_field": "hl7",
+    "timestamp_field": "receive_ts"
+  }
+}
