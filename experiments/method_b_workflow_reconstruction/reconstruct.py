@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from experiments.method_b_workflow_reconstruction.generate_sources import main as generate_sources
+from generate_sources import main as generate_sources
 
 ROOT = Path(__file__).resolve().parent
 DEFAULT_SOURCE_DIR = ROOT / "source_artifacts"
@@ -72,8 +72,6 @@ def main() -> None:
 
     detail = []
     for task in tasks:
-        # Reconstructed assignment rule: SOCIAL_SUPPORT contains a dedicated
-        # specialist assignment that is more specific than the generic owner.
         assigned_staff_id = task.get("owner_id")
         assignment_source = "owner_id"
         if task["workflow_type"] == "SOCIAL_SUPPORT" and task.get("specialist_staff_id"):
