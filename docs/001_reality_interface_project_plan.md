@@ -1,16 +1,19 @@
 # MediLacra Reality Interface
 
-**Project Plan v0.2 — WAV → measured periodicity → human validation → synthetic clinical context → HL7 v2 → FHIR**
+**Project Plan v0.3 — completed experiment record**
 
 | Field | Value |
 |---|---|
-| Document version | v0.2 |
-| Date | 2026-08-25 |
-| Status | Implementation-ready; feature branch initialized |
+| Document version | v0.3 |
+| Original plan date | 2026-08-25 |
+| Completion pass | 2026-08-27 |
+| Status | Implemented; experiment complete enough for Connectathon/demo use |
 | Target branch | `feature/reality-interface` |
 | UI rule | Streamlit is a thin client; processing and transformation logic live in reusable modules. |
-| Primary demo | Load a WAV recorded through the computer-connected stethoscope, derive a repeating rate, validate the interpretation, attach it to a synthetic patient/encounter, generate HL7 v2 ORU^R01, then transform the message to a FHIR JSON Bundle. |
-| Source context | Current conversation plus the existing MediLacra functionality overview. Existing generators, dataclasses, HL7 builders, schema knowledge, and transformation machinery are to be reused rather than duplicated. |
+| Primary demonstrated path | Physical acoustic signal → WAV → periodicity measurement → human semantic validation → synthetic patient/encounter → HL7 v2 ORU^R01 → downloadable artifact → independent re-ingestion → FHIR Bundle → PIQI |
+| Result record | `docs/003_reality_interface_experiment_result.md` |
+
+> **FHIR does not care whether reality entered the information system through a $14,000 medical appliance or a water-bottle cap and electrical tape. It cares what observation is being represented, how it was obtained, and whether the semantics survive.**
 
 ---
 
@@ -40,7 +43,7 @@ Prompts below are preserved in chronological order. Image-only turns are represe
 15. `[Image uploaded]`  
     Lol I found this in a dumpster, sadly stethoscope is not included 😭
 16. `[Image uploaded]`  
-    How should I attach the tube to the mic? 
+    How should I attach the tube to the mic?
 17. What do you mean by cut the tube and square
 18. `[Image uploaded]`  
     The hole is on the side
@@ -51,7 +54,7 @@ Prompts below are preserved in chronological order. Image-only turns are represe
 21. `[Image uploaded]`  
     🤡😹
 22. I'm thinking glue, tape or liquid latex might be good for the coupling. It's too small for the balloon
-23. Oh I'm not even going straight to skin yet, I was over my shirt 
+23. Oh I'm not even going straight to skin yet, I was over my shirt
 24. `[Images uploaded]`  
     V0.2
 25. Oh, this was direct skin. I think it's good enough for now. We should figure out how to turn this into health data
@@ -63,59 +66,60 @@ Prompts below are preserved in chronological order. Image-only turns are represe
     I think that's good enough. How do we produce that from a WAV file
 29. How are normal analog stethoscope reading recorded in FHIR?
 30. I'm thinking a new page for Medilacra on a new branch. Reality interface. Have a drag and drop place to load a WAV. Visualize it. Find the pattern. Human validates or adds notes. A synthetic patient is generated, attached to the data. HL7 v2 message generated, then transformed into FHIR JSON bundle
-31. Yeah we don't need the file in the HL7 message, just the file name and location. 
+31. Yeah we don't need the file in the HL7 message, just the file name and location.
 32. Ok, I think we've got it. Let's see the project plan, Nat style and focused on the mechanics. You don't need to over explain what this is NOT. This is clearly not a standard medical device. It's a fancy stethoscope that has a computer interface instead of ear piece
 33. Yeah, Streamlit should be a thin client. We'll separate scripts to make it modular. Print to doc, add all the usual trimmings and version logging, raw prompts at the top
 34. Create the reality interface branch  of Medilacra and add that as the first entry in docs as an MD.
 
     Lol also add a section about how I built the digital stethoscope from trash because it was easier and cheaper than buying one 😋 It's made from tubing I found in a construction dumpster, random USB headset with mic, the top of a water bottle, tubing from a broken washing machine, and electrical tape. Include this in the prompt history.
+35. Print the updated doc
+36. Ok, what are the scripts we need to write, in order
+37. Add the package options or functions for each script, with your top recommendation and why
+38. FHIR does not care whether reality entered the information system through a $14,000 medical appliance or a water-bottle cap and electrical tape. It cares what observation is being represented, how it was obtained, and whether the semantics survive.
+
+    Add this to the top of the README, version with all the trimmings
+39. 1 + 2- let's use scipy + numPy  
+    2- hilbert looks good  
+    3 + 10- pytest looks good  
+    4- I've used pathlib before, would that make sense here?  
+    11- Fine, as long as we actually need matplotlib. Don't want to make this fancier than needed
+
+    What else do you need from me before going to build this?
+40. Here's the file
+41. Can you add an HL7 v2 output that's downloadable from a Streamlit button? If it doesn't exist yet
+42. `[Images uploaded]`  
+    Looking good! Used a fresh WAV
+43. Should we do a final documentation pass? This project is done ish
+44. Ok, go make the final updates
 
 ---
 
-# 1. Project Definition
+# 1. Question
 
-**Purpose.** Create a small MediLacra Reality Interface that can accept an acoustic WAV from the computer-connected stethoscope, derive a repeating cycle and rate, let a human validate what the pattern represents, bind the validated measurement to synthetic patient/encounter context, generate HL7 v2, and transform that message into FHIR JSON.
+Can a physical acoustic signal enter MediLacra, become a measured fact, receive explicit human healthcare semantics, attach to synthetic clinical context, and survive HL7 v2 → FHIR transformation while retaining provenance?
 
-```text
-physical reality
-    ↓
-computer-connected stethoscope
-    ↓
-WAV artifact
-    ↓
-periodicity measurement
-    ↓
-human semantic validation
-    ↓
-synthetic Patient + Encounter + Observation
-    ↓
-HL7 v2 ORU^R01
-    ↓
-HL7 → FHIR transform
-    ↓
-FHIR Bundle
-```
+**Result: yes.**
 
-**Primary implementation rule.** The Streamlit page owns interaction and display only. All mechanics that can be tested or reused without Streamlit live in ordinary Python modules.
+The experiment is now documented as complete enough. Further work should be driven by an actual interoperability/Connectathon need rather than by extending the demo for its own sake.
 
-## 1.1 Prototype digital stethoscope: built from trash
+---
 
-The physical interface was assembled from reclaimed or already-available material because building it was easier and cheaper than buying a digital stethoscope or dedicated contact-mic interface.
+# 2. Physical Interface
 
-Current prototype components:
+The prototype computer-connected stethoscope was assembled from reclaimed or already-available material because building it was easier and cheaper than buying a dedicated digital stethoscope or contact-mic interface.
+
+Components:
 
 - tubing recovered from a construction dumpster;
-- a random USB headset with microphone, used as the computer audio interface;
-- the top of a water bottle, used as the chestpiece / acoustic chamber;
+- a random USB headset with microphone;
+- the top of a water bottle as the chestpiece/acoustic chamber;
 - tubing salvaged from a broken washing machine;
-- electrical tape for mechanical coupling and air sealing.
-
-Mechanically, the prototype is simply a stethoscope whose endpoint is a USB microphone rather than a pair of earpieces:
+- electrical tape for coupling and sealing.
 
 ```text
 chest
   ↓
-water-bottle chestpiece / air chamber
+water-bottle chestpiece
   ↓
 reclaimed tubing
   ↓
@@ -128,148 +132,122 @@ computer
 WAV
 ```
 
-The useful engineering fact is not the specific junk used. The interface creates a repeatable path from body-origin acoustic/mechanical activity into a digital waveform. The Reality Interface begins at that WAV boundary.
+The exact trash is not the software dependency. The useful boundary is the WAV: an inspectable source artifact carrying body-origin acoustic/mechanical activity into a computer-readable representation.
 
 ---
 
-# 2. Branch and Integration Strategy
-
-Branch:
-
-```bash
-git checkout main
-git pull
-git checkout -b feature/reality-interface
-```
-
-Repository branch created: `feature/reality-interface`.
-
-Integration rules:
-
-- Reuse current MediLacra patient and encounter generators rather than creating alternate demo-only generators.
-- Reuse current HL7 v2 builders/schema machinery; extend only where the externally measured observation or artifact reference requires it.
-- Reuse the existing HL7 → FHIR path. The FHIR Bundle is produced from the HL7 message, not independently regenerated from the UI state.
-- Keep Reality Interface code isolated enough that the signal-processing path can be invoked from tests, CLI scripts, notebooks, or future interfaces without importing Streamlit.
-
----
-
-# 3. Proposed Module Layout
+# 3. Final Architecture
 
 ```text
-medilacra/
-  reality_interface/
-    __init__.py
-    artifacts.py        # run directories, hashes, manifests, source file handling
-    audio.py            # WAV load + metadata normalization
-    periodicity.py      # envelope + autocorrelation + cycle/rate estimate
-    binding.py          # validated measurement → existing clinical objects
-    pipeline.py         # small orchestration layer for non-UI execution
-
-pages/
-  Reality_Interface.py  # thin Streamlit client only
+physical reality
+    ↓
+computer-connected stethoscope
+    ↓
+WAV source artifact
+    ↓
+SciPy / NumPy periodicity analysis
+    ↓
+measured cycle + rate
+    ↓
+human semantic validation
+    ↓
+validated Heart rate
+    +
+synthetic Patient + Encounter
+    ↓
+HL7 v2 ORU^R01
+    ↓
+downloadable .hl7 artifact
+    ↓
+existing / independent HL7 → FHIR consumer
+    ↓
+FHIR Bundle
+    ↓
+PIQI
 ```
 
-Keep existing machinery where it already lives. HL7 builders, FHIR transformation, patient/encounter generators, reference data, and schema registries should remain in their current packages. Reality Interface imports them; it does not fork them.
+The critical boundary remains explicit:
+
+```text
+machine measurement: repeating rate
+        ≠
+human semantic interpretation: heart rate
+```
+
+The machine does not silently promote acoustic periodicity into a clinical concept.
+
+---
+
+# 4. Implemented Module Layout
+
+```text
+reality_interface/
+  __init__.py
+  audio.py
+  periodicity.py
+  artifacts.py
+  validation.py
+  binding.py
+  hl7.py
+  pipeline.py
+
+pages/
+  8_Reality_Interface.py
+
+tests/
+  test_reality_interface_periodicity.py
+  test_reality_interface_hl7_fhir.py
+```
 
 ## Thin-client boundary
 
-| Streamlit page does | Python modules do |
+| Streamlit page does | Backend modules do |
 |---|---|
-| Accept file upload / drag-drop | Copy/persist source WAV and create artifact metadata |
-| Render waveform / spectrogram / results | Load WAV and return analysis-ready arrays |
-| Collect interpretation, accept/override, notes | Calculate envelope, autocorrelation, dominant period, rate |
-| Show generated Patient/Encounter/Observation | Bind validated measurement to existing clinical objects |
-| Buttons: Generate HL7 / Transform to FHIR | Call existing HL7 and FHIR transformation code |
-| Display raw HL7 and JSON | Persist run artifacts and manifest |
+| Accept WAV upload | Preserve/copy source and create run artifacts |
+| Display waveform / envelope | Load, normalize analysis copy, downsample, analyze periodicity |
+| Show measured cycle/rate | Return deterministic measurement state |
+| Collect interpretation / accept / override / notes | Validate and serialize semantic decision |
+| Show synthetic Patient/Encounter/Observation | Bind validated measurement to existing MediLacra generators/models |
+| Show/download HL7 | Build/persist ORU^R01 |
+| Show FHIR | Transform the generated HL7 artifact through the existing converter |
+
+No signal-processing, HL7-construction, or FHIR-mapping implementation lives in the Streamlit page.
 
 ---
 
-# 4. Run Artifact Model
+# 5. Signal Analysis
 
-Each upload becomes one durable run directory. The directory is the simplest provenance package: raw evidence, metadata, human decision, HL7, and FHIR stay together.
+Locked choices:
 
-```text
-artifacts/
-  reality_interface/
-    20260825_213500_ab12cd/
-      source.wav
-      manifest.json
-      validation.json
-      message.hl7
-      bundle.json
-```
+| Concern | Implementation |
+|---|---|
+| WAV load | `scipy.io.wavfile.read` |
+| Working signal | NumPy arrays |
+| Downsampling | `scipy.signal.resample_poly` when needed |
+| Envelope | `scipy.signal.hilbert` |
+| Smoothing | short moving average (~50 ms in v0.1) |
+| Periodicity | `scipy.signal.correlate(..., method="fft")` |
+| Search | plausible repeating-rate window |
+| Tests | pytest |
+| File handling | `pathlib.Path` + stdlib hashing/copy/JSON |
+| Visualization | Streamlit-native charts; no Matplotlib dependency |
 
-Example `manifest.json`:
-
-```json
-{
-  "run_id": "20260825_213500_ab12cd",
-  "source": {
-    "filename": "source.wav",
-    "location": "artifacts/reality_interface/20260825_213500_ab12cd/source.wav",
-    "sha256": "...",
-    "sample_rate_hz": 48000,
-    "channels": 1,
-    "duration_seconds": 10.0,
-    "acquisition_band_hz": [10, 300]
-  },
-  "analysis": {
-    "estimated_cycle_period_seconds": 0.80,
-    "estimated_rate_per_minute": 75.0
-  }
-}
-```
-
-**Important mechanical detail.** The 10–300 Hz band is acquisition/context metadata supplied by the experiment; a WAV header by itself does not prove that band limit. Preserve it in the manifest rather than pretending it was inferred from the file format.
-
----
-
-# 5. WAV Analysis Mechanics
-
-Target output for v0.1:
-
-```text
-estimated_cycle_period_seconds = 0.80
-estimated_rate_per_minute = 75.0
-```
-
-## Function contract
-
-```text
-analyze_periodicity(wav_path) -> PeriodicityResult
-
-PeriodicityResult:
-  estimated_cycle_period_seconds: float
-  estimated_rate_per_minute: float
-  time: array
-  waveform: array
-  envelope: array
-  autocorrelation: array
-  dominant_lag_seconds: float
-```
-
-## Algorithm
-
-1. Load the WAV and retain original file untouched.
-2. Convert stereo to mono if necessary.
-3. Normalize for analysis; do not reinterpret normalized amplitude as calibrated physical pressure.
-4. Create a smoothed energy envelope from the waveform.
-5. Calculate autocorrelation of the envelope.
-6. Search a plausible cycle window for the strongest repeating lag.
-7. Convert lag to seconds: `cycle_period = lag_samples / sample_rate`.
-8. Convert period to rate: `rate_per_minute = 60 / cycle_period`.
-9. Return both numeric results plus the arrays needed for visual inspection.
+Conceptual algorithm:
 
 ```text
 WAV
  ↓
-mono waveform
+mono analysis copy
  ↓
-energy envelope
+DC removal + normalization
+ ↓
+Hilbert amplitude envelope
+ ↓
+smoothing
  ↓
 autocorrelation
  ↓
-dominant repeating lag
+dominant plausible lag
  ↓
 cycle seconds
  ↓
@@ -278,95 +256,77 @@ cycle seconds
 rate per minute
 ```
 
-**Reason for the envelope/autocorrelation path.** A cardiac acoustic cycle can contain multiple transients. The first implementation should recover the repeating cycle rather than blindly count every visible peak.
+The source WAV is not normalized or rewritten. Analysis transformations happen to a working copy.
 
 ---
 
-# 6. Reality Interface Page Flow
+# 6. Human Validation
 
-## 6.1 Drop WAV
-
-Accept `.wav`. Persist immediately. Display filename, duration, sample rate, channels, source location, and hash.
-
-## 6.2 Visualize
-
-Render waveform plus a useful low-frequency spectrogram or envelope view. Overlay the inferred cycle spacing so the human can inspect what the algorithm is calling periodic.
-
-## 6.3 Measure
-
-Display only the core v0.1 result prominently:
-
-- estimated cycle period;
-- estimated rate per minute.
-
-## 6.4 Human validation
-
-Human chooses what the periodicity represents — initial option `Heart rate`, fallback `Other/unspecified` — accepts or overrides the result, and may add notes.
-
-## 6.5 Generate clinical context
-
-Generate a synthetic Patient and Encounter using existing MediLacra generators. Bind the validated measurement to an Observation object instead of generating a synthetic heart-rate value.
-
-## 6.6 Generate HL7 v2
-
-Build an ORU^R01 from the synthetic clinical context and externally measured Observation. Add a reference to the WAV by filename and project-relative location; do not embed the file.
-
-## 6.7 Transform to FHIR
-
-Run the generated HL7 message through the existing HL7 → FHIR transformation path. Display and persist the resulting Bundle.
-
----
-
-# 7. Human Validation Data
-
-The machine output remains generic until the human binds semantics to it. The first version only needs enough structure to preserve the decision.
+Machine output is preserved separately from human interpretation.
 
 ```json
 {
   "machine_measurement": {
-    "estimated_cycle_period_seconds": 0.80,
-    "estimated_rate_per_minute": 75.0
+    "estimated_cycle_period_seconds": 0.69,
+    "estimated_rate_per_minute": 86.96
   },
   "human_validation": {
     "interpretation": "heart_rate",
     "accepted": true,
     "override_rate_per_minute": null,
-    "notes": null
+    "notes": "Excited to share this, HR reflects that"
   }
 }
 ```
 
-**Resulting canonical value.** If accepted without override, the validated clinical measurement is `75 /min`. If overridden, the human-supplied value becomes the clinical value while the original machine estimate remains preserved in the run metadata.
+If the human overrides the value, the machine estimate remains preserved while the approved value becomes the clinical Observation value.
 
 ---
 
-# 8. Synthetic Clinical Binding
+# 7. Synthetic Clinical Binding
+
+After validation, existing MediLacra generators create the demo identity/context:
 
 ```text
-source.wav
-    ↓
-measured periodicity
-    ↓
-human: "heart rate"
-    ↓
-validated measurement
-    +
-existing gen_patient()
-    +
-existing gen_encounter()
-    ↓
-Observation
-  code = 8867-4
-  value = 75
-  unit = /min
-  source = external measurement
-  subject_binding = synthetic_demo
+gen_patient()
+gen_encounter(patient_id)
+        +
+validated external measurement
+        ↓
+clinical binding
 ```
 
-- The WAV is real source evidence from the experiment.
-- The Patient and Encounter are synthetic MediLacra context.
-- The Observation value comes from the validated external measurement, not from the synthetic observation generator.
-- Preserve this distinction in run metadata so provenance remains explicit.
+For the v0.1 heart-rate path:
+
+```text
+LOINC:   8867-4
+Display: Heart rate
+Unit:    /min
+Source:  validated external measurement
+Subject: synthetic demo patient
+Context: synthetic demo encounter
+```
+
+The source physical signal and generated clinical identity have different provenance and remain distinguishable.
+
+---
+
+# 8. Run Artifact Model
+
+Each run keeps source evidence and representations together:
+
+```text
+artifacts/
+  reality_interface/
+    <run_id>/
+      <source_filename>.wav
+      manifest.json
+      validation.json
+      message.hl7
+      bundle.json
+```
+
+The run directory uses `pathlib.Path`. The WAV is copied unchanged and hashed. Reality Interface artifacts are gitignored.
 
 ---
 
@@ -374,189 +334,182 @@ Observation
 
 Message type: `ORU^R01`.
 
+Implemented shape:
+
 ```text
 MSH  message metadata
 PID  synthetic patient
 PV1  synthetic encounter
-OBR  observation/report context
-OBX  numeric heart-rate result
-OBX  source WAV reference (filename + location)
-NTE  optional validated human note
+OBR  observation context
+OBX  NM  8867-4^Heart rate^LN  <validated rate> /min
+OBX  ST  SOURCE-WAV^Source WAV recording^99MEDILACRA  filename/location
+NTE  optional human note
 ```
 
-Core measurement OBX, conceptually:
+The source file is referenced, not embedded.
 
-```text
-OBX|1|NM|8867-4^Heart rate^LN||75|/min|||||F
-```
-
-## Source reference
-
-Prefer an RP-style reference OBX if the existing serializer supports it cleanly. Otherwise use a simple textual reference in v0.1. The content is the project-relative filename/location, not the WAV payload.
-
-```text
-source_filename = source.wav
-source_location = artifacts/reality_interface/<run_id>/source.wav
-```
+The Streamlit page displays the ORU and provides a run-specific **Download HL7 v2 ORU^R01** button.
 
 ---
 
-# 10. HL7 → FHIR Transformation
+# 10. HL7 → FHIR
 
-**Transformation rule.** The FHIR Bundle is derived from the generated HL7 message. Do not create a parallel UI-to-FHIR path.
+The FHIR Bundle is derived from the generated HL7 artifact rather than regenerated directly from Streamlit state.
 
 ```text
 validated measurement
       ↓
 ORU^R01
       ↓
-existing transformer
+existing FHIR conversion path
       ↓
 FHIR Bundle
 ```
 
-Expected core Bundle contents:
-
-- **Patient** — synthetic subject.
-- **Encounter** — synthetic clinical context.
-- **Observation** — heart rate `75 /min`.
-- **Source artifact reference** — preserve the filename/location through the transform when the current mapping supports it. A `DocumentReference`/`Attachment` URL is the natural FHIR-side representation if implemented in v0.1; otherwise preserve it in the Observation output and promote later.
+During implementation, the existing converter exposed an MSH indexing mismatch: the generic pipe-split representation omits MSH-1 while downstream accessors expect normal HL7 field numbering. Reality Interface handles this with a localized compatibility step rather than implementing a second FHIR converter.
 
 ---
 
-# 11. Pipeline API
+# 11. Demonstrated Runs
 
-A tiny orchestration layer keeps Streamlit thin and makes the full path callable elsewhere.
+## Development WAV baseline
 
-```python
-run = create_run(wav_path, acquisition_band_hz=(10, 300))
-measurement = analyze_periodicity(run.source_path)
+A development recording supplied outside the repository produced approximately:
 
-validated = validate_measurement(
-    measurement,
-    interpretation="heart_rate",
-    accepted=True,
-    notes=None,
-)
-
-clinical = bind_to_synthetic_context(validated)
-hl7 = generate_oru(clinical, run.source_reference)
-fhir = transform_hl7_to_fhir(hl7)
-
-persist(run, validated, hl7, fhir)
+```text
+source sample rate:              44,100 Hz
+channels:                        1
+duration:                        17.836 s
+estimated_cycle_period_seconds:  0.657
+estimated_rate_per_minute:       91.3
+periodicity_score:               ~0.345
 ```
 
-**UI behavior.** The page may call these functions stepwise so each transformation is visible, but the functions themselves remain independent of Streamlit state.
+This established that the SciPy/NumPy path could recover repeating structure from an actual prototype-stethoscope WAV.
+
+## Fresh end-to-end run
+
+A later fresh recording was run through the complete Streamlit workflow and produced approximately:
+
+```text
+estimated_rate_per_minute = 86.957
+```
+
+The human selected **Heart rate**, accepted the measurement, and entered:
+
+```text
+Excited to share this, HR reflects that
+```
+
+The generated ORU visibly contained:
+
+```text
+OBX|1|NM|8867-4^Heart rate^LN||86.957|/min...
+OBX|2|ST|SOURCE-WAV^Source WAV recording^99MEDILACRA|...
+NTE|1||Excited to share this, HR reflects that
+```
+
+The `.hl7` file was downloaded from Reality Interface and uploaded into the separate **HL7 v2 → FHIR Converter + PIQI Scorecard** surface.
+
+The independent consumer:
+
+- recognized the message as `ORU^R01`;
+- produced a FHIR Bundle with the expected resource family;
+- ran PIQI;
+- returned PIQI **75** for the observed message;
+- passed **6 / 8** applicable checks;
+- reported **0 critical failures**.
+
+That PIQI score describes the demonstrated run only. It is not treated as a universal score for Reality Interface output.
 
 ---
 
-# 12. Build Order
+# 12. Acceptance Criteria — Final Status
 
-| Work packet | Mechanics | Done when |
-|---|---|---|
-| WP1 — Branch + skeleton | Create branch, package folder, thin Streamlit page, and run-artifact directory helper. | Page imports successfully; empty workflow renders. |
-| WP2 — WAV → periodicity | Implement WAV loader, envelope, autocorrelation, cycle/rate result, and unit tests against one known recording. | Known WAV prints a plausible cycle and rate; analysis code has no Streamlit dependency. |
-| WP3 — Visualization | Return arrays from analysis and render waveform/envelope/spectrogram plus inferred cycle spacing. | Human can inspect why the result was produced. |
-| WP4 — Validation | Add semantic choice, accept/override, notes; persist `validation.json`. | Machine estimate and human decision are both preserved. |
-| WP5 — Synthetic binding | Call existing Patient/Encounter generators and construct Observation from validated external value. | Clinical objects contain the measured value without re-generating it. |
-| WP6 — ORU | Feed objects into existing ORU path; add source filename/location reference. | `message.hl7` is valid enough for current MediLacra parser/validator and contains patient, encounter, heart rate, source reference. |
-| WP7 — FHIR | Run ORU through existing transformer; persist `bundle.json`. | Bundle contains the same heart-rate fact after transformation. |
-| WP8 — Linear demo polish | Render each stage in order with clear artifact/result panels. | One upload can be followed from WAV to FHIR without opening code. |
-| WP9 — Freeze v0.1 | Add regression fixture, README/demo notes, tag/document exact branch state. | Repeatable demo; no hidden manual edits required. |
+| Criterion | Status |
+|---|---|
+| Drag/drop WAV into Streamlit | Demonstrated |
+| Preserve original source artifact | Implemented |
+| Visualize source signal | Demonstrated |
+| Visualize energy envelope | Demonstrated |
+| Derive cycle/rate outside Streamlit | Implemented |
+| Human accept/override/notes | Demonstrated |
+| Generate synthetic Patient + Encounter | Demonstrated |
+| Bind validated external value as Heart rate | Demonstrated |
+| Generate ORU^R01 | Demonstrated |
+| Reference WAV filename/location without embedding bytes | Demonstrated |
+| Include human note in NTE | Demonstrated |
+| Display generated HL7 | Demonstrated |
+| Download `.hl7` from Streamlit | Demonstrated |
+| Transform ORU into FHIR | Demonstrated |
+| Re-ingest downloaded artifact through separate consumer | Demonstrated |
+| Run PIQI on independently converted output | Demonstrated |
+| Keep Streamlit thin | Implemented |
 
----
+**Original stop condition:** drag in a WAV → see the pattern → validate measured rate as heart rate → generate synthetic context → generate ORU → transform to FHIR → inspect the same fact at every stage.
 
-# 13. Acceptance Criteria — Reality Interface v0.1
-
-- A WAV can be drag-dropped into the Streamlit page.
-- The original file is persisted unchanged with filename, relative location, hash, and basic WAV metadata.
-- The page visualizes the signal.
-- Independent Python analysis returns `estimated_cycle_period_seconds` and `estimated_rate_per_minute`.
-- The human can validate/override the measured rate and add notes.
-- Existing MediLacra generators create a synthetic patient and encounter.
-- The validated external measurement becomes the Observation value.
-- An ORU^R01 is generated containing the synthetic context, numeric heart-rate result, and WAV filename/location reference.
-- The ORU is transformed through the existing path into a FHIR JSON Bundle.
-- WAV, manifest, validation record, HL7, and FHIR are persisted together under one run ID.
-- The same numeric fact can be traced from measured periodicity → validated observation → HL7 → FHIR.
-- The Streamlit page contains no signal-processing, HL7-construction, or FHIR-transformation implementation logic.
-
-**Stop condition:** drag in a WAV → see the pattern → validate the measured rate as heart rate → generate synthetic context → generate ORU → transform to FHIR → inspect the same fact at every stage.
+**Expanded demonstrated stop condition:** the downloadable ORU also left the producing interface, entered a separate converter, became FHIR, and was scored by PIQI.
 
 ---
 
-# 14. Test Strategy
-
-- Unit test the periodicity function with a synthetic periodic waveform whose expected cycle is known exactly.
-- Regression-test at least one real WAV captured with the prototype stethoscope. Use a tolerance band rather than requiring one exact BPM from noisy source material.
-- Test stereo → mono handling and short/empty/corrupt WAV failure paths.
-- Test that `source.wav` hash does not change after analysis.
-- Test that a human override changes the clinical Observation but does not overwrite the machine estimate in manifest/validation metadata.
-- Round-trip assertion: validated rate in canonical state == numeric OBX value == FHIR Observation value.
-- Reference assertion: source filename/location emitted into HL7 can be traced back to the run artifact directory.
-
----
-
-# 15. Demo Mechanics
-
-1. Place chestpiece.
-2. Record ~10 seconds through the USB headset path.
-3. Save/export WAV.
-4. Drag WAV into Reality Interface.
-5. Watch waveform appear.
-6. Read: cycle ≈ `0.80 s`; rate ≈ `75 /min`.
-7. Human selects **Heart rate** and accepts/adds note.
-8. Generate synthetic patient + encounter.
-9. Generate ORU^R01.
-10. Transform ORU to FHIR Bundle.
-11. Show the same `75 /min` fact surviving every representation.
-
-**Useful artifact after the demo.** The run directory itself is a durable record of the demonstration and can be checked into an examples/fixtures area later if the WAV is appropriate for publication.
-
----
-
-# 16. Decisions Locked for v0.1
+# 13. Decisions Locked
 
 | ID | Decision | Reason |
 |---|---|---|
-| D-001 | Reality Interface is a new feature branch: `feature/reality-interface`. | Keeps the experiment isolated and reviewable. |
-| D-002 | Streamlit is a thin client. | UI is replaceable; mechanics remain reusable and testable. |
-| D-003 | WAV is the raw source artifact and stays unchanged. | Preserves provenance and reproducibility. |
-| D-004 | v0.1 derives only cycle period and rate. | Enough to demonstrate physical signal → measured fact without building a signal-analysis cathedral. |
-| D-005 | Human performs the semantic binding to heart rate. | Separates machine pattern measurement from clinical interpretation. |
-| D-006 | Patient and encounter are generated synthetically after validation. | Keeps the measured physical source distinct from the demo identity/context. |
-| D-007 | Observation value comes from the validated external measurement. | Prevents the generator from replacing measured reality with synthetic reality. |
-| D-008 | HL7 message contains source filename/location, not the WAV bytes. | Keeps transport lightweight while preserving source traceability. |
-| D-009 | FHIR is transformed from HL7, not regenerated independently. | Makes the bridge itself testable and exposes what survives transformation. |
-| D-010 | One run directory holds WAV, manifest, validation, HL7, and FHIR. | Creates a simple durable provenance package. |
-| D-011 | The prototype computer-connected stethoscope is built from reclaimed components rather than purchased as a dedicated device. | It was faster and cheaper, and the resulting interface is sufficient to create the WAV boundary needed for the experiment. |
+| D-001 | Reality Interface lives on `feature/reality-interface`. | Keeps the experiment isolated/reviewable. |
+| D-002 | Streamlit is a thin client. | Mechanics remain reusable and testable. |
+| D-003 | WAV is raw source evidence and stays unchanged. | Preserves provenance/replay. |
+| D-004 | v0.1 derives cycle period and rate only. | Enough to test the representation chain without building a signal-analysis cathedral. |
+| D-005 | Human performs the semantic binding to Heart rate. | Separates measurement from interpretation. |
+| D-006 | Patient and Encounter are synthetic. | Keeps source physical provenance distinct from demo identity/context. |
+| D-007 | Observation value comes from validated external measurement. | Prevents synthetic generation from replacing measured reality. |
+| D-008 | HL7 carries source filename/location, not WAV bytes. | Lightweight traceability. |
+| D-009 | FHIR is transformed from HL7, not generated in parallel. | Makes semantic survival testable. |
+| D-010 | One run directory keeps source, manifest, validation, HL7, and FHIR together. | Simple durable provenance package. |
+| D-011 | Prototype hardware uses reclaimed components. | Faster/cheaper and sufficient to establish the WAV boundary. |
+| D-012 | SciPy + NumPy + Hilbert/autocorrelation are the v0.1 signal path. | Minimal dependency surface for the needed mechanics. |
+| D-013 | pytest is the regression-test framework. | Lightweight and already aligned with repo test style. |
+| D-014 | `pathlib.Path` owns artifact paths. | Clear cross-platform filesystem semantics. |
+| D-015 | No Matplotlib unless native Streamlit charts become insufficient. | Avoid unnecessary visualization complexity. |
+| D-016 | Source reference uses a simple `ST` OBX in v0.1. | Existing converter already handles the representation. |
+| D-017 | Downloaded HL7 is a first-class output artifact. | Lets the representation leave the producing UI and be tested by independent consumers. |
 
 ---
 
-# 17. Open Implementation Decisions
+# 14. Known Rough Edges / Deferred Work
 
-- Exact current package names/entry points for the existing ORU builder and HL7 → FHIR transformer should be resolved from the checked-out branch before coding. Reuse the existing paths rather than naming new wrappers prematurely.
-- Choose the simplest source-reference OBX encoding supported by the existing HL7 serializer: RP if cleanly supported; textual fallback if not.
-- Choose waveform/spectrogram plotting library based on what MediLacra already depends on; avoid introducing a visualization dependency solely for this page if Streamlit/native plotting is sufficient.
-- Decide whether `acquisition_band_hz` is fixed to `[10, 300]` for the first demo or exposed as metadata input. It should not silently be inferred from the WAV header.
+- Periodicity measurement is intentionally primitive and not a general physiological-signal framework.
+- Source WAV reference uses a simple `ST` representation rather than a richer pointer/provenance structure.
+- The generic FHIR converter's MSH indexing issue remains a separate cleanup candidate; Reality Interface uses a localized compatibility step.
+- The observed PIQI score of 75 leaves two non-passing applicable assertions to inspect if PIQI optimization becomes useful.
+- Native Streamlit charts are intentionally simple; no plotting dependency is added unless a real need appears.
+
+These are not open requirements for this experiment. They are possible next steps if a concrete consumer demands them.
 
 ---
 
-# 18. Version Log
+# 15. Completion Rule
+
+The experiment is complete when the same fact can be traced from physical reality, through measurement and human interpretation, into HL7 v2, through an independent consumer, and into FHIR without losing what it means.
+
+**That happened.**
+
+---
+
+# 16. Version Log
 
 | Version | Date | Status | Changes |
 |---|---|---|---|
-| v0.1 | 2026-08-25 | Superseded | Initial implementation plan. Incorporated computer-connected stethoscope prototype, WAV periodicity extraction, human semantic validation, synthetic patient/encounter binding, HL7 ORU generation, HL7 → FHIR transformation, source filename/location provenance, thin Streamlit client, modular Python scripts, work packets, acceptance criteria, tests, decision log, and raw prompt history. |
-| v0.2 | 2026-08-25 | Current | Created `feature/reality-interface`; materialized the plan as the first Markdown entry under `docs/`; added explicit documentation of the trash-built digital stethoscope and its reclaimed components; appended the branch/documentation prompt verbatim; added D-011. |
+| v0.1 | 2026-08-25 | Superseded | Initial implementation plan: physical-source WAV, periodicity extraction, human validation, synthetic binding, ORU generation, HL7 → FHIR transformation, provenance package, thin Streamlit client, tests, decisions, and raw prompt history. |
+| v0.2 | 2026-08-25 | Superseded | Created `feature/reality-interface`; materialized plan as first Markdown entry under `docs/`; documented trash-built stethoscope and reclaimed components; added D-011. |
+| v0.3 | 2026-08-27 | Current / completed | Final documentation pass. Preserved raw prompt history; replaced planned module names with implemented layout; recorded SciPy/NumPy/Hilbert/pytest/pathlib decisions; documented downloadable HL7, real-WAV baseline, fresh 86.957/min end-to-end run, independent re-ingestion, FHIR conversion, PIQI 75 (6/8 applicable, 0 critical), completed acceptance criteria, deferred rough edges, and explicit stop condition. |
 
 ---
 
-# 19. Handoff Notes
+# 17. Related Documentation
 
-- Start implementation at WP1/WP2. Do not touch the UI beyond enough scaffolding to exercise the independent analysis function.
-- Before adding new abstractions, inspect existing MediLacra function names and object contracts and bind to them directly.
-- Keep every transformation inspectable: raw source, machine measurement, human validation, canonical clinical object, HL7, FHIR.
-- Version the document when mechanics materially change. Append decisions rather than rewriting history where the old decision remains relevant.
-- For Connectathon readiness, favor repeatability and visible provenance over UI polish.
+- `docs/002_reality_interface_build_log.md` — implementation record and discovered mechanics.
+- `docs/003_reality_interface_experiment_result.md` — concise final evidence/result record.
+- `README.md` — project-level capability summary and quick start.
 
-**Source note:** This plan was derived from the raw prompt history above and the current MediLacra functionality overview. It intentionally reuses existing generators, data classes, HL7 builders/schema knowledge, and transformation machinery rather than inventing replacement architecture.
+**Source note:** the design grew from the raw prompt history above and the existing MediLacra generation/HL7/FHIR machinery. The final implementation reuses those existing seams rather than creating a parallel healthcare-data architecture.
