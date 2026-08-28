@@ -1,7 +1,12 @@
+import pandas as pd
+import pytest
+
 from cheater_engine import (
     EXERCISES,
     build_cohort,
     cohort_counts,
+    execute_python,
+    execute_sql,
     render_python,
     render_sql,
     run_pandas,
@@ -68,3 +73,59 @@ def test_duplicate_exercise_uses_view_not_base_cohort():
     assert len(result) == 1
     assert result.iloc[0]["row_count"] == 2
     assert len(cohort["encounters"]) == base_rows
+
+
+@pytest.mark.parametrize("exercise_key", list(EXERCISES))
+def test_generated_sql_executes(exercise_key):
+    cohort = build_cohort()
+    spec = EXERCISES[exercise_key]
+    result = execute_sql(render_sql(spec), cohort, spec)
+    assert isinstance(result, pd.DataFrame)
+
+
+@pytest.mark.parametrize("exercise_key", list(EXERCISES))
+def test_generated_python_executes(exercise_key):
+    cohort = build_cohort()
+    spec = EXERCISES[exercise_key]
+    result = execute_python(render_python(spec), cohort, spec)
+    assert isinstance(result, pd.DataFrame)
+
+
+def test_edited_sql_changes_output():
+    cohort = build_cohort()
+    spec = EXERCISES["latest_per_group"]
+
+    latest = execute_sql(render_sql(spec), cohort, spec)
+    earliest_sql = render_sql(spec).replace("ORDER BY admit_ts DESC", "ORDER BY admit_ts ASC")
+    earliest = execute_sql(earliest_sql, cohort, spec)
+
+    assert len(latest) == 100
+    assert len(earliest) == 100
+    assert not latest["encounter_id"].equals(earliest["encounter_id"])
+
+
+def test_edited_python_changes_output():
+    cohort = build_cohort()
+    spec = EXERCISES["filter"]
+
+    outpatient = execute_python(render_python(spec), cohort, spec)
+    inpatient_code = render_python(spec).replace("OUTPATIENT", "INPATIENT")
+    inpatient = execute_python(inpatient_code, cohort, spec)
+
+    assert set(outpatient["patient_class"]) == {"OUTPATIENT"}
+    assert set(inpatient["patient_class"]) == {"INPATIENT"}
+    assert not outpatient["encounter_id"].equals(inpatient["encounter_id"])
+
+
+def test_sql_execution_rejects_writes():
+    cohort = build_cohort()
+    spec = EXERCISES["filter"]
+    with pytest.raises(ValueError, match="read-only"):
+        execute_sql("DELETE FROM encounters", cohort, spec)
+
+
+def test_python_requires_result_variable():
+    cohort = build_cohort()
+    spec = EXERCISES["filter"]
+    with pytest.raises(ValueError, match="result"):
+        execute_python("x = len(encounters)", cohort, spec)
