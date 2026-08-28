@@ -4,8 +4,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 import random
-from typing import Dict, List, Mapping
+from typing import Any, Dict, List, Mapping
 
+import duckdb
 import pandas as pd
 
 
@@ -99,6 +100,7 @@ def build_cohort(n_patients: int = 100, encounters_per_patient: int = 2, seed: i
 
 
 def build_exercise_tables(cohort: Mapping[str, pd.DataFrame], spec: TransformationSpec) -> Dict[str, pd.DataFrame]:
+    """Return isolated exercise tables without mutating the clean base cohort."""
     tables = {name: frame.copy() for name, frame in cohort.items()}
     if spec.exercise_mode == "drop_encounters_for_first_patient":
         first_patient = tables["patients"].iloc[0]["patient_id"]
@@ -156,7 +158,109 @@ def render_python(spec: TransformationSpec) -> str:
     raise KeyError(spec.key)
 
 
+def _validate_read_only_sql(sql: str) -> str:
+    """Accept one read-only SELECT/WITH statement for the in-memory cohort."""
+    statement = sql.strip()
+    if not statement:
+        raise ValueError("SQL is empty.")
+    statement = statement[:-1].rstrip() if statement.endswith(";") else statement
+    if ";" in statement:
+        raise ValueError("Run one SQL statement at a time.")
+
+    first_word = statement.split(None, 1)[0].upper()
+    if first_word not in {"SELECT", "WITH"}:
+        raise ValueError("Cheater SQL execution is read-only: start with SELECT or WITH.")
+
+    forbidden = {
+        "INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE", "COPY",
+        "ATTACH", "DETACH", "INSTALL", "LOAD", "EXPORT", "IMPORT", "PRAGMA", "CALL",
+    }
+    tokens = {token.strip("(),").upper() for token in statement.replace("\n", " ").split()}
+    blocked = sorted(forbidden & tokens)
+    if blocked:
+        raise ValueError(f"Blocked SQL operation: {blocked[0]}.")
+    return statement
+
+
+def execute_sql(sql: str, cohort: Mapping[str, pd.DataFrame], spec: TransformationSpec) -> pd.DataFrame:
+    """Execute edited SQL against isolated in-memory DuckDB tables."""
+    statement = _validate_read_only_sql(sql)
+    tables = build_exercise_tables(cohort, spec)
+    con = duckdb.connect(":memory:")
+    try:
+        for name, frame in tables.items():
+            con.register(name, frame)
+        return con.execute(statement).fetchdf()
+    finally:
+        con.close()
+
+
+_SAFE_BUILTINS = {
+    "abs": abs,
+    "all": all,
+    "any": any,
+    "bool": bool,
+    "dict": dict,
+    "enumerate": enumerate,
+    "float": float,
+    "int": int,
+    "len": len,
+    "list": list,
+    "max": max,
+    "min": min,
+    "range": range,
+    "round": round,
+    "set": set,
+    "sorted": sorted,
+    "str": str,
+    "sum": sum,
+    "tuple": tuple,
+    "zip": zip,
+}
+
+
+def _result_to_frame(result: Any) -> pd.DataFrame:
+    if isinstance(result, pd.DataFrame):
+        return result.reset_index(drop=True)
+    if isinstance(result, pd.Series):
+        return result.to_frame().reset_index(drop=True)
+    if isinstance(result, list):
+        return pd.DataFrame(result)
+    if isinstance(result, tuple):
+        return pd.DataFrame(list(result))
+    if isinstance(result, dict):
+        try:
+            return pd.DataFrame(result)
+        except ValueError:
+            return pd.DataFrame([result])
+    return pd.DataFrame({"result": [result]})
+
+
+def execute_python(code: str, cohort: Mapping[str, pd.DataFrame], spec: TransformationSpec) -> pd.DataFrame:
+    """Execute edited plain Python against list-of-dict copies of exercise tables.
+
+    This is a local interview sandbox, not a security boundary. Imports are disabled
+    and the expected contract is that edited code assigns its output to ``result``.
+    """
+    if not code.strip():
+        raise ValueError("Python code is empty.")
+
+    tables = build_exercise_tables(cohort, spec)
+    namespace: Dict[str, Any] = {
+        name: frame.to_dict(orient="records")
+        for name, frame in tables.items()
+    }
+    namespace["__builtins__"] = _SAFE_BUILTINS
+
+    exec(code, namespace, namespace)
+
+    if "result" not in namespace:
+        raise ValueError("Python code must assign the final output to a variable named 'result'.")
+    return _result_to_frame(namespace["result"])
+
+
 def run_pandas(spec: TransformationSpec, cohort: Mapping[str, pd.DataFrame]) -> pd.DataFrame:
+    """Reference implementation used by tests; editor execution uses SQL/Python directly."""
     tables = build_exercise_tables(cohort, spec)
     if spec.key == "filter":
         return tables[spec.source_a][tables[spec.source_a][spec.filter_column] == spec.filter_value].reset_index(drop=True)
