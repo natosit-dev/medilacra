@@ -1,5 +1,6 @@
 # --- Core ---
 streamlit>=1.36
+streamlit-code-editor
 duckdb>=1.0
 pandas>=2.2
 pyarrow>=16.0
