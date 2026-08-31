@@ -1,10 +1,13 @@
 from random import Random
 
+import duckdb
 import pandas as pd
 import pandas.testing as pdt
 
 from experiments.disco_inferno.compare import compare_models, control_is_zero
 from experiments.disco_inferno.corruptions import control, drop_identifier, duplicate_record, null_field
+from experiments.disco_inferno.exports import write_source_duckdb
+from experiments.disco_inferno.materialize import save_model
 
 
 def sample_model():
@@ -70,3 +73,27 @@ def test_different_inferno_seed_changes_victims_not_truth():
     b = null_field(source, "observations", "observation_text", 0.5, Random(667), identity_field="observation_id")
     assert a.manifest["selected_positions"] != b.manifest["selected_positions"]
     pdt.assert_frame_equal(source["observations"], before)
+
+
+def test_source_reality_duckdb_contains_beatrice_tables(tmp_path):
+    source = sample_model()
+    db_path = tmp_path / "source_reality_20260830T211031-0400.duckdb"
+    write_source_duckdb(source, db_path)
+
+    con = duckdb.connect(str(db_path), read_only=True)
+    try:
+        assert con.execute("SELECT COUNT(*) FROM observations").fetchone()[0] == 4
+        assert con.execute("SELECT COUNT(*) FROM transactions").fetchone()[0] == 4
+        assert con.execute(
+            "SELECT observation_text FROM observations WHERE observation_id = 'O1'"
+        ).fetchone()[0] == "a"
+    finally:
+        con.close()
+
+
+def test_save_model_can_datetime_stamp_csv_names(tmp_path):
+    source = sample_model()
+    stamp = "20260830T211031-0400"
+    save_model(source, tmp_path, file_suffix=stamp)
+    assert (tmp_path / f"observations_{stamp}.csv").exists()
+    assert (tmp_path / f"transactions_{stamp}.csv").exists()

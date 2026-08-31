@@ -38,7 +38,13 @@ def materialize_cases(cases: Iterable[object]) -> dict[str, pd.DataFrame]:
     }
 
 
-def save_model(model: dict[str, pd.DataFrame], directory: Path) -> None:
+def save_model(
+    model: dict[str, pd.DataFrame],
+    directory: Path,
+    *,
+    file_suffix: str | None = None,
+) -> None:
     directory.mkdir(parents=True, exist_ok=True)
+    suffix = f"_{file_suffix}" if file_suffix else ""
     for name, frame in model.items():
-        frame.to_csv(directory / f"{name}.csv", index=False)
+        frame.to_csv(directory / f"{name}{suffix}.csv", index=False)
