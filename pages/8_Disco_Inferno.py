@@ -303,11 +303,11 @@ with st.expander("Beatrice — source reality", expanded=True):
         include_labs = st.checkbox("Include lab ORM + lab ORU exports", value=True)
     with s3:
         include_sdoh = st.checkbox(
-            "Include SDOH enrichment (slow)",
-            value=True,
+            "Include SDOH enrichment (slow / external APIs)",
+            value=False,
             help=(
-                "Uncheck to skip public SDOH lookups in ADT generation. "
-                "Vitals still generate using neutral poverty/AQI defaults."
+                "Off by default. Enable only when external SDOH enrichment is part of the experiment. "
+                "When off, the worker blocks Census, AirNow, PLACES, and BLS network lookups."
             ),
         )
 
@@ -367,8 +367,8 @@ with st.expander("Minos — Inferno controls", expanded=True):
 st.caption(
     "Defaults reproduce the validated MVP: 100 / 2 / 2 / 2, reality seed 42, "
     "Inferno seed 666, Charon observations.encounter_id, 10% observation_text nulling, "
-    "and 10% transaction duplication. SDOH remains enabled by default but can be disabled "
-    "for much faster HL7 generation."
+    "and 10% transaction duplication. External SDOH enrichment is OFF by default, "
+    "matching the local deterministic experiment boundary used by Structured Sparsity."
 )
 
 start_disabled = active_run is not None
