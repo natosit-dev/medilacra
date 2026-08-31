@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from dataclasses import fields
 from pathlib import Path
 
@@ -7,7 +8,14 @@ import pandas as pd
 import streamlit as st
 
 from hl7_demo.models import Encounter, Observation, Patient, Transaction
-from experiments.disco_inferno.run_experiment import run_experiment
+from experiments.disco_inferno.process_control import (
+    get_active_run,
+    get_job_status,
+    load_completed_run,
+    start_run,
+    stop_active_run,
+    tail_job_log,
+)
 
 
 TABLE_CLASSES = {
@@ -87,135 +95,7 @@ def _preview_arm(result: dict, arm_name: str, preview_rows: int) -> None:
         st.json(manifest)
 
 
-st.title("🔥 Disco Inferno")
-st.caption(
-    "Medilacra entropy engine — hold reality and model constant, then compare "
-    "Beatrice with controlled corruption."
-)
-
-st.markdown("### Experiment controls")
-
-with st.expander("Beatrice — source reality", expanded=True):
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        patients = int(
-            st.number_input("Patients", min_value=1, max_value=10000, value=100, step=10)
-        )
-    with c2:
-        encounters_per_patient = int(
-            st.number_input("Encounters / patient", min_value=1, max_value=10, value=2, step=1)
-        )
-    with c3:
-        observations_per_encounter = int(
-            st.number_input("Observations / encounter", min_value=1, max_value=10, value=2, step=1)
-        )
-    with c4:
-        transactions_per_encounter = int(
-            st.number_input("Transactions / encounter", min_value=1, max_value=10, value=2, step=1)
-        )
-
-    s1, s2, s3 = st.columns(3)
-    with s1:
-        reality_seed = int(st.number_input("Reality seed", value=42, step=1))
-    with s2:
-        include_labs = st.checkbox("Include lab ORM + lab ORU exports", value=True)
-    with s3:
-        include_sdoh = st.checkbox(
-            "Include SDOH enrichment (slow)",
-            value=True,
-            help=(
-                "Uncheck to skip public SDOH lookups in ADT generation. "
-                "Vitals still generate using neutral poverty/AQI defaults."
-            ),
-        )
-
-with st.expander("Minos — Inferno controls", expanded=True):
-    inferno_seed = int(st.number_input("Inferno seed", value=666, step=1))
-
-    st.markdown("#### Charon — drop identifier")
-    cc1, cc2 = st.columns(2)
-    with cc1:
-        charon_tables = list(TABLE_CLASSES)
-        charon_table = st.selectbox(
-            "Charon table",
-            charon_tables,
-            index=_default_index(charon_tables, "observations"),
-        )
-    with cc2:
-        charon_fields = _identifier_candidates(charon_table)
-        charon_field = st.selectbox(
-            "Identifier / reference field",
-            charon_fields,
-            index=_default_index(charon_fields, "encounter_id"),
-        )
-
-    st.markdown("#### Null — erase facts")
-    nc1, nc2, nc3 = st.columns([1, 1.5, 1])
-    with nc1:
-        null_tables = list(TABLE_CLASSES)
-        null_table = st.selectbox(
-            "Null table",
-            null_tables,
-            index=_default_index(null_tables, "observations"),
-        )
-    with nc2:
-        null_fields = TABLE_FIELDS[null_table]
-        null_field_name = st.selectbox(
-            "Field to null",
-            null_fields,
-            index=_default_index(null_fields, "observation_text"),
-        )
-    with nc3:
-        null_percent = st.slider("Null %", min_value=0, max_value=100, value=10, step=1)
-
-    st.markdown("#### Cerberus — duplicate records")
-    dc1, dc2 = st.columns(2)
-    with dc1:
-        duplicate_tables = list(TABLE_CLASSES)
-        duplicate_table = st.selectbox(
-            "Duplicate table",
-            duplicate_tables,
-            index=_default_index(duplicate_tables, "transactions"),
-        )
-    with dc2:
-        duplicate_percent = st.slider(
-            "Duplicate %", min_value=0, max_value=100, value=10, step=1
-        )
-
-st.caption(
-    "Defaults reproduce the validated MVP: 100 / 2 / 2 / 2, reality seed 42, "
-    "Inferno seed 666, Charon observations.encounter_id, 10% observation_text nulling, "
-    "and 10% transaction duplication. SDOH remains enabled by default but can be disabled "
-    "for much faster HL7 generation."
-)
-
-if st.button("❤️‍🔥 Descend into the Inferno", type="primary", use_container_width=True):
-    try:
-        with st.spinner("Minos is judging the data..."):
-            result = run_experiment(
-                patients=patients,
-                encounters_per_patient=encounters_per_patient,
-                observations_per_encounter=observations_per_encounter,
-                transactions_per_encounter=transactions_per_encounter,
-                reality_seed=reality_seed,
-                inferno_seed=inferno_seed,
-                charon_table=charon_table,
-                charon_field=charon_field,
-                null_table=null_table,
-                null_field_name=null_field_name,
-                null_fraction=null_percent / 100.0,
-                duplicate_table=duplicate_table,
-                duplicate_fraction=duplicate_percent / 100.0,
-                include_labs=include_labs,
-                include_sdoh=include_sdoh,
-            )
-        st.session_state["disco_inferno_result"] = result
-    except Exception as exc:
-        st.session_state.pop("disco_inferno_result", None)
-        st.exception(exc)
-
-result = st.session_state.get("disco_inferno_result")
-if result:
+def _render_result(result: dict) -> None:
     run_id = result["run_id"]
     beatrice = result["beatrice"]
     arms = result["arms"]
@@ -340,3 +220,194 @@ if result:
 
     with report_tab:
         st.markdown(Path(artifacts["report"]).read_text(encoding="utf-8"))
+
+
+st.title("🔥 Disco Inferno")
+st.caption(
+    "Medilacra entropy engine — hold reality and model constant, then compare "
+    "Beatrice with controlled corruption."
+)
+
+active_run = get_active_run()
+session_job_id = st.session_state.get("disco_inferno_job_id")
+session_job_status = get_job_status(session_job_id)
+
+if active_run:
+    active_job_id = str(active_run["job_id"])
+    active_pid = active_run.get("pid") or "starting"
+    st.warning(
+        f"🔒 Generator locked — job `{active_job_id}` • PID `{active_pid}`. "
+        "Only one Disco Inferno generation process can run at a time."
+    )
+    stop_col, log_col = st.columns([1, 3])
+    with stop_col:
+        if st.button("🛑 Stop active run", type="primary", use_container_width=True):
+            stopped = stop_active_run()
+            st.session_state.pop("disco_inferno_result", None)
+            if stopped.get("stopped"):
+                st.session_state["disco_inferno_job_id"] = active_job_id
+            st.rerun()
+    with log_col:
+        st.caption(
+            "The generator is isolated in its own process. Stopping it terminates "
+            "the worker process group without stopping Streamlit."
+        )
+
+    with st.expander("Live worker log", expanded=True):
+        current_log = tail_job_log(active_job_id, max_lines=100)
+        st.code(current_log or "Worker starting...", language="text")
+
+if session_job_status:
+    state = session_job_status.get("status")
+    if state == "complete":
+        loaded_job = st.session_state.get("disco_inferno_loaded_job")
+        if loaded_job != session_job_id:
+            try:
+                loaded_result = load_completed_run(session_job_status["run_dir"])
+                st.session_state["disco_inferno_result"] = loaded_result
+                st.session_state["disco_inferno_loaded_job"] = session_job_id
+            except Exception as exc:
+                st.error(f"Run completed, but the UI could not reload its artifacts: {exc}")
+    elif state == "failed":
+        st.error(f"Worker failed: {session_job_status.get('error', 'unknown error')}")
+        with st.expander("Worker log", expanded=True):
+            st.code(tail_job_log(session_job_id, max_lines=150) or "No log output.", language="text")
+    elif state == "stopped":
+        st.info("🛑 The previous Disco Inferno worker was stopped and the generator lock was released.")
+
+st.markdown("### Experiment controls")
+
+with st.expander("Beatrice — source reality", expanded=True):
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        patients = int(
+            st.number_input("Patients", min_value=1, max_value=10000, value=100, step=10)
+        )
+    with c2:
+        encounters_per_patient = int(
+            st.number_input("Encounters / patient", min_value=1, max_value=10, value=2, step=1)
+        )
+    with c3:
+        observations_per_encounter = int(
+            st.number_input("Observations / encounter", min_value=1, max_value=10, value=2, step=1)
+        )
+    with c4:
+        transactions_per_encounter = int(
+            st.number_input("Transactions / encounter", min_value=1, max_value=10, value=2, step=1)
+        )
+
+    s1, s2, s3 = st.columns(3)
+    with s1:
+        reality_seed = int(st.number_input("Reality seed", value=42, step=1))
+    with s2:
+        include_labs = st.checkbox("Include lab ORM + lab ORU exports", value=True)
+    with s3:
+        include_sdoh = st.checkbox(
+            "Include SDOH enrichment (slow)",
+            value=True,
+            help=(
+                "Uncheck to skip public SDOH lookups in ADT generation. "
+                "Vitals still generate using neutral poverty/AQI defaults."
+            ),
+        )
+
+with st.expander("Minos — Inferno controls", expanded=True):
+    inferno_seed = int(st.number_input("Inferno seed", value=666, step=1))
+
+    st.markdown("#### Charon — drop identifier")
+    cc1, cc2 = st.columns(2)
+    with cc1:
+        charon_tables = list(TABLE_CLASSES)
+        charon_table = st.selectbox(
+            "Charon table",
+            charon_tables,
+            index=_default_index(charon_tables, "observations"),
+        )
+    with cc2:
+        charon_fields = _identifier_candidates(charon_table)
+        charon_field = st.selectbox(
+            "Identifier / reference field",
+            charon_fields,
+            index=_default_index(charon_fields, "encounter_id"),
+        )
+
+    st.markdown("#### Null — erase facts")
+    nc1, nc2, nc3 = st.columns([1, 1.5, 1])
+    with nc1:
+        null_tables = list(TABLE_CLASSES)
+        null_table = st.selectbox(
+            "Null table",
+            null_tables,
+            index=_default_index(null_tables, "observations"),
+        )
+    with nc2:
+        null_fields = TABLE_FIELDS[null_table]
+        null_field_name = st.selectbox(
+            "Field to null",
+            null_fields,
+            index=_default_index(null_fields, "observation_text"),
+        )
+    with nc3:
+        null_percent = st.slider("Null %", min_value=0, max_value=100, value=10, step=1)
+
+    st.markdown("#### Cerberus — duplicate records")
+    dc1, dc2 = st.columns(2)
+    with dc1:
+        duplicate_tables = list(TABLE_CLASSES)
+        duplicate_table = st.selectbox(
+            "Duplicate table",
+            duplicate_tables,
+            index=_default_index(duplicate_tables, "transactions"),
+        )
+    with dc2:
+        duplicate_percent = st.slider(
+            "Duplicate %", min_value=0, max_value=100, value=10, step=1
+        )
+
+st.caption(
+    "Defaults reproduce the validated MVP: 100 / 2 / 2 / 2, reality seed 42, "
+    "Inferno seed 666, Charon observations.encounter_id, 10% observation_text nulling, "
+    "and 10% transaction duplication. SDOH remains enabled by default but can be disabled "
+    "for much faster HL7 generation."
+)
+
+start_disabled = active_run is not None
+if st.button(
+    "❤️‍🔥 Descend into the Inferno",
+    type="primary",
+    use_container_width=True,
+    disabled=start_disabled,
+):
+    config = {
+        "patients": patients,
+        "encounters_per_patient": encounters_per_patient,
+        "observations_per_encounter": observations_per_encounter,
+        "transactions_per_encounter": transactions_per_encounter,
+        "reality_seed": reality_seed,
+        "inferno_seed": inferno_seed,
+        "charon_table": charon_table,
+        "charon_field": charon_field,
+        "null_table": null_table,
+        "null_field_name": null_field_name,
+        "null_fraction": null_percent / 100.0,
+        "duplicate_table": duplicate_table,
+        "duplicate_fraction": duplicate_percent / 100.0,
+        "include_labs": include_labs,
+        "include_sdoh": include_sdoh,
+    }
+    try:
+        job = start_run(config)
+        st.session_state["disco_inferno_job_id"] = job["job_id"]
+        st.session_state.pop("disco_inferno_result", None)
+        st.session_state.pop("disco_inferno_loaded_job", None)
+        st.rerun()
+    except Exception as exc:
+        st.exception(exc)
+
+result = st.session_state.get("disco_inferno_result")
+if result:
+    _render_result(result)
+
+if active_run:
+    time.sleep(1.0)
+    st.rerun()
