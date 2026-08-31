@@ -105,7 +105,7 @@ def write_hl7_exports(
     *,
     run_id: str,
     include_labs: bool = True,
-    include_sdoh: bool = True,
+    include_sdoh: bool = False,
 ) -> dict[str, object]:
     """Project the untouched source reality into timestamped bulk HL7 files.
 
@@ -113,9 +113,9 @@ def write_hl7_exports(
     MediLacra's pipeline. Narrative ORU and laboratory ORU are kept distinct
     because the existing pipeline treats them as separate generated products.
 
-    include_sdoh controls the slow public-data enrichment used by ADT output.
-    When disabled, SDOH OBX output is omitted and vitals use neutral poverty/AQI
-    lookup results while all other HL7 generation remains unchanged.
+    External SDOH enrichment is opt-in for Disco Inferno. When disabled, SDOH
+    OBX output is omitted and vitals use neutral poverty/AQI lookup results while
+    all other HL7 generation remains unchanged.
     """
 
     output_dir.mkdir(parents=True, exist_ok=True)
