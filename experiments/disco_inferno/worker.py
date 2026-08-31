@@ -7,6 +7,7 @@ import signal
 import traceback
 from pathlib import Path
 
+from experiments.disco_inferno.offline_sdoh import install_offline_sdoh
 from experiments.disco_inferno.process_control import (
     _now_iso,
     release_lock,
@@ -37,6 +38,18 @@ def main() -> int:
 
     wait_for_lock_ready(job_id, pid)
     config = json.loads(config_path.read_text(encoding="utf-8"))
+
+    # Structured Sparsity never enters the external SDOH enrichment path.
+    # Disco Inferno should behave the same way whenever SDOH is disabled:
+    # install a worker-wide offline boundary before any generation/projection
+    # work begins. Missing include_sdoh in older configs is treated as off.
+    if not bool(config.get("include_sdoh", False)):
+        install_offline_sdoh()
+        print(
+            "SDOH OFFLINE — Census, AirNow, PLACES, and BLS network lookups disabled.",
+            flush=True,
+        )
+
     started_at = _now_iso()
     write_job_status(
         job_id,
