@@ -67,10 +67,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--duplicate-table", default="transactions")
     parser.add_argument("--duplicate-fraction", type=float, default=0.10)
     parser.add_argument("--no-labs", action="store_true")
-    parser.add_argument(
+    sdoh_group = parser.add_mutually_exclusive_group()
+    sdoh_group.add_argument(
+        "--with-sdoh",
+        action="store_true",
+        help="Explicitly enable external Census/AirNow/PLACES/BLS SDOH enrichment.",
+    )
+    sdoh_group.add_argument(
         "--no-sdoh",
         action="store_true",
-        help="Skip slow public SDOH enrichment while preserving non-SDOH ADT content.",
+        help="Deprecated compatibility flag; SDOH is already disabled by default.",
     )
     parser.add_argument(
         "--reports",
@@ -217,7 +223,7 @@ def run_experiment(
     duplicate_table: str = "transactions",
     duplicate_fraction: float = 0.10,
     include_labs: bool = True,
-    include_sdoh: bool = True,
+    include_sdoh: bool = False,
     report_glob: str | None = None,
     output_dir: str | Path | None = None,
     verbose_generation: bool = False,
@@ -408,7 +414,7 @@ def main() -> None:
         duplicate_table=args.duplicate_table,
         duplicate_fraction=args.duplicate_fraction,
         include_labs=not args.no_labs,
-        include_sdoh=not args.no_sdoh,
+        include_sdoh=bool(args.with_sdoh),
         report_glob=args.reports,
         output_dir=args.output_dir,
         verbose_generation=args.verbose_generation,
