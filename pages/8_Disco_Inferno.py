@@ -114,11 +114,20 @@ with st.expander("Beatrice — source reality", expanded=True):
             st.number_input("Transactions / encounter", min_value=1, max_value=10, value=2, step=1)
         )
 
-    s1, s2 = st.columns(2)
+    s1, s2, s3 = st.columns(3)
     with s1:
         reality_seed = int(st.number_input("Reality seed", value=42, step=1))
     with s2:
         include_labs = st.checkbox("Include lab ORM + lab ORU exports", value=True)
+    with s3:
+        include_sdoh = st.checkbox(
+            "Include SDOH enrichment (slow)",
+            value=True,
+            help=(
+                "Uncheck to skip public SDOH lookups in ADT generation. "
+                "Vitals still generate using neutral poverty/AQI defaults."
+            ),
+        )
 
 with st.expander("Minos — Inferno controls", expanded=True):
     inferno_seed = int(st.number_input("Inferno seed", value=666, step=1))
@@ -176,7 +185,8 @@ with st.expander("Minos — Inferno controls", expanded=True):
 st.caption(
     "Defaults reproduce the validated MVP: 100 / 2 / 2 / 2, reality seed 42, "
     "Inferno seed 666, Charon observations.encounter_id, 10% observation_text nulling, "
-    "and 10% transaction duplication."
+    "and 10% transaction duplication. SDOH remains enabled by default but can be disabled "
+    "for much faster HL7 generation."
 )
 
 if st.button("❤️‍🔥 Descend into the Inferno", type="primary", use_container_width=True):
@@ -197,6 +207,7 @@ if st.button("❤️‍🔥 Descend into the Inferno", type="primary", use_conta
                 duplicate_table=duplicate_table,
                 duplicate_fraction=duplicate_percent / 100.0,
                 include_labs=include_labs,
+                include_sdoh=include_sdoh,
             )
         st.session_state["disco_inferno_result"] = result
     except Exception as exc:
@@ -256,6 +267,10 @@ if result:
         st.markdown("#### Source-reality export")
         st.code(Path(artifacts["source_duckdb"]).name)
         st.markdown("#### HL7 message counts")
+        st.caption(
+            "SDOH enrichment: "
+            + ("enabled" if result["manifest"]["settings"]["include_sdoh"] else "disabled")
+        )
         st.dataframe(
             pd.DataFrame(
                 [

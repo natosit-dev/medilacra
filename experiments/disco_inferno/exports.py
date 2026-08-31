@@ -2,14 +2,15 @@ from __future__ import annotations
 
 from collections import defaultdict
 from pathlib import Path
+from types import FunctionType
 from typing import Iterable
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import duckdb
 import pandas as pd
 
+from hl7_demo import messages as hl7_messages
 from hl7_demo.messages import (
-    build_adt,
     build_dft,
     build_orm_labs,
     build_oru,
@@ -50,18 +51,71 @@ def _write_bulk(path: Path, messages: list[str]) -> None:
     path.write_text("\n\n".join(messages), encoding="utf-8")
 
 
+def _build_adt_for_export(
+    patient: object,
+    encounter: object,
+    transaction: object | None,
+    observation: object | None,
+    *,
+    include_sdoh: bool,
+) -> str:
+    """Build the normal ADT, optionally replacing slow SDOH lookups with neutral values.
+
+    The fast path executes the existing build_adt function bytecode against a copied
+    globals dictionary. This keeps normal MediLacra behavior untouched and avoids
+    process-global monkeypatching while preserving all non-SDOH ADT generation.
+    """
+
+    if include_sdoh:
+        return hl7_messages.build_adt(
+            patient,
+            encounter,
+            tx=transaction,
+            obs=observation,
+        )
+
+    fast_globals = dict(hl7_messages.build_adt.__globals__)
+    fast_globals["get_air_quality_by_zip"] = lambda *_args, **_kwargs: None
+    fast_globals["get_poverty_pct_by_zcta"] = lambda *_args, **_kwargs: 0.0
+
+    fast_build_adt = FunctionType(
+        hl7_messages.build_adt.__code__,
+        fast_globals,
+        name=hl7_messages.build_adt.__name__,
+        argdefs=hl7_messages.build_adt.__defaults__,
+        closure=hl7_messages.build_adt.__closure__,
+    )
+    fast_build_adt.__kwdefaults__ = hl7_messages.build_adt.__kwdefaults__
+
+    return fast_build_adt(
+        patient,
+        encounter,
+        tx=transaction,
+        obs=observation,
+        add_air_obx=False,
+        add_poverty_obx=False,
+        add_places_obesity_obx=False,
+        add_unemployment_obx=False,
+    )
+
+
 def write_hl7_exports(
     cases: Iterable[object],
     output_dir: Path,
     *,
     run_id: str,
     include_labs: bool = True,
+    include_sdoh: bool = True,
 ) -> dict[str, object]:
     """Project the untouched source reality into timestamped bulk HL7 files.
 
     One output file is written for each message family already produced by
     MediLacra's pipeline. Narrative ORU and laboratory ORU are kept distinct
     because the existing pipeline treats them as separate generated products.
+
+    include_sdoh controls the slow public-data enrichment used by ADT output.
+    When disabled, SDOH OBX output is omitted and vitals use neutral poverty/AQI
+    lookup results while all other HL7 generation remains unchanged.
     """
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -87,11 +141,12 @@ def write_hl7_exports(
             primary_transaction = transactions[0] if transactions else None
 
             messages["ADT_A01"].append(
-                build_adt(
+                _build_adt_for_export(
                     patient,
                     encounter,
-                    tx=primary_transaction,
-                    obs=primary_observation,
+                    primary_transaction,
+                    primary_observation,
+                    include_sdoh=include_sdoh,
                 )
             )
             messages["ORU_R01"].append(

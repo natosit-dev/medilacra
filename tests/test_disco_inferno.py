@@ -1,13 +1,17 @@
+import random
 from random import Random
 
 import duckdb
 import pandas as pd
 import pandas.testing as pdt
+from faker import Faker
 
 from experiments.disco_inferno.compare import compare_models, control_is_zero
 from experiments.disco_inferno.corruptions import control, drop_identifier, duplicate_record, null_field
-from experiments.disco_inferno.exports import write_source_duckdb
+from experiments.disco_inferno.exports import _build_adt_for_export, write_source_duckdb
 from experiments.disco_inferno.materialize import save_model
+from hl7_demo import messages as hl7_messages
+from hl7_demo.generators import gen_encounter, gen_patient
 
 
 def sample_model():
@@ -97,3 +101,29 @@ def test_save_model_can_datetime_stamp_csv_names(tmp_path):
     save_model(source, tmp_path, file_suffix=stamp)
     assert (tmp_path / f"observations_{stamp}.csv").exists()
     assert (tmp_path / f"transactions_{stamp}.csv").exists()
+
+
+def test_fast_hl7_export_skips_sdoh_lookups_without_changing_shared_builder(monkeypatch):
+    random.seed(42)
+    Faker.seed(42)
+    patient = gen_patient()
+    encounter = gen_encounter(patient.patient_id)
+
+    original_build_adt = hl7_messages.build_adt
+
+    def fail_lookup(*_args, **_kwargs):
+        raise AssertionError("SDOH lookup was called while include_sdoh=False")
+
+    monkeypatch.setattr(hl7_messages, "get_air_quality_by_zip", fail_lookup)
+    monkeypatch.setattr(hl7_messages, "get_poverty_pct_by_zcta", fail_lookup)
+
+    message = _build_adt_for_export(
+        patient,
+        encounter,
+        None,
+        None,
+        include_sdoh=False,
+    )
+
+    assert message.startswith("MSH|")
+    assert hl7_messages.build_adt is original_build_adt

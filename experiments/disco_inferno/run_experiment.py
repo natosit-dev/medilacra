@@ -68,6 +68,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--duplicate-fraction", type=float, default=0.10)
     parser.add_argument("--no-labs", action="store_true")
     parser.add_argument(
+        "--no-sdoh",
+        action="store_true",
+        help="Skip slow public SDOH enrichment while preserving non-SDOH ADT content.",
+    )
+    parser.add_argument(
         "--reports",
         default=str(REPO_ROOT / "input" / "reports" / "*.csv"),
     )
@@ -212,6 +217,7 @@ def run_experiment(
     duplicate_table: str = "transactions",
     duplicate_fraction: float = 0.10,
     include_labs: bool = True,
+    include_sdoh: bool = True,
     report_glob: str | None = None,
     output_dir: str | Path | None = None,
     verbose_generation: bool = False,
@@ -272,6 +278,7 @@ def run_experiment(
         hl7_dir,
         run_id=run_id,
         include_labs=include_labs,
+        include_sdoh=include_sdoh,
     )
 
     arms = _run_arms(
@@ -325,6 +332,7 @@ def run_experiment(
             "null": {"table": null_table, "field": null_field_name, "fraction": null_fraction},
             "cerberus": {"table": duplicate_table, "fraction": duplicate_fraction},
             "include_labs": include_labs,
+            "include_sdoh": include_sdoh,
         },
         "hl7": {
             "message_counts": hl7_artifacts["counts"],
@@ -400,6 +408,7 @@ def main() -> None:
         duplicate_table=args.duplicate_table,
         duplicate_fraction=args.duplicate_fraction,
         include_labs=not args.no_labs,
+        include_sdoh=not args.no_sdoh,
         report_glob=args.reports,
         output_dir=args.output_dir,
         verbose_generation=args.verbose_generation,
