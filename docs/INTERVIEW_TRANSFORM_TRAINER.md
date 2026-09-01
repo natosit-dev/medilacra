@@ -1,776 +1,356 @@
-# MediLacra Interview Transform Trainer
+# MediLacra Interview Transform Trainer — Cheater
 
 Branch: `cheater`
 
+Status: working interview-prep prototype
+
 ## Purpose
 
-Build a deliberately small, deterministic interview-prep surface inside MediLacra for SQL and plain-Python data engineering questions.
+Cheater is a deliberately small Streamlit surface for practicing common data-engineering interview transformations in SQL and plain Python.
 
-The trainer does not attempt to understand arbitrary English. The user manually normalizes an interview question through dropdowns. Those selections become a canonical transformation specification, which is then rendered as:
-
-1. normalized transformation logic,
-2. SQL,
-3. plain Python,
-4. a concise verbal explanation of the data flow and output grain.
-
-The goal is to train recognition of data shape and transformation primitives rather than rote syntax memorization.
-
-## Core Principle
-
-SQL and plain Python are treated as two materializations of the same underlying data transformation.
+The core training idea is:
 
 ```text
-INTERVIEW QUESTION
+QUESTION
+  ↓
+REMOVE SEMANTIC NOISE
+  ↓
+IDENTIFY THE TRANSFORMATION
+  ↓
+GENERATED STARTING CODE
+  ↓
+EDIT THE CODE
+  ↓
+EXECUTE THE EDITED CODE
+  ↓
+OBSERVE THE RESULT
+```
+
+The generated code is not the answer boundary. It is a starting point. The code currently visible in the editor is what executes.
+
+That matters because the user can change the transformation and immediately observe the consequence. For example:
+
+```text
+ORDER BY admit_ts DESC
+        ↓ edit
+ORDER BY admit_ts ASC
+```
+
+changes "latest encounter per patient" into "earliest encounter per patient" without changing the exercise definition.
+
+## Current Architecture
+
+```text
+100-patient deterministic cohort
         ↓
-HUMAN REMOVES SEMANTIC NOISE
+exercise selection
         ↓
-DROPDOWN SELECTIONS
+TransformationSpec
         ↓
-TRANSFORMATION SPEC
+semantic explanation
         ↓
-┌───────────────┬───────────────┬───────────────┐
-│ NORMALIZED    │ SQL           │ PLAIN PYTHON  │
-│ LOGIC         │ RENDERER      │ RENDERER      │
-└───────────────┴───────────────┴───────────────┘
-        ↓
-VERBAL EXPLANATION
+┌────────────────────┬────────────────────┐
+│ editable SQL       │ editable Python    │
+│ starter            │ starter            │
+└────────────────────┴────────────────────┘
+        ↓                    ↓
+ in-memory DuckDB       local Python exec
+        ↓                    ↓
+        └──────── result dataframe ───────┘
 ```
 
-The dropdowns are the parser. No NLP layer is required for v0.1.
+The page is a control surface. Transformation and execution logic lives in `cheater_engine.py`.
 
----
+## Cohort
 
-# v0.1 Scope
-
-The first version covers five high-probability data engineering interview primitives.
-
-## 1. Filter
-
-Typical wording:
-
-- Find rows where...
-- Return records matching...
-- Show encounters after a date...
-
-Canonical transformation:
+The default cohort is deterministic:
 
 ```text
-SOURCE
-→ APPLY PREDICATE
-→ RETURN MATCHING ROWS
+patients       100
+encounters     200
+orders         200
+observations   200
+transactions   200
 ```
 
-Primary SQL primitive:
+Each patient has exactly two encounters.
 
-```text
-WHERE
-```
+Each encounter has exactly:
 
-Primary Python primitive:
+- one order,
+- one observation,
+- one transaction.
 
-```text
-if / list comprehension
-```
+The base cohort remains clean. Missing-record and duplicate-record exercises create disposable exercise tables rather than mutating the base data.
 
-Default drill:
+### Training schema
 
-> Return encounters admitted after a selected date.
+Cheater uses a small, purpose-built interview schema. It is MediLacra-flavored, but it is **not intended to be a mirror of every column in MediLacra's persistence schema**.
 
----
+That is deliberate: Cheater needs stable relational shapes for interview drills, not a second production-style data model.
 
-## 2. Group + Aggregate
-
-Typical wording:
-
-- Count encounters per patient.
-- Sum charges by provider.
-- Average result value by test code.
-
-Canonical transformation:
-
-```text
-SOURCE
-→ GROUP BY DIMENSION
-→ APPLY AGGREGATE
-→ RETURN ONE ROW PER GROUP
-```
-
-Primary SQL primitives:
-
-```text
-GROUP BY
-COUNT / SUM / AVG / MIN / MAX
-```
-
-Primary Python primitive:
-
-```text
-dictionary keyed by group + accumulator
-```
-
-Default drill:
-
-> Count encounters per patient.
-
----
-
-## 3. Join
-
-Typical wording:
-
-- Combine patients with encounters.
-- Return orders with patient information.
-- Match observations to encounters.
-
-Canonical transformation:
-
-```text
-SOURCE A
-+ SOURCE B
-→ MATCH ON RELATIONSHIP KEY
-→ RETURN COMBINED RECORDS
-```
-
-Primary SQL primitives:
-
-```text
-INNER JOIN
-LEFT JOIN
-```
-
-Primary Python primitive:
-
-```text
-lookup dictionary keyed by join value
-```
-
-Default drill:
-
-> Return patient demographics with their encounters.
-
----
-
-## 4. Latest / Top per Group
-
-Typical wording:
-
-- Most recent encounter per patient.
-- Highest charge per account.
-- Top three observations per encounter.
-
-Canonical transformation:
-
-```text
-SOURCE
-→ PARTITION BY ENTITY / GROUP
-→ ORDER WITHIN EACH PARTITION
-→ KEEP FIRST OR TOP N
-```
-
-Primary SQL primitives:
-
-```text
-ROW_NUMBER()
-PARTITION BY
-ORDER BY
-```
-
-Primary Python primitive:
-
-```text
-dictionary keyed by group retaining best row
-```
-
-Default drill:
-
-> Return the most recent encounter for each patient.
-
----
-
-## 5. Missing / Duplicate
-
-This is treated as one data-quality / existence family with a sub-operation dropdown.
-
-### Missing match
-
-Typical wording:
-
-- Patients with no encounters.
-- Orders without results.
-- Records that do not have a matching parent.
-
-Canonical transformation:
-
-```text
-SOURCE A
-→ TEST FOR RELATED SOURCE B
-→ RETAIN A WHERE B DOES NOT EXIST
-```
-
-Primary SQL primitives:
-
-```text
-LEFT JOIN ... IS NULL
-NOT EXISTS
-```
-
-Primary Python primitive:
-
-```text
-set membership
-```
-
-Default drill:
-
-> Return patients with no encounters.
-
-### Duplicate key
-
-Typical wording:
-
-- Find duplicate encounter IDs.
-- Identify keys appearing more than once.
-
-Canonical transformation:
-
-```text
-SOURCE
-→ GROUP BY KEY
-→ COUNT
-→ KEEP COUNT > 1
-```
-
-Primary SQL primitives:
-
-```text
-GROUP BY
-HAVING COUNT(*) > 1
-```
-
-Primary Python primitive:
-
-```text
-frequency dictionary / Counter-like behavior without requiring packages
-```
-
-Default drill:
-
-> Find duplicate encounter IDs.
-
----
-
-# Canonical Transformation Model
-
-The only new core abstraction for v0.1 is `TransformationSpec`.
-
-Minimal fields:
-
-```text
-operation
-source_a
-source_b
-
-entity_key
-relationship_key
-
-filter_column
-filter_operator
-filter_value
-
-group_column
-aggregate_function
-aggregate_column
-
-order_column
-order_direction
-limit
-
-preserve_unmatched
-```
-
-Not every operation uses every field.
-
-Example: latest encounter per patient.
-
-```text
-operation = TOP_PER_GROUP
-source_a = encounters
-group_column = patient_id
-order_column = admit_datetime
-order_direction = DESC
-limit = 1
-```
-
-The canonical spec is the invariant. SQL and Python are renderers.
-
----
-
-# Minimal Repository Changes
-
-The implementation should remain isolated from existing MediLacra generation, HL7, Reality Interface, persistence, and Reality Model work.
-
-Proposed additions:
-
-```text
-medilacra/
-├── interview_trainer/
-│   ├── __init__.py
-│   ├── models.py
-│   ├── patterns.py
-│   ├── render_sql.py
-│   ├── render_python.py
-│   └── examples.py
-│
-├── apps/
-│   └── interview_trainer.py
-│
-└── docs/
-    └── INTERVIEW_TRANSFORM_TRAINER.md
-```
-
-If the repository already has an established Streamlit page convention, bind to it instead of creating a parallel app structure.
-
-No database is required.
-
-No new framework is required.
-
-No new dependency should be introduced unless required by the existing application conventions.
-
----
-
-# Static Training Schema
-
-Use a tiny MediLacra-flavored schema for dropdown values.
-
-Do not require live schema introspection in v0.1.
+Current tables:
 
 ```text
 patients
     patient_id
-    birth_date
+    patient_name
+    date_of_birth
     sex
-    zip
+    state
 
 encounters
     encounter_id
     patient_id
-    admit_datetime
-    discharge_datetime
-    encounter_class
+    visit_number
+    patient_class
+    admit_ts
+    discharge_ts
+    attending_provider_id
+
+orders
+    order_id
+    patient_id
+    encounter_id
+    order_ts
+    order_code
 
 observations
     observation_id
     encounter_id
-    code
-    value
-    completed_datetime
+    order_id
+    observation_code
+    observation_value
+    completed_time
 
 transactions
     transaction_id
     encounter_id
-    amount
-    transaction_datetime
-
-orders
-    order_id
-    encounter_id
-    patient_id
-    order_datetime
+    transaction_date
+    transaction_amount
+    billing_provider_id
 ```
 
-This can initially be represented as simple metadata:
+## Exercise Families
 
-```python
-SCHEMAS = {
-    "patients": [...],
-    "encounters": [...],
-    "observations": [...],
-    "transactions": [...],
-    "orders": [...],
-}
-```
+### 1. Filter
 
-The purpose is pedagogical normalization, not schema discovery.
+Default:
 
----
+> Filter encounters to outpatient rows.
 
-# Control Surface
-
-Use one thin Streamlit page.
-
-## Primary control
-
-```text
-QUESTION FAMILY
-[ Latest / Top per group ▼ ]
-```
-
-Only show controls relevant to the selected family.
-
-Example for latest / top per group:
-
-```text
-SOURCE
-[ encounters ▼ ]
-
-GROUP / ENTITY KEY
-[ patient_id ▼ ]
-
-ORDER COLUMN
-[ admit_datetime ▼ ]
-
-DIRECTION
-[ newest first ▼ ]
-
-ROWS PER GROUP
-[ 1 ▼ ]
-```
-
-## Output sections
-
-### 1. Normalized transformation
-
-Example:
-
-```text
-Partition encounters by patient_id.
-Order each partition by admit_datetime descending.
-Keep the first row.
-```
-
-### 2. SQL
-
-Show a boring, readable, ANSI-ish solution pattern.
-
-### 3. Plain Python
-
-Show the equivalent transformation using basic Python data structures and control flow.
-
-No pandas in v0.1.
-
-### 4. Interview explanation
-
-Example:
-
-> Output grain is one row per patient. Records are partitioned by patient, ordered newest-to-oldest by admission time, and the first record from each partition is retained.
-
-The verbal explanation is part of the training target, not decoration.
-
----
-
-# Pattern Registry
-
-`patterns.py` should contain five deterministic pattern families.
-
-```text
-FILTER
-GROUP_AGGREGATE
-JOIN
-TOP_PER_GROUP
-EXISTENCE_QUALITY
-```
-
-Each pattern owns:
-
-```text
-required fields
-optional fields
-semantic steps
-SQL template
-Python strategy
-interview explanation
-common traps
-```
-
-Example:
-
-```text
-TOP_PER_GROUP
-
-Required:
-- group_column
-- order_column
-- direction
-- limit
-
-Semantic steps:
-1. partition by group
-2. order within group
-3. assign position
-4. retain required number
-
-Common traps:
-- ties
-- null ordering values
-- output grain
-```
-
-The UI should not contain transformation logic.
-
----
-
-# SQL Renderer
-
-Keep the SQL renderer template-based.
-
-No SQL parser.
-
-No optimizer.
-
-No AST unless a later requirement clearly justifies one.
-
-Required templates:
-
-```text
-FILTER
-SELECT ...
-FROM ...
-WHERE ...
-
-GROUP_AGGREGATE
-SELECT group, AGG(value)
-FROM ...
-GROUP BY group
-
-JOIN
-SELECT ...
-FROM a
-JOIN b ON ...
-
-TOP_PER_GROUP
-WITH ranked AS (...)
-SELECT ...
-WHERE rn <= n
-
-ANTI_JOIN
-LEFT JOIN ...
-WHERE right.key IS NULL
-
-DUPLICATES
-GROUP BY key
-HAVING COUNT(*) > 1
-```
-
-Prefer boring SQL over clever dialect-specific syntax.
-
----
-
-# Plain Python Renderer
-
-The Python renderer should expose the same transformation imperatively using only basic Python.
-
-Conceptual correspondences:
+Primary correspondence:
 
 ```text
 SQL WHERE
-↔ Python if
+↔
+Python if / list comprehension
+```
 
-SQL GROUP BY
-↔ dictionary keyed by group
+### 2. Group + Aggregate
 
+Default:
+
+> Count encounters per patient.
+
+Primary correspondence:
+
+```text
+SQL GROUP BY + COUNT
+↔
+Python dictionary keyed by group
+```
+
+### 3. Join
+
+Default:
+
+> Join patient demographics to encounters.
+
+Primary correspondence:
+
+```text
 SQL JOIN
-↔ lookup dictionary
-
-SQL DISTINCT
-↔ set
-
-SQL window / rank
-↔ grouping + comparison / sorting
-
-SQL anti-join
-↔ set membership
+↔
+Python lookup dictionary
 ```
 
-No pandas, Polars, PySpark, NumPy, or third-party helper packages in v0.1.
+### 4. Latest / Top per Group
 
-The point is to make the shared transformation visible before introducing execution-model differences.
+Default:
 
----
+> Return the latest encounter for each patient.
 
-# Optional Data Preview
-
-If cheap to implement, show 5–10 tiny synthetic rows before and after the transformation.
-
-Example:
+Primary correspondence:
 
 ```text
-INPUT
-patient_id | encounter_id | admit_datetime
-1          | E1           | ...
-1          | E2           | ...
-2          | E3           | ...
-
-↓ TOP PER PATIENT
-
-OUTPUT
-1 | E2 | ...
-2 | E3 | ...
+SQL ROW_NUMBER() OVER (
+    PARTITION BY ...
+    ORDER BY ...
+)
+↔
+Python group + sort + retain N
 ```
 
-This is useful for making grain visible, but it is not required for v0.1 completion.
+The renderer honors both:
 
----
+- `order_direction` (`ASC` / `DESC`)
+- `limit` (top N)
 
-# Work Packets
+The SQL starter avoids DuckDB-only projection syntax so the displayed pattern is closer to ordinary interview SQL.
 
-## WP0 — Branch + Documentation
+### 5. Missing / Duplicates
 
-Create branch:
+Two exercise variants:
+
+- patients with no encounters,
+- duplicate encounter IDs.
+
+These operate on disposable exercise views.
+
+## Editable Execution
+
+### SQL
+
+Generated SQL is loaded into the code editor.
+
+Pressing **Run** submits the current editor text and executes it against an isolated in-memory DuckDB connection.
+
+Cheater accepts one `SELECT` or `WITH` statement at a time and rejects obvious write/DDL operations.
+
+This is intentionally a small local execution guard, not a general SQL security system.
+
+### Python
+
+Generated plain Python is loaded into the code editor.
+
+Available table names are lists of dictionaries:
 
 ```text
-cheater
+patients
+encounters
+orders
+observations
+transactions
 ```
 
-Create this document:
+Exercise-specific tables such as `encounters_exercise` are also exposed when needed.
+
+The edited code must assign final output to:
+
+```python
+result
+```
+
+Imports are disabled and the tables are disposable copies.
+
+This is a trusted local interview sandbox, **not a security boundary for hostile Python code**.
+
+## Files
 
 ```text
+cheater_engine.py
+pages/8_Cheater.py
+tests/test_cheater_engine.py
 docs/INTERVIEW_TRANSFORM_TRAINER.md
+requirements.txt
 ```
 
-Acceptance:
-
-- purpose documented,
-- five primitives documented,
-- architecture documented,
-- non-goals documented.
-
-## WP1 — TransformationSpec
-
-Implement the canonical model and static MediLacra training schema.
-
-Acceptance:
-
-> A complete dropdown selection can be represented without knowing SQL or Python.
-
-## WP2 — Five Pattern Definitions
-
-Encode the semantic operations, required fields, verbal explanation, and common traps.
-
-Acceptance:
-
-> Each family maps one `TransformationSpec` to an ordered transformation explanation.
-
-## WP3 — SQL Renderer
-
-Implement the required templates.
-
-Acceptance:
-
-> All default drills emit syntactically plausible SQL.
-
-## WP4 — Python Renderer
-
-Implement matching plain-Python patterns.
-
-Acceptance:
-
-> Every default drill expresses the same semantic result as its SQL version.
-
-## WP5 — Streamlit Control Surface
-
-Wire dropdowns to the canonical spec and renderers.
-
-Acceptance:
-
-> Changing a dropdown immediately changes normalized logic, SQL, Python, and the verbal explanation.
-
-## WP6 — Smoke Tests
-
-Minimal tests:
+Dependency added for the editor:
 
 ```text
-test_filter
-test_group_aggregate
-test_join
-test_top_per_group
-test_anti_join
-test_duplicates
+streamlit-code-editor
 ```
 
-The tests only need to validate the canonical spec and expected rendered fragments.
+## Tests
 
-This is not a SQL-engine correctness project.
+The Cheater tests cover:
 
----
+- deterministic cohort cardinality,
+- two encounters per patient,
+- one order / observation / transaction per encounter,
+- SQL and Python starter equivalence,
+- default latest-per-patient behavior,
+- ASC / DESC and top-N behavior,
+- missing-record exercise isolation,
+- duplicate-record exercise isolation,
+- edited SQL changing output,
+- edited Python changing output,
+- Python execution not mutating the base cohort,
+- rejection of SQL writes,
+- rejection of multiple SQL statements,
+- Python `result` contract.
 
-# Explicit Non-Goals for v0.1
+Run locally in the established MediLacra environment:
 
-Do not add:
+```bash
+conda activate dev310
+pytest tests/test_cheater_engine.py -v
+```
+
+Launch MediLacra normally:
+
+```bash
+streamlit run medi_lacra_app.py
+```
+
+Then open the **Cheater** page.
+
+## Current Non-Goals
+
+Cheater is still intentionally small.
+
+Do not add unless interview practice demonstrates a concrete need:
 
 ```text
 free-text NLP
 LLMs
-fuzzy extraction
 voice input
-pandas
-PySpark
-Polars
-SQL dialect selection
-query execution engine
-database connections
-LeetCode-style algorithm catalog
-arbitrary schema loading
+fuzzy question parsing
+SQL dialect selector
+arbitrary schema upload
 automatic schema inference
-Reality Model integration
-FHIR integration
-HL7 integration
+remote database connections
 persistent user state
-scoring system
+scoring
 gamification
 timers
 question-generation engine
+LeetCode-style algorithm catalog
+FHIR / HL7 workflow integration
+Reality Model integration
 ```
 
-Interesting extensions are not requirements.
+Pandas and DuckDB are implementation machinery for the local cohort and result materialization. They are not the skills being taught by the displayed plain-Python answer.
 
-Only add them later if actual interview practice proves they solve a real problem.
+## Design Lineage
 
----
+The original v0.1 plan treated code editing and query execution as non-goals. That was a useful initial boundary, but actual use exposed a stronger requirement:
 
-# v0.1 Finish Line
+> The user needs to demonstrate that the displayed SQL and Python are not preconfigured answers.
 
-The branch is complete when a question such as:
+That changed the architecture.
 
-> Find each patient's most recent encounter.
-
-can be manually reduced through dropdowns to:
+The current rule is:
 
 ```text
-Operation:
-TOP PER GROUP
-
-Source:
-encounters
-
-Group:
-patient_id
-
-Order:
-admit_datetime
-
-Direction:
-DESC
-
-Limit:
-1
+exercise chooses the starting transformation
+generated code provides a starting materialization
+edited code is authoritative
+execution proves the consequence
 ```
 
-and MediLacra returns:
+This is an intentional evolution of the first plan, not accidental scope creep.
 
-```text
-CANONICAL LOGIC
-partition → order → keep
+## Finish Line
 
-SQL
-ROW_NUMBER() ...
+Cheater is doing its job when the user can:
 
-PYTHON
-dictionary / comparison ...
-
-VERBAL ANSWER
-one row per patient ...
-```
-
-Once all five primitive families work, stop building and use the tool for drilling.
+1. recognize the transformation family,
+2. explain the data shape,
+3. inspect a generated SQL/Python starting point,
+4. edit that code,
+5. run the edited code,
+6. explain why the output changed.
 
 The purpose of this branch is interview leverage, not product expansion.
