@@ -17,8 +17,8 @@ from cheater_engine import (
 st.set_page_config(page_title="MediLacra — Cheater", layout="wide")
 st.title("😈 MediLacra — Cheater")
 st.caption(
-    "Deterministic interview translator: identify the data shape, inspect a generated "
-    "starting point, then edit and execute the actual SQL or Python."
+    "Deterministic interview translator: identify the data shape, inspect a "
+    "generated starting point, then edit and execute the actual SQL or Python."
 )
 
 
@@ -41,20 +41,29 @@ EDITOR_OPTIONS = {
 
 @st.cache_data
 def load_cohort():
-    return build_cohort(n_patients=100, encounters_per_patient=2, seed=42)
+    return build_cohort(
+        n_patients=100,
+        encounters_per_patient=2,
+        seed=42,
+    )
 
 
 def _handle_submission(response, language, spec, cohort):
-    """Execute a code-editor submission once and store its visible result."""
+    """Execute one editor submission and store the visible result."""
     if not response or response.get("type") != "submit":
         return
 
     response_id = response.get("id")
     processed_key = f"cheater_processed_{language}_{spec.key}"
-    if response_id and st.session_state.get(processed_key) == response_id:
+
+    if (
+        response_id is not None
+        and st.session_state.get(processed_key) == response_id
+    ):
         return
 
     code = response.get("text", "")
+
     try:
         if language == "SQL":
             result = execute_sql(code, cohort, spec)
@@ -77,7 +86,7 @@ def _handle_submission(response, language, spec, cohort):
             "error": str(exc),
         }
 
-    if response_id:
+    if response_id is not None:
         st.session_state[processed_key] = response_id
 
 
@@ -86,7 +95,10 @@ counts = cohort_counts(cohort)
 
 with st.sidebar:
     st.header("Problem Shape")
-    family = st.selectbox("Question family", list(FAMILY_OPTIONS.keys()))
+    family = st.selectbox(
+        "Question family",
+        list(FAMILY_OPTIONS.keys()),
+    )
     exercise_keys = FAMILY_OPTIONS[family]
     exercise_key = st.selectbox(
         "Exercise",
@@ -110,17 +122,25 @@ for idx, step in enumerate(semantic_steps(spec), start=1):
     st.write(f"{idx}. {step}")
 
 with st.expander("Data dictionary", expanded=False):
-    selected_table = st.selectbox("Table", list(SCHEMA.keys()))
+    selected_table = st.selectbox(
+        "Table",
+        list(SCHEMA.keys()),
+    )
     st.code("\n".join(SCHEMA[selected_table]))
-    st.dataframe(cohort[selected_table].head(10), use_container_width=True)
+    st.dataframe(
+        cohort[selected_table].head(10),
+        use_container_width=True,
+    )
 
 st.subheader("2. Materialize the transformation")
 st.caption(
-    "These are generated starting points, not fixed answers. Edit either one and press "
-    "Run inside that editor; the submitted code becomes the transformation that produces the result."
+    "These are generated starting points, not fixed answers. Edit either one "
+    "and press Run inside that editor; the submitted code becomes the "
+    "transformation that produces the result."
 )
 
 sql_col, py_col = st.columns(2)
+
 with sql_col:
     st.markdown("#### SQL")
     sql_response = code_editor(
@@ -131,11 +151,19 @@ with sql_col:
         allow_reset=True,
         key=f"cheater_sql_{exercise_key}",
     )
-    _handle_submission(sql_response, "SQL", spec, cohort)
+    _handle_submission(
+        sql_response,
+        "SQL",
+        spec,
+        cohort,
+    )
 
 with py_col:
     st.markdown("#### Plain Python")
-    st.caption("Available variables are table names as lists of dictionaries. Assign final output to `result`.")
+    st.caption(
+        "Table names are available as lists of dictionaries. "
+        "Assign final output to `result`."
+    )
     python_response = code_editor(
         render_python(spec),
         lang="python",
@@ -144,27 +172,50 @@ with py_col:
         allow_reset=True,
         key=f"cheater_python_{exercise_key}",
     )
-    _handle_submission(python_response, "Python", spec, cohort)
+    _handle_submission(
+        python_response,
+        "Python",
+        spec,
+        cohort,
+    )
 
 st.subheader("3. See the executed result")
 execution = st.session_state.get("cheater_execution")
 
 if not execution or execution.get("exercise") != exercise_key:
-    st.info("Edit either materialization—or leave it alone—and press Run inside that editor.")
+    st.info(
+        "Edit either materialization—or leave it alone—and press Run "
+        "inside that editor."
+    )
 elif execution.get("error"):
-    st.error(f"{execution['language']} execution failed: {execution['error']}")
+    st.error(
+        f"{execution['language']} execution failed: "
+        f"{execution['error']}"
+    )
 else:
     result = execution["result"]
     metric_a, metric_b = st.columns(2)
     metric_a.metric("Executed language", execution["language"])
     metric_b.metric("Output rows", len(result))
-    st.dataframe(result.head(100), use_container_width=True)
+
+    st.dataframe(
+        result,
+        use_container_width=True,
+    )
 
     with st.expander("Executed code", expanded=False):
-        language = "sql" if execution["language"] == "SQL" else "python"
-        st.code(execution["code"], language=language)
+        language = (
+            "sql"
+            if execution["language"] == "SQL"
+            else "python"
+        )
+        st.code(
+            execution["code"],
+            language=language,
+        )
 
 st.caption(
-    "Execution is local and disposable. SQL runs read-only against an in-memory DuckDB cohort. "
-    "Python runs against copies of the same exercise tables with imports disabled."
+    "Execution is local and disposable. SQL runs read-only against an "
+    "in-memory DuckDB cohort. Python runs against copies of the same "
+    "exercise tables with imports disabled."
 )
