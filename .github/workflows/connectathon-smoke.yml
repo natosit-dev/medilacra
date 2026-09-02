@@ -12,8 +12,15 @@ jobs:
   connectathon-smoke:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout MediLacra
         uses: actions/checkout@v4
+
+      - name: Checkout PIQITT Connectathon branch
+        uses: actions/checkout@v4
+        with:
+          repository: natosit-dev/piqitt
+          ref: connectathon/piqi-43
+          path: piqitt
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -35,8 +42,11 @@ jobs:
             experiments/disco_inferno/fhir_corruptions.py \
             pages/9_PIQI_Connectathon_43.py
 
-      - name: Run Connectathon unit tests
+      - name: Run Connectathon tests
+        env:
+          PIQITT_REPO: ${{ github.workspace }}/piqitt
         run: |
-          pytest -q \
+          python -m pytest -q \
             tests/test_connectathon_fhir_corruptions.py \
-            tests/test_connectathon_scenarios.py
+            tests/test_connectathon_scenarios.py \
+            tests/test_connectathon_piqitt_integration.py
