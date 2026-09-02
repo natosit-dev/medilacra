@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from connectathon.piqitt_bridge import convert_hl7_file, default_piqitt_repo
+from connectathon.provenance import build_source_provenance
 from connectathon.scenarios import DEFAULT_SCENARIOS, build_scenario_pack
 
 
@@ -32,12 +33,21 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    input_path = Path(args.input)
+    raw = input_path.read_text(encoding="utf-8", errors="ignore")
     baseline, metadata = convert_hl7_file(
-        args.input,
+        input_path,
         message_index=args.message_index,
         piqitt_repo=args.piqitt_repo,
     )
-    metadata["input"] = str(Path(args.input).resolve())
+    metadata.update(
+        build_source_provenance(
+            raw,
+            source_name=str(input_path),
+            medilacra_root=Path(__file__).resolve().parents[1],
+            piqitt_repo=args.piqitt_repo,
+        )
+    )
 
     result = build_scenario_pack(
         baseline,
