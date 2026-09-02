@@ -114,7 +114,7 @@ def diff_json_paths(left: Any, right: Any, prefix: str = "") -> list[str]:
     the one-declared-mutation experiment boundary.
     """
     if type(left) is not type(right):
-        return [prefix or "$ "]
+        return [prefix or "$"]
 
     if isinstance(left, dict):
         differences: list[str] = []
