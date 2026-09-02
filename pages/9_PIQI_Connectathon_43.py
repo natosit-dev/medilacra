@@ -14,15 +14,18 @@ from connectathon.piqitt_bridge import (
     inspect_hl7_text,
 )
 from connectathon.preflight import preflight_bundle
+from connectathon.provenance import build_source_provenance
 from connectathon.scenarios import (
     DEFAULT_SCENARIOS,
     build_scenario_pack,
     load_case,
     zip_run_directory,
 )
+from experiments.disco_inferno.fhir_corruptions import path_exists
 
 
 RESULT_ROOT = Path("connectathon/results")
+MEDILACRA_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _discover_hl7_files() -> list[Path]:
@@ -47,6 +50,18 @@ def _bundle_resource_counts(bundle: dict) -> dict[str, int]:
     return counts
 
 
+def _scenario_applicable(bundle: dict, scenario: dict) -> bool:
+    if scenario["operator"] == "control":
+        return True
+    for entry in bundle.get("entry", []):
+        resource = entry.get("resource", {}) if isinstance(entry, dict) else {}
+        if resource.get("resourceType") != scenario.get("resource"):
+            continue
+        if path_exists(resource, scenario.get("path") or ""):
+            return True
+    return False
+
+
 def _json_bytes(payload: dict) -> bytes:
     return (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode("utf-8")
 
@@ -68,6 +83,12 @@ st.caption(
     "MediLacra → PIQITT → FHIR baseline → controlled PIQI-shaped mutants. "
     "This page is the local Connectathon workbench."
 )
+
+nav1, nav2 = st.columns(2)
+with nav1:
+    st.page_link("pages/8_Disco_Inferno.py", label="Generate source data in Disco Inferno", icon="🔥")
+with nav2:
+    st.page_link("medi_lacra_app.py", label="Generate ordinary MediLacra HL7", icon="🧬")
 
 st.info(
     "First-pass boundary: this UI builds and inspects the local evidence pack. "
@@ -155,7 +176,14 @@ if st.button(
             message_index=int(message_index),
             piqitt_repo=piqitt_repo,
         )
-        metadata["source_name"] = source_name
+        metadata.update(
+            build_source_provenance(
+                source_text,
+                source_name=source_name,
+                medilacra_root=MEDILACRA_ROOT,
+                piqitt_repo=piqitt_repo,
+            )
+        )
         st.session_state["piqi43_baseline"] = bundle
         st.session_state["piqi43_source_metadata"] = metadata
         st.session_state.pop("piqi43_run", None)
@@ -181,6 +209,14 @@ if baseline:
         hide_index=True,
     )
 
+    if not counts.get("Observation"):
+        st.warning(
+            "This FHIR baseline has no Observation resource. Observation-targeting Connectathon cases will be hidden; "
+            "an ORU or ADT with OBX content is a better source for the initial PIQI pack."
+        )
+
+    with st.expander("Source provenance"):
+        st.json(source_metadata)
     with st.expander("Baseline FHIR JSON"):
         st.json(baseline)
     st.download_button(
@@ -193,10 +229,24 @@ if baseline:
 
 st.markdown("## 2. Build controlled Connectathon cases")
 scenario_labels = {scenario["case_id"]: scenario["label"] for scenario in DEFAULT_SCENARIOS}
+if baseline:
+    applicable_scenarios = [scenario for scenario in DEFAULT_SCENARIOS if _scenario_applicable(baseline, scenario)]
+    unavailable_scenarios = [scenario for scenario in DEFAULT_SCENARIOS if scenario not in applicable_scenarios]
+else:
+    applicable_scenarios = list(DEFAULT_SCENARIOS)
+    unavailable_scenarios = []
+
+if unavailable_scenarios:
+    st.caption(
+        "Not applicable to this baseline: "
+        + "; ".join(scenario["label"] for scenario in unavailable_scenarios)
+    )
+
+available_case_ids = [scenario["case_id"] for scenario in applicable_scenarios]
 selected_case_ids = st.multiselect(
     "Cases",
-    options=list(scenario_labels),
-    default=list(scenario_labels),
+    options=available_case_ids,
+    default=available_case_ids,
     format_func=lambda case_id: scenario_labels[case_id],
     help="The three non-control SAM targets remain provisional until the track kickoff confirms the rubric targets.",
 )
