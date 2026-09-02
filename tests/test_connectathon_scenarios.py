@@ -7,23 +7,28 @@ from connectathon.scenarios import build_scenario_pack, load_case, zip_run_direc
 
 
 def _bundle() -> dict:
+    patient_url = "urn:uuid:11111111-1111-4111-8111-111111111111"
+    obs_url = "urn:uuid:22222222-2222-4222-8222-222222222222"
     return {
         "resourceType": "Bundle",
-        "type": "message",
+        "type": "collection",
         "id": "bundle-test",
         "entry": [
             {
+                "fullUrl": patient_url,
                 "resource": {
                     "resourceType": "Patient",
                     "id": "patient-1",
                     "identifier": [{"system": "urn:mrn", "value": "MRN1"}],
-                }
+                },
             },
             {
+                "fullUrl": obs_url,
                 "resource": {
                     "resourceType": "Observation",
                     "id": "obs-1",
                     "status": "final",
+                    "subject": {"reference": patient_url},
                     "code": {
                         "coding": [
                             {
@@ -33,8 +38,13 @@ def _bundle() -> dict:
                             }
                         ]
                     },
-                    "valueQuantity": {"value": 6.1, "unit": "%"},
-                }
+                    "valueQuantity": {
+                        "value": 6.1,
+                        "unit": "%",
+                        "system": "http://unitsofmeasure.org",
+                        "code": "%",
+                    },
+                },
             },
         ],
     }
@@ -52,7 +62,9 @@ def test_build_pack_writes_control_and_mutant_artifacts(tmp_path: Path):
 
     run_dir = Path(run["run_dir"])
     assert (run_dir / "run_manifest.json").exists()
+    assert (run_dir / "control_quality_gate.json").exists()
     assert len(run["cases"]) == 2
+    assert run["baseline_control_gate"] == "PASS"
 
     control = load_case(run_dir, "case_000_control")
     mutant = load_case(run_dir, "case_002_code_system")
