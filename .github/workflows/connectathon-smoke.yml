@@ -34,12 +34,14 @@ jobs:
         run: |
           python -m py_compile \
             connectathon/__init__.py \
+            connectathon/fhir_control.py \
             connectathon/piqitt_bridge.py \
             connectathon/preflight.py \
             connectathon/provenance.py \
             connectathon/scenarios.py \
             connectathon/run.py \
             experiments/disco_inferno/fhir_corruptions.py \
+            hl7_demo/labs.py \
             pages/9_PIQI_Connectathon_43.py
 
       - name: Run Connectathon tests
@@ -48,5 +50,6 @@ jobs:
         run: |
           python -m pytest -q \
             tests/test_connectathon_fhir_corruptions.py \
+            tests/test_connectathon_control_quality.py \
             tests/test_connectathon_scenarios.py \
             tests/test_connectathon_piqitt_integration.py
