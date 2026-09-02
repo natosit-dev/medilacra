@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable
 
-from connectathon.preflight import preflight_pair
+from connectathon.preflight import control_quality_gate, preflight_pair
 from experiments.disco_inferno.fhir_corruptions import apply_fhir_mutation, sha256_json
 
 
@@ -102,7 +102,19 @@ def build_scenario_pack(
     run_id: str | None = None,
     source_metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Materialize the control + selected one-defect FHIR cases to disk."""
+    """Materialize the control + selected one-defect FHIR cases to disk.
+
+    A scenario pack is only created when the unmutated baseline passes the local control
+    quality gate. Intentional mutants are then checked only for structural ingest shape.
+    """
+    control_gate = control_quality_gate(baseline_bundle)
+    if control_gate["status"] != "PASS":
+        failed = [row["check"] for row in control_gate["checks"] if row["status"] == "FAIL"]
+        raise ValueError(
+            "Baseline failed the PIQI control quality gate; refusing to build mutants. "
+            f"Failed checks: {', '.join(failed)}"
+        )
+
     run_id = run_id or utc_run_id()
     run_dir = Path(output_root) / run_id
     if run_dir.exists():
@@ -111,6 +123,8 @@ def build_scenario_pack(
 
     cases: list[dict[str, Any]] = []
     try:
+        _write_json(run_dir / "control_quality_gate.json", control_gate)
+
         for scenario in selected_scenarios(case_ids):
             case_id = scenario["case_id"]
             case_dir = run_dir / "cases" / case_id
@@ -126,6 +140,7 @@ def build_scenario_pack(
             manifest["experiment_contract"] = {
                 "one_declared_mutation": scenario["operator"] != "control",
                 "raw_baseline_preserved": True,
+                "baseline_control_gate": "PASS",
                 "track_targets_provisional": bool(scenario.get("expected", {}).get("provisional")),
             }
 
@@ -164,12 +179,13 @@ def build_scenario_pack(
             "run_dir": str(run_dir),
             "mutation_seed": mutation_seed,
             "baseline_sha256": sha256_json(baseline_bundle),
+            "baseline_control_gate": control_gate["status"],
             "source": dict(source_metadata or {}),
             "cases": cases,
             "external_piqi_execution": "NOT_RUN",
             "note": (
-                "Local pack only. PASS preflight means JSON/FHIR Bundle shape checks passed; "
-                "it does not claim successful ingestion by a PIQI track endpoint."
+                "Baseline passed the local PIQI control quality gate. Case preflight then checks "
+                "self-contained Bundle shape only; external PIQI ingest has not yet been exercised."
             ),
         }
         _write_json(run_dir / "run_manifest.json", summary)
