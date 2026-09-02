@@ -6,6 +6,8 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
+from connectathon.fhir_control import prepare_control_bundle
+
 
 _BACKEND_CACHE: dict[str, ModuleType] = {}
 
@@ -74,7 +76,12 @@ def convert_hl7_text(
     message_index: int = 1,
     piqitt_repo: str | Path | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Convert one 1-based HL7 message to FHIR with PIQITT's existing backend."""
+    """Convert one 1-based HL7 message to the PIQI Connectathon FHIR control representation.
+
+    PIQITT performs the actual HL7 -> FHIR mapping. The Connectathon layer then removes
+    message-transport semantics and normalizes the resulting Bundle into a self-contained
+    collection suitable for baseline/mutation experiments.
+    """
     backend = load_backend(piqitt_repo)
     messages = backend.split_messages(hl7_text)
     if not messages:
@@ -82,12 +89,16 @@ def convert_hl7_text(
     if message_index < 1 or message_index > len(messages):
         raise IndexError(f"message_index {message_index} is outside 1..{len(messages)}")
 
-    bundle, message_type = backend.convert_message_to_bundle(messages[message_index - 1])
+    raw_bundle, message_type = backend.convert_message_to_bundle(messages[message_index - 1])
+    bundle, cleanup = prepare_control_bundle(raw_bundle)
     metadata = {
         "message_index": message_index,
         "message_count": len(messages),
         "message_type": message_type,
         "piqitt_backend": str(backend_path(piqitt_repo)),
+        "piqitt_raw_bundle_type": raw_bundle.get("type"),
+        "connectathon_bundle_type": bundle.get("type"),
+        "connectathon_cleanup": cleanup,
     }
     return bundle, metadata
 
