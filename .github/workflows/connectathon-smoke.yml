@@ -1,0 +1,42 @@
+name: Connectathon smoke tests
+
+on:
+  push:
+    branches:
+      - connectathon/piqi-43
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  connectathon-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install test dependency
+        run: python -m pip install pytest
+
+      - name: Compile Connectathon modules
+        run: |
+          python -m py_compile \
+            connectathon/__init__.py \
+            connectathon/piqitt_bridge.py \
+            connectathon/preflight.py \
+            connectathon/provenance.py \
+            connectathon/scenarios.py \
+            connectathon/run.py \
+            experiments/disco_inferno/fhir_corruptions.py \
+            pages/9_PIQI_Connectathon_43.py
+
+      - name: Run Connectathon unit tests
+        run: |
+          pytest -q \
+            tests/test_connectathon_fhir_corruptions.py \
+            tests/test_connectathon_scenarios.py
