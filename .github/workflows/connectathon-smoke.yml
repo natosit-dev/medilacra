@@ -27,8 +27,8 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install test dependency
-        run: python -m pip install pytest
+      - name: Install test dependencies
+        run: python -m pip install pytest faker
 
       - name: Compile Connectathon modules
         run: |
@@ -39,10 +39,12 @@ jobs:
             connectathon/preflight.py \
             connectathon/provenance.py \
             connectathon/scenarios.py \
+            connectathon/shn_mvp0.py \
             connectathon/run.py \
             experiments/disco_inferno/fhir_corruptions.py \
             hl7_demo/labs.py \
-            pages/9_PIQI_Connectathon_43.py
+            pages/9_PIQI_Connectathon_43.py \
+            pages/10_SHN_MVP0.py
 
       - name: Run Connectathon tests
         env:
@@ -52,4 +54,5 @@ jobs:
             tests/test_connectathon_fhir_corruptions.py \
             tests/test_connectathon_control_quality.py \
             tests/test_connectathon_scenarios.py \
-            tests/test_connectathon_piqitt_integration.py
+            tests/test_connectathon_piqitt_integration.py \
+            tests/test_shn_mvp0.py
