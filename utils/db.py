@@ -54,8 +54,18 @@ def writer(db_path: Optional[str] = None):
                 logger.info("duckdb.writer.close", extra={"extra": {"db": db}})
 
 @contextmanager
-def reader(read_only: bool = True, db_path: Optional[str] = None):
-    """Reader connection; closed after use. Safe for quick selects."""
+def reader(read_only: bool = False, db_path: Optional[str] = None):
+    """Short-lived select connection.
+
+    Default to the same read/write DuckDB configuration used by ``writer``.
+    DuckDB does not allow simultaneous connections to the same database file
+    with incompatible configurations (for example read-only plus read/write)
+    inside one process. Streamlit reruns can briefly overlap connection
+    lifetimes, so consistent configuration is safer for the application.
+
+    Callers that are truly standalone and read-only may still opt in with
+    ``read_only=True``.
+    """
     db = _normalize_path(db_path) if db_path else get_db_path()
     logger.info("duckdb.reader.open", extra={"extra": {"db": db, "read_only": read_only}})
     con = duckdb.connect(db, read_only=read_only)
