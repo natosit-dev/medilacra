@@ -159,6 +159,18 @@ def _integer_answer(raw: Any, declined: bool) -> dict[str, Any] | None:
     return {"valueInteger": value}
 
 
+def _text_answer(raw: Any, declined: bool) -> dict[str, Any] | None:
+    """Preserve optional free text as supplied; interpretation belongs downstream."""
+    if declined:
+        return _absent_answer("asked-declined")
+    if raw is None:
+        return None
+    text = str(raw)
+    if not text.strip():
+        return None
+    return {"valueString": text}
+
+
 def _phq_answer(raw: Any, declined: bool) -> dict[str, Any] | None:
     if declined:
         return _absent_answer("asked-declined")
@@ -296,6 +308,21 @@ def build_questionnaire_response(
                 group = _medication_group(medication, index)
                 if group:
                     items.append(group)
+
+    items.extend(
+        [
+            _item(
+                "feeling-today",
+                "How are you feeling today?",
+                _text_answer(raw_input.get("feeling-today"), "feeling-today" in declined),
+            ),
+            _item(
+                "life-today",
+                "What's going on in your life today?",
+                _text_answer(raw_input.get("life-today"), "life-today" in declined),
+            ),
+        ]
+    )
 
     return {
         "resourceType": "QuestionnaireResponse",
