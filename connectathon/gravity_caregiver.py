@@ -37,7 +37,7 @@ from connectathon.gravity_storage import (
 
 
 ARTIFACT_FILENAMES = {
-    "questionnaire": "caregiver_health_baseline_questionnaire_v0.1.json",
+    "questionnaire": f"caregiver_health_baseline_questionnaire_v{QUESTIONNAIRE_VERSION}.json",
     "questionnaire_response": "caregiver_health_questionnaire_response.json",
     "bundle": "caregiver_health_phase1_bundle.json",
     "quality": "caregiver_health_quality_report.json",
