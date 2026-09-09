@@ -8,7 +8,7 @@ import streamlit as st
 from connectathon.gravity_caregiver import build_artifact_files, build_artifact_zip
 from connectathon.gravity_materialize import build_submission_bundle
 from connectathon.gravity_quality import caregiver_quality_gate
-from connectathon.gravity_questionnaire import PHQ_CHOICES, build_questionnaire
+from connectathon.gravity_questionnaire import PHQ_CHOICES, QUESTIONNAIRE_VERSION, build_questionnaire
 from connectathon.gravity_response import build_questionnaire_response
 from connectathon.gravity_storage import (
     init_questionnaire_storage,
@@ -99,7 +99,7 @@ with reset_columns[0]:
 with st.sidebar:
     st.header("Baseline settings")
     db_path = st.text_input("DuckDB path", DEFAULT_DB_PATH, key="cg_db_path")
-    st.write("Questionnaire version: **0.1**")
+    st.write(f"Questionnaire version: **{QUESTIONNAIRE_VERSION}**")
     st.write("IRIS round trip: **Phase 2**")
 
 init_db(db_path)
@@ -269,6 +269,34 @@ if medication_status_raw is True and not medication_declined:
             }
         )
 
+st.markdown("#### How are you feeling today?")
+feeling_columns = st.columns([4, 1])
+with feeling_columns[1]:
+    feeling_declined = _decline_control("feeling-today")
+with feeling_columns[0]:
+    feeling_today_raw = st.text_area(
+        "How are you feeling today?",
+        value="",
+        placeholder="Write as much or as little as you want.",
+        disabled=feeling_declined,
+        key="cg_feeling_today",
+        label_visibility="collapsed",
+    )
+
+st.markdown("#### What's going on in your life today?")
+life_columns = st.columns([4, 1])
+with life_columns[1]:
+    life_declined = _decline_control("life-today")
+with life_columns[0]:
+    life_today_raw = st.text_area(
+        "What's going on in your life today?",
+        value="",
+        placeholder="Anything that feels relevant today.",
+        disabled=life_declined,
+        key="cg_life_today",
+        label_visibility="collapsed",
+    )
+
 st.divider()
 submit = st.button("Submit assessment", type="primary", use_container_width=True)
 
@@ -282,6 +310,8 @@ if submit:
             "phq2-depressed": phq2_declined,
             "heart-rate": heart_declined,
             "medication-status": medication_declined,
+            "feeling-today": feeling_declined,
+            "life-today": life_declined,
         }.items()
         if is_declined
     }
@@ -294,6 +324,8 @@ if submit:
         "heart-rate": heart_raw,
         "medication-status": medication_status_raw,
         "medications": medications,
+        "feeling-today": feeling_today_raw,
+        "life-today": life_today_raw,
     }
 
     questionnaire_response = build_questionnaire_response(
@@ -351,7 +383,7 @@ if result:
         st.json(result["questionnaire"])
         _json_download(
             "Download Questionnaire",
-            "caregiver_health_baseline_questionnaire_v0.1.json",
+            f"caregiver_health_baseline_questionnaire_v{QUESTIONNAIRE_VERSION}.json",
             result["questionnaire"],
             "cg_download_questionnaire",
         )
