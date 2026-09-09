@@ -4,7 +4,7 @@ from typing import Any, Mapping, Sequence
 
 
 QUESTIONNAIRE_ID = "caregiver-health-baseline"
-QUESTIONNAIRE_VERSION = "0.1"
+QUESTIONNAIRE_VERSION = "0.2"
 QUESTIONNAIRE_URL = "https://medilacra.dev/fhir/Questionnaire/caregiver-health-baseline"
 MEDILACRA_CODE_SYSTEM = "https://medilacra.dev/fhir/CodeSystem/caregiver-health"
 LOINC_SYSTEM = "http://loinc.org"
@@ -65,7 +65,7 @@ def _question_item(
 
 
 def build_questionnaire() -> dict[str, Any]:
-    """Build the v0.1 caregiver baseline as a standard FHIR R4 Questionnaire."""
+    """Build the caregiver baseline as a standard FHIR R4 Questionnaire."""
     phq_options = [
         {
             "valueCoding": {
@@ -108,11 +108,11 @@ def build_questionnaire() -> dict[str, Any]:
         "title": "MediLacra Caregiver Health Baseline",
         "status": "active",
         "experimental": True,
-        "date": "2026-09-08",
+        "date": "2026-09-09",
         "publisher": "MediLacra",
         "description": (
-            "Baseline caregiver-health questionnaire for Gravity/SDC materialization "
-            "and semantic-preservation testing."
+            "Baseline caregiver-health questionnaire for Gravity/SDC materialization, "
+            "semantic-preservation testing, and optional free-text lived-experience capture."
         ),
         "subjectType": ["Patient"],
         "item": [
@@ -170,5 +170,17 @@ def build_questionnaire() -> dict[str, Any]:
                 "boolean",
             ),
             medication_group,
+            _question_item(
+                "feeling-today",
+                "How are you feeling today?",
+                "text",
+                coding=local_coding("feeling-today", "How are you feeling today?"),
+            ),
+            _question_item(
+                "life-today",
+                "What's going on in your life today?",
+                "text",
+                coding=local_coding("life-today", "What's going on in your life today?"),
+            ),
         ],
     }
