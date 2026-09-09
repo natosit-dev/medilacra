@@ -1,0 +1,38 @@
+name: Gravity caregiver baseline smoke tests
+
+on:
+  push:
+    branches:
+      - feature/gravity-caregiver-baseline-v0.1
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  gravity-caregiver:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout MediLacra
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install test dependencies
+        run: python -m pip install pytest duckdb
+
+      - name: Compile phase 1 modules
+        run: |
+          python -m py_compile \
+            connectathon/gravity_questionnaire.py \
+            connectathon/gravity_response.py \
+            connectathon/gravity_materialize.py \
+            connectathon/gravity_quality.py \
+            connectathon/gravity_storage.py \
+            pages/10_Gravity_Caregiver_Health.py \
+            tests/test_gravity_caregiver.py
+
+      - name: Run phase 1 tests
+        run: python -m pytest -q tests/test_gravity_caregiver.py
