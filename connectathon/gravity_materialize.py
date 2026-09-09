@@ -40,6 +40,7 @@ COMMON_DOSE_UNITS = {
 # the person for medication text; terminology normalization happens downstream. Add entries
 # only when the RxNorm concept has been verified.
 BASELINE_RXNORM_BY_NAME = {
+    "lisinopril": ("29046", "lisinopril"),
     "lisinopril 10 mg oral tablet": ("314076", "lisinopril 10 MG Oral Tablet"),
 }
 
