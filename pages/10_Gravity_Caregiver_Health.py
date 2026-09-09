@@ -5,6 +5,7 @@ from dataclasses import asdict
 
 import streamlit as st
 
+from connectathon.gravity_caregiver import build_artifact_files, build_artifact_zip
 from connectathon.gravity_materialize import build_submission_bundle
 from connectathon.gravity_quality import caregiver_quality_gate
 from connectathon.gravity_questionnaire import PHQ_CHOICES, build_questionnaire
@@ -56,6 +57,14 @@ def _load_patients(db_path: str, limit: int = 100) -> list[dict]:
     return [dict(zip(columns, row)) for row in rows]
 
 
+def _reset_assessment_state() -> None:
+    """Reset caregiver questionnaire controls/results while preserving DB and patient selection."""
+    preserve = {"cg_db_path", "cg_patient", "cg_reset_assessment"}
+    for key in list(st.session_state.keys()):
+        if key.startswith("cg_") and key not in preserve:
+            del st.session_state[key]
+
+
 def _decline_control(link_id: str, label: str = "Decline") -> bool:
     state_key = f"cg_declined_{link_id}"
     st.session_state.setdefault(state_key, False)
@@ -71,12 +80,21 @@ def _decline_control(link_id: str, label: str = "Decline") -> bool:
 def _json_download(label: str, filename: str, value: dict, key: str) -> None:
     st.download_button(
         label,
-        data=json.dumps(value, indent=2, sort_keys=True),
+        data=json.dumps(value, indent=2, sort_keys=True, default=str),
         file_name=filename,
         mime="application/fhir+json",
         key=key,
     )
 
+
+reset_columns = st.columns([1, 4])
+with reset_columns[0]:
+    st.button(
+        "Reset assessment",
+        key="cg_reset_assessment",
+        on_click=_reset_assessment_state,
+        use_container_width=True,
+    )
 
 with st.sidebar:
     st.header("Baseline settings")
@@ -310,6 +328,21 @@ result = st.session_state.get("cg_last_result")
 if result:
     st.divider()
     st.subheader("3. Materialized artifacts")
+
+    artifact_files = build_artifact_files(result)
+    st.download_button(
+        "Download all artifacts (.zip)",
+        data=build_artifact_zip(result),
+        file_name="caregiver_health_phase1_artifacts.zip",
+        mime="application/zip",
+        key="cg_download_all_artifacts",
+        use_container_width=True,
+    )
+    st.caption(
+        "ZIP contains the same individually downloadable Questionnaire, QuestionnaireResponse, "
+        "FHIR Bundle, quality report, and Bundle-cleanup receipt shown below."
+    )
+
     tab_questionnaire, tab_response, tab_bundle, tab_quality = st.tabs(
         ["Questionnaire", "QuestionnaireResponse", "FHIR Bundle", "PIQITT-style checks"]
     )
@@ -341,11 +374,23 @@ if result:
             result["bundle"],
             "cg_download_bundle",
         )
+        _json_download(
+            "Download Bundle cleanup receipt",
+            "caregiver_health_bundle_cleanup.json",
+            result["cleanup"],
+            "cg_download_cleanup",
+        )
 
     with tab_quality:
         st.write(f"**Result:** {result['quality']['status']}")
         st.write(result["quality"]["claim"])
         st.dataframe(result["quality"]["checks"], use_container_width=True, hide_index=True)
+        _json_download(
+            "Download quality report",
+            "caregiver_health_quality_report.json",
+            result["quality"],
+            "cg_download_quality",
+        )
 
 with st.expander("Recent persisted QuestionnaireResponses"):
     try:
