@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import io
+import zipfile
+
+from connectathon.gravity_caregiver import build_artifact_files, build_artifact_zip
 from connectathon.gravity_materialize import (
     build_submission_bundle,
     bundle_resources,
@@ -286,5 +290,32 @@ def test_duckdb_persistence_keeps_fhir_json_and_nested_struct_projection(tmp_pat
     assert row["questionnaire_version"] == QUESTIONNAIRE_VERSION
     assert isinstance(row["items"], list)
     assert any(item["link_id"] == "heart-rate" and item["value_number"] == 82.0 for item in row["items"])
-    assert '"resourceType": "QuestionnaireResponse"' in row["fhir_json"]
-    assert '"resourceType": "Bundle"' in row["bundle_json"]
+    assert '\"resourceType\": \"QuestionnaireResponse\"' in row["fhir_json"]
+    assert '\"resourceType\": \"Bundle\"' in row["bundle_json"]
+
+
+def test_artifact_zip_contains_the_same_complete_individual_output_set():
+    response, bundle, cleanup = _bundle()
+    quality = caregiver_quality_gate(bundle)
+    result = {
+        "questionnaire": build_questionnaire(),
+        "questionnaire_response": response,
+        "bundle": bundle,
+        "cleanup": cleanup,
+        "quality": quality,
+    }
+
+    files = build_artifact_files(result)
+    assert set(files) == {
+        "caregiver_health_baseline_questionnaire_v0.1.json",
+        "caregiver_health_questionnaire_response.json",
+        "caregiver_health_phase1_bundle.json",
+        "caregiver_health_quality_report.json",
+        "caregiver_health_bundle_cleanup.json",
+    }
+
+    archive_bytes = build_artifact_zip(result)
+    with zipfile.ZipFile(io.BytesIO(archive_bytes), "r") as archive:
+        assert set(archive.namelist()) == set(files)
+        for filename, payload in files.items():
+            assert archive.read(filename) == payload
