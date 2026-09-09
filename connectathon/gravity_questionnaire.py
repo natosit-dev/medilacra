@@ -92,7 +92,6 @@ def build_questionnaire() -> dict[str, Any]:
         ],
         "item": [
             _question_item("medication-name", "Medication name", "string"),
-            _question_item("medication-rxnorm", "RxNorm code (if known)", "string"),
             _question_item("medication-dose-value", "Dose", "decimal"),
             _question_item("medication-dose-unit", "Dose unit", "string"),
             _question_item("medication-route", "Route", "string"),
