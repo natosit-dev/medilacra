@@ -21,18 +21,23 @@ jobs:
           python-version: '3.11'
 
       - name: Install test dependencies
-        run: python -m pip install pytest duckdb
+        run: python -m pip install pytest duckdb streamlit faker pandas pyyaml
 
       - name: Compile phase 1 modules
         run: |
           python -m py_compile \
+            connectathon/gravity_caregiver.py \
             connectathon/gravity_questionnaire.py \
             connectathon/gravity_response.py \
             connectathon/gravity_materialize.py \
             connectathon/gravity_quality.py \
             connectathon/gravity_storage.py \
             pages/10_Gravity_Caregiver_Health.py \
-            tests/test_gravity_caregiver.py
+            tests/test_gravity_caregiver.py \
+            tests/test_gravity_caregiver_streamlit.py
 
       - name: Run phase 1 tests
-        run: python -m pytest -q tests/test_gravity_caregiver.py
+        run: |
+          python -m pytest -q \
+            tests/test_gravity_caregiver.py \
+            tests/test_gravity_caregiver_streamlit.py
