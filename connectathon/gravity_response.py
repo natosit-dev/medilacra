@@ -193,19 +193,19 @@ def _boolean_answer(raw: Any, declined: bool) -> dict[str, Any] | None:
 
 def _medication_group(raw_medication: Mapping[str, Any], index: int) -> dict[str, Any] | None:
     name = str(raw_medication.get("name") or "").strip()
-    rxnorm = str(raw_medication.get("rxnorm") or "").strip()
     raw_dose = raw_medication.get("dose_value")
     unit = str(raw_medication.get("dose_unit") or "").strip()
     route = str(raw_medication.get("route") or "").strip()
     frequency = str(raw_medication.get("frequency") or "").strip()
     dose, dose_error = _parse_float(raw_dose)
 
-    if not any([name, rxnorm, str(raw_dose or "").strip(), unit, route, frequency]):
+    if not any([name, str(raw_dose or "").strip(), unit, route, frequency]):
         return None
 
     children = [
-        _item("medication-name", "Medication name", {"valueString": name}) if name else _item("medication-name", "Medication name"),
-        _item("medication-rxnorm", "RxNorm code (if known)", {"valueString": rxnorm}) if rxnorm else _item("medication-rxnorm", "RxNorm code (if known)"),
+        _item("medication-name", "Medication name", {"valueString": name})
+        if name
+        else _item("medication-name", "Medication name")
     ]
     if dose_error:
         children.append(_item("medication-dose-value", "Dose", _absent_answer(dose_error)))
@@ -215,9 +215,15 @@ def _medication_group(raw_medication: Mapping[str, Any], index: int) -> dict[str
         children.append(_item("medication-dose-value", "Dose"))
     children.extend(
         [
-            _item("medication-dose-unit", "Dose unit", {"valueString": unit}) if unit else _item("medication-dose-unit", "Dose unit"),
-            _item("medication-route", "Route", {"valueString": route}) if route else _item("medication-route", "Route"),
-            _item("medication-frequency", "Frequency", {"valueString": frequency}) if frequency else _item("medication-frequency", "Frequency"),
+            _item("medication-dose-unit", "Dose unit", {"valueString": unit})
+            if unit
+            else _item("medication-dose-unit", "Dose unit"),
+            _item("medication-route", "Route", {"valueString": route})
+            if route
+            else _item("medication-route", "Route"),
+            _item("medication-frequency", "Frequency", {"valueString": frequency})
+            if frequency
+            else _item("medication-frequency", "Frequency"),
         ]
     )
 
