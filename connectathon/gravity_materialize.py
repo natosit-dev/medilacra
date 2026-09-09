@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 from typing import Any, Mapping
 
@@ -34,6 +35,22 @@ COMMON_DOSE_UNITS = {
     "ug": ("mcg", "ug"),
     "ml": ("mL", "mL"),
 }
+
+# Tiny baseline terminology bridge, not a medication knowledge base. The questionnaire asks
+# the person for medication text; terminology normalization happens downstream. Add entries
+# only when the RxNorm concept has been verified.
+BASELINE_RXNORM_BY_NAME = {
+    "lisinopril 10 mg oral tablet": ("314076", "lisinopril 10 MG Oral Tablet"),
+}
+
+
+def _normalize_medication_name(name: str) -> str:
+    return re.sub(r"\s+", " ", str(name or "").strip().lower())
+
+
+def resolve_rxnorm(name: str) -> tuple[str, str] | None:
+    """Resolve the intentionally tiny v0.1 medication terminology fixture."""
+    return BASELINE_RXNORM_BY_NAME.get(_normalize_medication_name(name))
 
 
 def _quantity_value(resource: Mapping[str, Any], link_id: str) -> float | None:
@@ -196,23 +213,27 @@ def extract_clinical_resources(questionnaire_response: Mapping[str, Any]) -> lis
     if _boolean_value(questionnaire_response, "medication-status") is True:
         for index, group in enumerate(find_response_items(questionnaire_response, "medications"), start=1):
             name = str(_child_value(group, "medication-name", "valueString") or "").strip()
-            rxnorm = str(_child_value(group, "medication-rxnorm", "valueString") or "").strip()
             dose_value = _child_value(group, "medication-dose-value", "valueDecimal")
             dose_unit = str(_child_value(group, "medication-dose-unit", "valueString") or "").strip()
             route = str(_child_value(group, "medication-route", "valueString") or "").strip()
             frequency = str(_child_value(group, "medication-frequency", "valueString") or "").strip()
 
-            if not any([name, rxnorm, dose_value is not None, dose_unit, route, frequency]):
+            if not any([name, dose_value is not None, dose_unit, route, frequency]):
                 continue
 
             medication_concept: dict[str, Any] = {}
             if name:
                 medication_concept["text"] = name
-            if rxnorm:
-                coding: dict[str, Any] = {"system": RXNORM_SYSTEM, "code": rxnorm}
-                if name:
-                    coding["display"] = name
-                medication_concept["coding"] = [coding]
+                resolved = resolve_rxnorm(name)
+                if resolved:
+                    rxnorm_code, rxnorm_display = resolved
+                    medication_concept["coding"] = [
+                        {
+                            "system": RXNORM_SYSTEM,
+                            "code": rxnorm_code,
+                            "display": rxnorm_display,
+                        }
+                    ]
 
             dosage: dict[str, Any] = {}
             if frequency:
