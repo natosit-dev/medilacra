@@ -86,15 +86,14 @@ with st.sidebar:
 
 init_db(db_path)
 init_questionnaire_storage(db_path)
-
 patients = _load_patients(db_path)
 
 st.subheader("1. Synthetic caregiver")
 patient_columns = st.columns([4, 1])
 with patient_columns[1]:
     if st.button("Generate patient", type="secondary", use_container_width=True):
-        patient = gen_patient()
-        upsert_patient(asdict(patient), db_path=db_path)
+        generated_patient = gen_patient()
+        upsert_patient(asdict(generated_patient), db_path=db_path)
         st.rerun()
 
 if not patients:
@@ -115,7 +114,6 @@ patient = patient_lookup[selected_patient_id]
 st.divider()
 st.subheader("2. Caregiver Health Baseline")
 
-# Sleep
 st.markdown("#### Sleep")
 sleep_columns = st.columns([4, 1])
 with sleep_columns[1]:
@@ -129,7 +127,6 @@ with sleep_columns[0]:
         key="cg_sleep_hours",
     )
 
-# Pain
 st.markdown("#### Pain")
 pain_columns = st.columns([4, 1])
 with pain_columns[1]:
@@ -143,7 +140,6 @@ with pain_columns[0]:
         key="cg_pain_score",
     )
 
-# PHQ-2
 st.markdown("#### PHQ-2")
 st.caption("Over the last 2 weeks, how often have you been bothered by the following problems?")
 phq_labels = {code: display for code, display, _score in PHQ_CHOICES}
@@ -173,7 +169,6 @@ with phq2_columns[0]:
         key="cg_phq2",
     )
 
-# Heart rate
 st.markdown("#### Heart rate")
 heart_columns = st.columns([4, 1])
 with heart_columns[1]:
@@ -188,7 +183,6 @@ with heart_columns[0]:
     )
     st.caption("Enter beats/minute. Clinical abnormality is not treated as invalid data.")
 
-# Medication reconciliation
 st.markdown("#### Medication reconciliation")
 medication_columns = st.columns([4, 1])
 with medication_columns[1]:
@@ -221,19 +215,17 @@ if medication_status_raw is True and not medication_declined:
 
     for index in range(int(st.session_state.cg_medication_count)):
         st.markdown(f"**Medication {index + 1}**")
-        row1 = st.columns([3, 2, 1, 1])
+        row1 = st.columns([4, 1, 1])
         with row1[0]:
-            name = st.text_input("Medication", key=f"cg_med_name_{index}")
-        with row1[1]:
-            rxnorm = st.text_input("RxNorm code (optional)", key=f"cg_med_rxnorm_{index}")
-        with row1[2]:
-            dose_value = st.text_input("Dose", key=f"cg_med_dose_{index}")
-        with row1[3]:
-            dose_unit = st.selectbox(
-                "Unit",
-                options=["", "mg", "mcg", "g", "mL", "other"],
-                key=f"cg_med_unit_{index}",
+            name = st.text_input(
+                "Medication",
+                placeholder="e.g. lisinopril",
+                key=f"cg_med_name_{index}",
             )
+        with row1[1]:
+            dose_value = st.text_input("Dose", key=f"cg_med_dose_{index}")
+        with row1[2]:
+            dose_unit = st.text_input("Unit", placeholder="mg", key=f"cg_med_unit_{index}")
 
         row2 = st.columns(2)
         with row2[0]:
@@ -252,7 +244,6 @@ if medication_status_raw is True and not medication_declined:
         medications.append(
             {
                 "name": name,
-                "rxnorm": rxnorm,
                 "dose_value": dose_value,
                 "dose_unit": dose_unit,
                 "route": route,
