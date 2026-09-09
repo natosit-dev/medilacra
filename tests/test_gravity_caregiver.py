@@ -59,6 +59,8 @@ HAPPY_INPUT = {
             "frequency": "daily",
         }
     ],
+    "feeling-today": "Tired, but pretty steady today.",
+    "life-today": "My mom has an appointment and work is busy.",
 }
 
 
@@ -88,12 +90,16 @@ def test_questionnaire_is_standard_fhir_resource_with_expected_baseline_items():
         "heart-rate",
         "medication-status",
         "medications",
+        "feeling-today",
+        "life-today",
     }
     assert top_level["sleep-hours"]["type"] == "quantity"
     assert top_level["pain-score"]["code"][0]["code"] == PAIN_LOINC
     assert top_level["heart-rate"]["code"][0]["code"] == HEART_RATE_LOINC
     assert top_level["medications"]["type"] == "group"
     assert top_level["medications"]["repeats"] is True
+    assert top_level["feeling-today"]["type"] == "text"
+    assert top_level["life-today"]["type"] == "text"
 
     medication_fields = {item["linkId"] for item in top_level["medications"]["item"]}
     assert medication_fields == {
@@ -149,6 +155,24 @@ def test_happy_path_materializes_recognizable_clinical_facts():
     }
 
 
+def test_journal_text_is_preserved_verbatim_in_questionnaire_response_only():
+    response, bundle, _cleanup = _bundle()
+
+    feeling = first_answer(response, "feeling-today")
+    life = first_answer(response, "life-today")
+    assert feeling == {"valueString": HAPPY_INPUT["feeling-today"]}
+    assert life == {"valueString": HAPPY_INPUT["life-today"]}
+
+    observations = bundle_resources(bundle, "Observation")
+    local_observation_codes = {
+        coding.get("code")
+        for observation in observations
+        for coding in ((observation.get("code") or {}).get("coding") or [])
+    }
+    assert "feeling-today" not in local_observation_codes
+    assert "life-today" not in local_observation_codes
+
+
 def test_unknown_medication_preserves_text_without_inventing_a_code():
     raw = dict(HAPPY_INPUT)
     raw["medications"] = [
@@ -188,6 +212,16 @@ def test_decline_is_preserved_as_standard_data_absent_reason():
     sleep_check = next(check for check in report["checks"] if check["check"] == "sleep.plausibility")
     assert sleep_check["status"] == "PASS"
     assert sleep_check["detail"] == "declined"
+
+
+def test_journal_decline_is_preserved_without_inventing_text():
+    raw = dict(HAPPY_INPUT)
+    raw["feeling-today"] = ""
+    response, _bundle_value, _cleanup = _bundle(raw, declined={"feeling-today"})
+
+    answer = first_answer(response, "feeling-today")
+    assert answer_absent_reason(answer) == "asked-declined"
+    assert "valueString" not in answer
 
 
 def test_phq_total_is_omitted_when_one_component_is_not_answered():
@@ -290,6 +324,14 @@ def test_duckdb_persistence_keeps_fhir_json_and_nested_struct_projection(tmp_pat
     assert row["questionnaire_version"] == QUESTIONNAIRE_VERSION
     assert isinstance(row["items"], list)
     assert any(item["link_id"] == "heart-rate" and item["value_number"] == 82.0 for item in row["items"])
+    assert any(
+        item["link_id"] == "feeling-today" and item["value_text"] == HAPPY_INPUT["feeling-today"]
+        for item in row["items"]
+    )
+    assert any(
+        item["link_id"] == "life-today" and item["value_text"] == HAPPY_INPUT["life-today"]
+        for item in row["items"]
+    )
     assert '\"resourceType\": \"QuestionnaireResponse\"' in row["fhir_json"]
     assert '\"resourceType\": \"Bundle\"' in row["bundle_json"]
 
@@ -307,7 +349,7 @@ def test_artifact_zip_contains_the_same_complete_individual_output_set():
 
     files = build_artifact_files(result)
     assert set(files) == {
-        "caregiver_health_baseline_questionnaire_v0.1.json",
+        f"caregiver_health_baseline_questionnaire_v{QUESTIONNAIRE_VERSION}.json",
         "caregiver_health_questionnaire_response.json",
         "caregiver_health_phase1_bundle.json",
         "caregiver_health_quality_report.json",
