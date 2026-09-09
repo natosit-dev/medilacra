@@ -48,8 +48,7 @@ HAPPY_INPUT = {
     "medication-status": True,
     "medications": [
         {
-            "name": "Lisinopril 10 MG Oral Tablet",
-            "rxnorm": "314076",
+            "name": "lisinopril",
             "dose_value": "10",
             "dose_unit": "mg",
             "route": "oral",
@@ -92,6 +91,16 @@ def test_questionnaire_is_standard_fhir_resource_with_expected_baseline_items():
     assert top_level["medications"]["type"] == "group"
     assert top_level["medications"]["repeats"] is True
 
+    medication_fields = {item["linkId"] for item in top_level["medications"]["item"]}
+    assert medication_fields == {
+        "medication-name",
+        "medication-dose-value",
+        "medication-dose-unit",
+        "medication-route",
+        "medication-frequency",
+    }
+    assert "medication-rxnorm" not in medication_fields
+
 
 def test_happy_path_materializes_recognizable_clinical_facts():
     response, bundle, _cleanup = _bundle()
@@ -119,10 +128,11 @@ def test_happy_path_materializes_recognizable_clinical_facts():
     medications = bundle_resources(bundle, "MedicationStatement")
     assert len(medications) == 1
     medication = medications[0]
+    assert medication["medicationCodeableConcept"]["text"] == "lisinopril"
     coding = medication["medicationCodeableConcept"]["coding"][0]
     assert coding["system"] == RXNORM_SYSTEM
-    assert coding["code"] == "314076"
-    assert medication["medicationCodeableConcept"]["text"] == "Lisinopril 10 MG Oral Tablet"
+    assert coding["code"] == "29046"
+    assert coding["display"] == "lisinopril"
 
     dosage = medication["dosage"][0]
     assert dosage["route"]["text"] == "oral"
@@ -133,6 +143,26 @@ def test_happy_path_materializes_recognizable_clinical_facts():
         "system": UCUM_SYSTEM,
         "code": "mg",
     }
+
+
+def test_unknown_medication_preserves_text_without_inventing_a_code():
+    raw = dict(HAPPY_INPUT)
+    raw["medications"] = [
+        {
+            "name": "Mystery Medicine",
+            "dose_value": "5",
+            "dose_unit": "mg",
+            "route": "oral",
+            "frequency": "daily",
+        }
+    ]
+    _response, bundle, _cleanup = _bundle(raw)
+
+    medications = bundle_resources(bundle, "MedicationStatement")
+    assert len(medications) == 1
+    concept = medications[0]["medicationCodeableConcept"]
+    assert concept["text"] == "Mystery Medicine"
+    assert "coding" not in concept
 
 
 def test_decline_is_preserved_as_standard_data_absent_reason():
