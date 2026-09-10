@@ -49,6 +49,12 @@ def test_gravity_caregiver_page_renders_with_existing_synthetic_patient(tmp_path
     assert "What's going on in your life today?" in text_area_labels
 
 
+def test_medication_unit_placeholder_is_explicitly_an_example():
+    source = _page_path().read_text(encoding="utf-8")
+    assert 'st.text_input("Unit", placeholder="Example: mg"' in source
+    assert 'st.text_input("Unit", placeholder="mg"' not in source
+
+
 def test_decline_button_survives_streamlit_rerun_without_duckdb_configuration_error(
     tmp_path,
     monkeypatch,
