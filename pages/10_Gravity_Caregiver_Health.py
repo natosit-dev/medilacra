@@ -243,7 +243,7 @@ if medication_status_raw is True and not medication_declined:
         with row1[1]:
             dose_value = st.text_input("Dose", key=f"cg_med_dose_{index}")
         with row1[2]:
-            dose_unit = st.text_input("Unit", placeholder="mg", key=f"cg_med_unit_{index}")
+            dose_unit = st.text_input("Unit", placeholder="Example: mg", key=f"cg_med_unit_{index}")
 
         row2 = st.columns(2)
         with row2[0]:
