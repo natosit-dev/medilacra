@@ -1,0 +1,542 @@
+# ID DRAG — Project Plan v0.1
+
+**Identity Resolution Doesn't Require A Gun**
+
+| Field | Value |
+|---|---|
+| Project | ID DRAG |
+| Description | Identity Resolution Doesn't Require A Gun |
+| Repository | `natosit-dev/medilacra` |
+| Branch | `experiment/id-drag` |
+| Version | `v0.1` |
+| Date | 2026-09-13 |
+| Status | Proof of concept / experiment |
+| Parent work | Caregiver-health patient generation workflow |
+
+---
+
+## 1. Purpose
+
+ID DRAG is a deliberately small Medilacra experiment built around one proposition:
+
+> **Identity resolution is a public-health problem. The medical community should not have to depend on law-enforcement infrastructure to determine who a patient is.**
+
+The immediate use case is a person who cannot present ordinary identity artifacts: no wallet, phone, government ID, insurance card, stable address, available family member, or ability to communicate their identity.
+
+The person still exists even when their conventional identity representations do not.
+
+ID DRAG v0.1 does **not** attempt to solve biometric identity resolution. It demonstrates that healthcare can collect, associate, encode, and transport a body-carried identity artifact using ordinary healthcare infrastructure.
+
+---
+
+## 2. Raw Prompt Provenance
+
+This project was shaped directly from the following prompts and decisions.
+
+> “If someone needs to have a fingerprint database, it should be public health agencies, not police.”
+
+> “I'm thinking about unhoused people. If someone has no possessions or id, what happens to them? How are they identified?”
+
+> “Yeah, what I'm thinking is a registration system of sorts. Very rough model, honestly don't want high resolution. Maybe even mask the actual prints. OH we could just bolt it on to the caregiver thing. It has a patient generator, just drop a hand pic in there and grab and mask the prints. This may be easier than I thought.”
+
+The project purpose was then narrowed explicitly:
+
+> “This is more proof of concept to get people thinking about identity as a public health issue, that the medicinal community shouldn't have to rely on law enforcement.”
+
+The project name and rhetorical frame followed:
+
+> “ID Resolution Doesn't Require A Gun. We're calling it ID DRAG.”
+
+The initial design briefly considered derived biometric templates, masking, matching, and privacy transformations. The scope was intentionally cut back:
+
+> “Lol actually fuck it we're done need any of that fancy shit at first, just a have encoded in base 64 and sent in OBX segments/ observation.”
+
+The human-in-the-loop requirement was then reduced to one explicit assertion:
+
+> “Have the UI include a human in the loop check, 1 question- does this hand belong to the human?”
+
+The resulting metadata field is:
+
+```text
+human_verified
+```
+
+This document records that scope as the authoritative v0.1 plan.
+
+---
+
+## 3. Project Thesis
+
+# Identity Resolution Doesn't Require A Gun
+
+Healthcare should be able to collect and transmit a body-carried identity artifact using healthcare infrastructure without routing that identity function through criminal-justice systems.
+
+ID DRAG v0.1 is a proof of concept for that proposition.
+
+It is **not** an attempt to build a production biometric identification system.
+
+---
+
+## 4. Core Experiment
+
+The first implementation is intentionally crude.
+
+```text
+Generate / select patient
+        ↓
+Upload photograph of hand
+        ↓
+Human verifies relationship between hand and patient
+        ↓
+Base64 encode image
+        ↓
+Attach image to healthcare data
+        ↓
+Emit HL7 / FHIR artifact
+```
+
+No fingerprint extraction is required for v0.1.
+
+No matching algorithm is required.
+
+No biometric template is required.
+
+No biometric database is required.
+
+No AFIS is required.
+
+The image itself is the experimental identity artifact.
+
+---
+
+## 5. Existing Medilacra Substrate
+
+Reuse the caregiver-health patient-generation workflow already inherited into `experiment/id-drag`.
+
+ID DRAG should **not** create a second patient-generation architecture.
+
+Existing:
+
+```text
+Patient generator
+    ↓
+synthetic Patient
+    ↓
+healthcare artifacts
+```
+
+ID DRAG adds:
+
+```text
+synthetic Patient
+    ↓
+hand-image enrollment
+    ↓
+human verification
+    ↓
+encoded identity artifact
+```
+
+The existing synthetic patient remains authoritative.
+
+---
+
+## 6. ID DRAG Page
+
+Create an independent Medilacra page titled:
+
+# ID DRAG
+
+### Identity Resolution Doesn't Require A Gun
+
+The page should be simple enough that the conceptual argument is immediately legible.
+
+The v0.1 UI should contain only the interaction required to demonstrate the thesis.
+
+---
+
+## 7. Patient Selection
+
+At the top of the page:
+
+```text
+Generate New Patient
+
+or
+
+Select Existing Patient
+```
+
+Display enough identifying information to make the enrollment relationship obvious:
+
+```text
+Patient Name
+MRN / Patient ID
+DOB
+```
+
+All patient information used in the experiment is synthetic data generated by Medilacra.
+
+---
+
+## 8. Hand Image Capture
+
+Allow the user to upload an image of a hand.
+
+Initial accepted formats:
+
+```text
+JPEG
+PNG
+```
+
+The image does not need to contain a forensic-quality fingerprint.
+
+The v0.1 experiment only requires a recognizable body-carried visual artifact associated with the patient.
+
+Display the uploaded image prominently before verification.
+
+---
+
+## 9. Human-in-the-Loop Verification
+
+Before the image can be associated with the patient, require exactly one question:
+
+> **Does this hand belong to the human?**
+
+Controls:
+
+```text
+[ Yes ]    [ No ]
+```
+
+### Yes
+
+Set:
+
+```text
+human_verified = true
+```
+
+The application may proceed with encoding and artifact generation.
+
+### No
+
+Set:
+
+```text
+human_verified = false
+```
+
+Do not associate the image with the patient.
+
+Reject or clear the image and allow another upload.
+
+This is the critical provenance assertion in v0.1.
+
+The system is **not** claiming:
+
+> “The fingerprint proves who this person is.”
+
+It is recording:
+
+> **A human affirmed that this image depicts the hand of the person being registered.**
+
+That distinction is intentional.
+
+---
+
+## 10. Minimum Enrollment Representation
+
+ID DRAG does not need a sophisticated biometric model in v0.1.
+
+Minimum internal representation:
+
+```text
+patient_id
+image_content_type
+image_base64
+human_verified
+verification_timestamp
+```
+
+Optional implementation metadata:
+
+```text
+enrollment_id
+source_filename
+```
+
+That is sufficient for the first experiment.
+
+---
+
+## 11. HL7 v2 Output
+
+Encode the uploaded image as Base64 and transmit it in an `OBX` segment using encapsulated data.
+
+Conceptual structure:
+
+```text
+OBX
+├── OBX-2 = ED
+├── OBX-3 = ID DRAG hand identity image
+└── OBX-5
+      ├── type = IMAGE
+      ├── subtype = JPEG / PNG
+      ├── encoding = Base64
+      └── data = <BASE64 IMAGE>
+```
+
+Illustrative shape:
+
+```text
+OBX|1|ED|IDDRAG^Hand Identity Image^99MEDILACRA||^IMAGE^JPEG^Base64^<DATA>||||||F
+```
+
+The human-verification state should travel with the healthcare artifact as an additional observation.
+
+Illustrative shape:
+
+```text
+OBX|2|CWE|IDDRAG-HUMAN-VERIFIED^Human Verified^99MEDILACRA||Y^Yes||||||F
+```
+
+Exact local coding may be refined during implementation.
+
+The important semantic statement is:
+
+```text
+hand image
++
+human_verified = true
++
+patient identity
+```
+
+---
+
+## 12. FHIR Output
+
+FHIR should express the same deliberately simple model.
+
+For v0.1:
+
+```text
+Patient
+    ↓
+Observation
+    ├── encoded image
+    └── human verification state
+```
+
+The project does not need to solve a final canonical FHIR biometric model yet.
+
+The generated artifact only needs to preserve:
+
+```text
+which patient
+which image
+whether a human verified the association
+```
+
+FHIR modeling can be tightened later if the experiment warrants it.
+
+---
+
+## 13. UI Result
+
+After successful verification:
+
+```text
+ID DRAG Enrollment Complete
+
+Patient: MED-000184
+Human verified: YES
+Image encoded: YES
+HL7 artifact generated: YES
+FHIR artifact generated: YES
+```
+
+Then display or allow inspection of the generated healthcare data.
+
+The user should be able to see that the hand image has become an ordinary interoperable healthcare artifact associated with the synthetic patient.
+
+---
+
+## 14. Canonical Demo Story
+
+### Step 1 — Generate or select patient
+
+Generate a synthetic patient using the existing Medilacra patient workflow.
+
+### Step 2 — Upload hand image
+
+Upload a photograph of that person's hand.
+
+### Step 3 — Human verification
+
+Ask exactly:
+
+> **Does this hand belong to the human?**
+
+Select:
+
+```text
+YES
+```
+
+### Step 4 — Materialize the identity artifact
+
+Medilacra:
+
+- records `human_verified = true`
+- Base64-encodes the image
+- associates the image with the Patient
+- writes the image into an HL7 OBX
+- produces corresponding FHIR output
+
+### Step 5 — Inspect interoperability output
+
+Show the resulting healthcare message/artifact.
+
+Then state the thesis:
+
+# Identity Resolution Doesn't Require A Gun
+
+No police database participated.
+
+No forensic system participated.
+
+Healthcare transported its own identity artifact using healthcare infrastructure.
+
+---
+
+## 15. Explicit Non-Goals for v0.1
+
+Do **not** add the following before the base experiment works:
+
+- fingerprint minutiae extraction
+- fingerprint enhancement
+- automatic hand recognition
+- biometric templates
+- biometric matching
+- 1:N identity lookup
+- law-enforcement queries
+- criminal-history access
+- forensic-quality image requirements
+- automated identity determination
+- production consent workflows
+- national registry architecture
+- graph infrastructure
+- specialized biometric databases
+
+These may become later experiments. They are not prerequisites for demonstrating the idea.
+
+---
+
+## 16. Success Criteria
+
+ID DRAG v0.1 succeeds when Medilacra can:
+
+1. Generate or select a synthetic patient.
+2. Accept a hand photograph.
+3. Ask: **“Does this hand belong to the human?”**
+4. Refuse the association when the answer is **No**.
+5. Record `human_verified = true` when the answer is **Yes**.
+6. Base64-encode the uploaded image.
+7. Include the image in an HL7 `OBX`.
+8. Represent the same association in FHIR output.
+9. Produce a portable healthcare artifact containing the patient, hand image, and human-verification assertion.
+10. Do all of this without any law-enforcement infrastructure.
+
+That is the complete v0.1 experiment.
+
+---
+
+## 17. Deferred Experiments
+
+Only after the initial concept works:
+
+```text
+v0.2
+image masking / transformation
+
+v0.3
+ridge or feature extraction
+
+v0.4
+derived biometric templates
+
+v0.5
+same-person comparison
+
+v0.6
+unknown-patient candidate search
+```
+
+These experiments should be justified by what is learned from v0.1 rather than assumed in advance.
+
+---
+
+## 18. Decision Log
+
+### 2026-09-13 — Identity framed as public health
+
+The experiment originated from the observation that medicine may need to resolve the identity of people who lack conventional identity artifacts, particularly people experiencing homelessness, incapacitation, displacement, or loss of possessions.
+
+### 2026-09-13 — Separate experiment branch
+
+Created:
+
+```text
+experiment/id-drag
+```
+
+from the caregiver-health branch so ID DRAG can reuse the existing synthetic patient machinery without becoming part of the caregiver-health feature itself.
+
+### 2026-09-13 — Avoid production biometric architecture
+
+Early discussion considered fingerprint extraction, masking, derived templates, matching, and privacy-preserving biometric storage. Those were intentionally deferred.
+
+### 2026-09-13 — Base64 image is sufficient for v0.1
+
+The MVP was reduced to the smallest useful materialization:
+
+```text
+hand image
+→ Base64
+→ Observation / OBX
+```
+
+### 2026-09-13 — Require human verification
+
+One human-in-the-loop question was added:
+
+> **Does this hand belong to the human?**
+
+The resulting assertion is stored as:
+
+```text
+human_verified
+```
+
+### 2026-09-13 — Final project description
+
+The project subtitle/description was standardized as:
+
+> **Identity Resolution Doesn't Require A Gun**
+
+---
+
+## 19. Core Principle
+
+A fingerprint algorithm is not the experiment.
+
+A fingerprint database is not the experiment.
+
+The experiment is:
+
+> **Can healthcare represent and carry evidence of human identity on its own terms?**
+
+ID DRAG v0.1 answers that question with the smallest implementation that can make the idea concrete.
