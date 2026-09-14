@@ -1,33 +1,34 @@
-
-import json
 from uuid import uuid4
-from datetime import datetime
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
+
 
 def _norm(s: str) -> str:
     return s.replace("\r\n", "\n").replace("\r", "\n")
 
+
 def split_segments(hl7: str) -> List[str]:
-    lines = [ln for ln in _norm(hl7).split("\n") if ln.strip()]
-    return lines
+    return [ln for ln in _norm(hl7).split("\n") if ln.strip()]
+
 
 def parse_segment(line: str) -> tuple[str, list[str]]:
     parts = line.split("|")
-    seg = parts[0].strip()
-    fields = parts[1:]
-    return seg, fields
+    return parts[0].strip(), parts[1:]
+
 
 def get_field(fields: List[str], idx_1_based: int) -> str:
     if idx_1_based - 1 < 0 or idx_1_based - 1 >= len(fields):
         return ""
     return fields[idx_1_based - 1]
 
+
 def comp(field: str, i: int) -> str:
     comps = field.split("^") if field else []
-    return comps[i-1] if 0 <= i-1 < len(comps) else ""
+    return comps[i - 1] if 0 <= i - 1 < len(comps) else ""
+
 
 def reps(field: str) -> List[str]:
     return field.split("~") if field else []
+
 
 def split_messages(hl7_text: str) -> List[str]:
     lines = split_segments(hl7_text)
@@ -40,9 +41,17 @@ def split_messages(hl7_text: str) -> List[str]:
             messages.append(block)
     return messages
 
+
 def parse_hl7(hl7_text: str) -> Dict[str, Any]:
     segments = split_segments(hl7_text)
-    out: Dict[str, Any] = {"MSH": [], "PID": [], "PV1": [], "OBR": [], "OBX": [], "FT1": []}
+    out: Dict[str, Any] = {
+        "MSH": [],
+        "PID": [],
+        "PV1": [],
+        "OBR": [],
+        "OBX": [],
+        "FT1": [],
+    }
     ordered = []
     for line in segments:
         seg, fields = parse_segment(line)
@@ -55,12 +64,42 @@ def parse_hl7(hl7_text: str) -> Dict[str, Any]:
     out["_order"] = ordered
     return out
 
+
+def group_obr_obx(parsed: Dict[str, Any]) -> tuple[list[dict[str, Any]], list[List[str]]]:
+    """Preserve ORU result-group grain from ordered HL7 segments.
+
+    Each OBR starts a new result group. Following OBX segments belong to that
+    OBR until another OBR appears. OBX segments before the first OBR are
+    returned separately so they survive conversion without being attached to
+    an unrelated DiagnosticReport.
+    """
+    groups: list[dict[str, Any]] = []
+    current: Optional[dict[str, Any]] = None
+    ungrouped_obx: list[List[str]] = []
+
+    for seg, fields in parsed.get("_order", []):
+        if seg == "OBR":
+            current = {"obr": fields, "obx": []}
+            groups.append(current)
+        elif seg == "OBX":
+            if current is None:
+                ungrouped_obx.append(fields)
+            else:
+                current["obx"].append(fields)
+
+    return groups, ungrouped_obx
+
+
 def new_id(prefix: str) -> str:
     return f"{prefix}-{uuid4()}"
 
+
 def to_gender(sex: str) -> str:
     sx = (sex or "").strip().upper()
-    return {"M":"male","F":"female","O":"other","U":"unknown"}.get(sx, "unknown")
+    return {"M": "male", "F": "female", "O": "other", "U": "unknown"}.get(
+        sx, "unknown"
+    )
+
 
 def to_iso_date(d: str):
     if not d:
@@ -70,9 +109,11 @@ def to_iso_date(d: str):
         return f"{d[0:4]}-{d[4:6]}-{d[6:8]}"
     try:
         from datetime import datetime as _dt
+
         return _dt.fromisoformat(d).date().isoformat()
     except Exception:
         return None
+
 
 def codeable_concept_from_ce(ce_field: str) -> Dict[str, Any]:
     code = comp(ce_field, 1)
@@ -80,15 +121,24 @@ def codeable_concept_from_ce(ce_field: str) -> Dict[str, Any]:
     system = comp(ce_field, 3)
     coding = []
     if code:
-        coding.append({
-            "system": "http://loinc.org" if (system and system.upper() in ["LN", "LOINC"]) else f"urn:hl7v2:{system}" if system else "urn:hl7v2",
-            "code": code,
-            "display": text or None
-        })
+        coding.append(
+            {
+                "system": (
+                    "http://loinc.org"
+                    if system and system.upper() in ["LN", "LOINC"]
+                    else f"urn:hl7v2:{system}"
+                    if system
+                    else "urn:hl7v2"
+                ),
+                "code": code,
+                "display": text or None,
+            }
+        )
     cc = {"coding": coding} if coding else {}
     if text and not coding:
         cc["text"] = text
     return cc
+
 
 def build_message_header(msh_fields: List[str]) -> Dict[str, Any]:
     ev = get_field(msh_fields, 9)
@@ -103,12 +153,23 @@ def build_message_header(msh_fields: List[str]) -> Dict[str, Any]:
         "id": new_id("msg"),
         "eventCoding": {
             "system": "http://terminology.hl7.org/CodeSystem/v2-0003",
-            "code": f"{ev_code}^{ev_trigger}" if ev_trigger else ev_code
+            "code": f"{ev_code}^{ev_trigger}" if ev_trigger else ev_code,
         },
-        "source": {"name": f"{sending_app}|{sending_fac}".strip("|") or "Unknown"},
-        "destination": [{"name": f"{receiving_app}|{receiving_fac}".strip("|") or "Unknown"}],
-        "timestamp": __import__("datetime").datetime.utcnow().isoformat(timespec="seconds") + "Z"
+        "source": {
+            "name": f"{sending_app}|{sending_fac}".strip("|") or "Unknown"
+        },
+        "destination": [
+            {
+                "name": f"{receiving_app}|{receiving_fac}".strip("|")
+                or "Unknown"
+            }
+        ],
+        "timestamp": __import__("datetime")
+        .datetime.utcnow()
+        .isoformat(timespec="seconds")
+        + "Z",
     }
+
 
 def build_patient_from_pid(pid_fields: List[str]) -> Dict[str, Any]:
     pid3 = get_field(pid_fields, 3)
@@ -117,15 +178,16 @@ def build_patient_from_pid(pid_fields: List[str]) -> Dict[str, Any]:
         id_val = comp(rep, 1)
         id_assigner = comp(rep, 4)
         if id_val:
-            identifiers.append({
-                "system": f"urn:oid:{id_assigner}" if id_assigner else "urn:mrn",
-                "value": id_val
-            })
+            identifiers.append(
+                {
+                    "system": f"urn:oid:{id_assigner}" if id_assigner else "urn:mrn",
+                    "value": id_val,
+                }
+            )
     name = get_field(pid_fields, 5)
     family = comp(name, 1)
     given = comp(name, 2)
-    dob_raw = get_field(pid_fields, 7)
-    birth_date = to_iso_date(dob_raw)
+    birth_date = to_iso_date(get_field(pid_fields, 7))
     gender = to_gender(get_field(pid_fields, 8))
     addr = get_field(pid_fields, 11)
     street = comp(addr, 1)
@@ -139,21 +201,33 @@ def build_patient_from_pid(pid_fields: List[str]) -> Dict[str, Any]:
         "name": [{"family": family, "given": [given] if given else []}],
         "gender": gender,
         "birthDate": birth_date,
-        "address": [{
-            "line": [street] if street else [],
-            "city": city or None,
-            "state": state or None,
-            "postalCode": postal or None
-        }]
+        "address": [
+            {
+                "line": [street] if street else [],
+                "city": city or None,
+                "state": state or None,
+                "postalCode": postal or None,
+            }
+        ],
     }
-    patient["identifier"] = [i for i in (patient["identifier"] or []) if i.get("value")]
+    patient["identifier"] = [
+        i for i in (patient["identifier"] or []) if i.get("value")
+    ]
     if not patient["identifier"]:
         patient.pop("identifier", None)
-    if not patient["address"][0]["line"] and not patient["address"][0]["city"] and not patient["address"][0]["state"] and not patient["address"][0]["postalCode"]:
+    if (
+        not patient["address"][0]["line"]
+        and not patient["address"][0]["city"]
+        and not patient["address"][0]["state"]
+        and not patient["address"][0]["postalCode"]
+    ):
         patient.pop("address", None)
     return patient
 
-def build_encounter_from_pv1(pv1_fields: List[str], patient_ref: str) -> Dict[str, Any]:
+
+def build_encounter_from_pv1(
+    pv1_fields: List[str], patient_ref: str
+) -> Dict[str, Any]:
     cls = get_field(pv1_fields, 2)
     loc = get_field(pv1_fields, 3)
     pof = comp(loc, 1)
@@ -167,22 +241,24 @@ def build_encounter_from_pv1(pv1_fields: List[str], patient_ref: str) -> Dict[st
         "class": {"code": cls or "UNK"},
         "subject": {"reference": patient_ref},
     }
-    extensions = []
     if any([pof, room, bed, facility]):
-        extensions.append({
-            "url": "http://example.org/fhir/StructureDefinition/hl7v2-location",
-            "extension": [
-                {"url": "pointOfCare", "valueString": pof},
-                {"url": "room", "valueString": room},
-                {"url": "bed", "valueString": bed},
-                {"url": "facility", "valueString": facility}
-            ]
-        })
-    if extensions:
-        encounter["extension"] = extensions
+        encounter["extension"] = [
+            {
+                "url": "http://example.org/fhir/StructureDefinition/hl7v2-location",
+                "extension": [
+                    {"url": "pointOfCare", "valueString": pof},
+                    {"url": "room", "valueString": room},
+                    {"url": "bed", "valueString": bed},
+                    {"url": "facility", "valueString": facility},
+                ],
+            }
+        ]
     return encounter
 
-def build_observation_from_obx(obx_fields: List[str], patient_ref: str, encounter_ref: Optional[str]) -> Dict[str, Any]:
+
+def build_observation_from_obx(
+    obx_fields: List[str], patient_ref: str, encounter_ref: Optional[str]
+) -> Dict[str, Any]:
     vtype = get_field(obx_fields, 2).upper()
     id_ce = get_field(obx_fields, 3)
     val = get_field(obx_fields, 5)
@@ -200,8 +276,10 @@ def build_observation_from_obx(obx_fields: List[str], patient_ref: str, encounte
     if dt_obs:
         try:
             ts = dt_obs[:14]
-            iso = f"{ts[0:4]}-{ts[4:6]}-{ts[6:8]}T{ts[8:10]}:{ts[10:12]}:{ts[12:14]}"
-            obs["effectiveDateTime"] = iso
+            obs["effectiveDateTime"] = (
+                f"{ts[0:4]}-{ts[4:6]}-{ts[6:8]}"
+                f"T{ts[8:10]}:{ts[10:12]}:{ts[12:14]}"
+            )
         except Exception:
             pass
     if vtype in ("TX", "ST"):
@@ -218,15 +296,20 @@ def build_observation_from_obx(obx_fields: List[str], patient_ref: str, encounte
     elif vtype in ("DT", "TS"):
         try:
             d = val[:8]
-            iso = f"{d[0:4]}-{d[4:6]}-{d[6:8]}"
-            obs["valueDateTime"] = iso
+            obs["valueDateTime"] = f"{d[0:4]}-{d[4:6]}-{d[6:8]}"
         except Exception:
             obs["valueString"] = val
     else:
         obs["valueString"] = val
     return obs
 
-def build_diagnostic_report_from_obr(obr_fields: List[str], patient_ref: str, encounter_ref: Optional[str], observations_refs: List[str]) -> Dict[str, Any]:
+
+def build_diagnostic_report_from_obr(
+    obr_fields: List[str],
+    patient_ref: str,
+    encounter_ref: Optional[str],
+    observations_refs: List[str],
+) -> Dict[str, Any]:
     svc = get_field(obr_fields, 4)
     code = codeable_concept_from_ce(svc)
     dr = {
@@ -235,13 +318,16 @@ def build_diagnostic_report_from_obr(obr_fields: List[str], patient_ref: str, en
         "status": "final",
         "code": code or {"text": "Diagnostic Report"},
         "subject": {"reference": patient_ref},
-        "result": [{"reference": r} for r in observations_refs]
+        "result": [{"reference": r} for r in observations_refs],
     }
     if encounter_ref:
         dr["encounter"] = {"reference": encounter_ref}
     return dr
 
-def build_account_from_ft1(ft1_fields: List[str], patient_ref: str, encounter_ref: Optional[str]) -> Dict[str, Any]:
+
+def build_account_from_ft1(
+    ft1_fields: List[str], patient_ref: str, encounter_ref: Optional[str]
+) -> Dict[str, Any]:
     dt = get_field(ft1_fields, 4)
     code = get_field(ft1_fields, 6)
     desc = get_field(ft1_fields, 7)
@@ -253,7 +339,7 @@ def build_account_from_ft1(ft1_fields: List[str], patient_ref: str, encounter_re
         "type": {"text": "professional"},
         "patient": {"reference": patient_ref},
         "billablePeriod": {},
-        "item": []
+        "item": [],
     }
     if encounter_ref:
         claim["encounter"] = [{"reference": encounter_ref}]
@@ -262,7 +348,10 @@ def build_account_from_ft1(ft1_fields: List[str], patient_ref: str, encounter_re
         claim["billablePeriod"]["start"] = d
         claim["billablePeriod"]["end"] = d
     if code or desc or amt:
-        entry = {"sequence": 1, "productOrService": {"text": f"{code} {desc}".strip()}}
+        entry = {
+            "sequence": 1,
+            "productOrService": {"text": f"{code} {desc}".strip()},
+        }
         if amt:
             try:
                 entry["unitPrice"] = {"value": float(amt)}
@@ -271,11 +360,31 @@ def build_account_from_ft1(ft1_fields: List[str], patient_ref: str, encounter_re
         claim["item"].append(entry)
     return claim
 
+
 def detect_message_type(parsed: Dict[str, Any]) -> str:
     if not parsed.get("MSH"):
         return "UNKNOWN"
     ev = get_field(parsed["MSH"][0]["_fields"], 9)
-    return f"{comp(ev,1)}^{comp(ev,2)}".upper()
+    return f"{comp(ev, 1)}^{comp(ev, 2)}".upper()
+
+
+def _generic_diagnostic_report(
+    patient_ref: str,
+    encounter_ref: Optional[str],
+    observation_refs: List[str],
+) -> Dict[str, Any]:
+    dr = {
+        "resourceType": "DiagnosticReport",
+        "id": new_id("dr"),
+        "status": "final",
+        "code": {"text": "Diagnostic Report"},
+        "subject": {"reference": patient_ref},
+        "result": [{"reference": r} for r in observation_refs],
+    }
+    if encounter_ref:
+        dr["encounter"] = {"reference": encounter_ref}
+    return dr
+
 
 def convert_oru(parsed: Dict[str, Any]) -> Dict[str, Any]:
     msh = parsed["MSH"][0]["_fields"]
@@ -284,23 +393,67 @@ def convert_oru(parsed: Dict[str, Any]) -> Dict[str, Any]:
     msg_header = build_message_header(msh)
     patient = build_patient_from_pid(pid) if pid else None
     patient_ref = f"Patient/{patient['id']}" if patient else None
-    encounter = build_encounter_from_pv1(pv1, patient_ref) if pv1 and patient else None
+    encounter = (
+        build_encounter_from_pv1(pv1, patient_ref) if pv1 and patient else None
+    )
     encounter_ref = f"Encounter/{encounter['id']}" if encounter else None
-    observations = [build_observation_from_obx(o["_fields"], patient_ref, encounter_ref) for o in parsed.get("OBX", [])]
-    obs_refs = [f"Observation/{o['id']}" for o in observations]
-    if parsed.get("OBR"):
-        dr = build_diagnostic_report_from_obr(parsed["OBR"][0]["_fields"], patient_ref, encounter_ref, obs_refs)
+
+    groups, ungrouped_obx = group_obr_obx(parsed)
+    reports: list[Dict[str, Any]] = []
+    observations: list[Dict[str, Any]] = []
+
+    if groups:
+        for group in groups:
+            group_observations = [
+                build_observation_from_obx(fields, patient_ref, encounter_ref)
+                for fields in group["obx"]
+            ]
+            observations.extend(group_observations)
+            group_refs = [
+                f"Observation/{observation['id']}"
+                for observation in group_observations
+            ]
+            reports.append(
+                build_diagnostic_report_from_obr(
+                    group["obr"], patient_ref, encounter_ref, group_refs
+                )
+            )
+
+        # Preserve malformed/legacy OBX segments that occur before the first OBR,
+        # but do not falsely attach them to a later report.
+        observations.extend(
+            build_observation_from_obx(fields, patient_ref, encounter_ref)
+            for fields in ungrouped_obx
+        )
     else:
-        dr = {"resourceType":"DiagnosticReport","id":new_id("dr"),"status":"final","code":{"text":"Diagnostic Report"},"subject":{"reference":patient_ref},"result":[{"reference":r} for r in obs_refs]}
-        if encounter_ref:
-            dr["encounter"] = {"reference": encounter_ref}
+        observations = [
+            build_observation_from_obx(
+                obx["_fields"], patient_ref, encounter_ref
+            )
+            for obx in parsed.get("OBX", [])
+        ]
+        reports.append(
+            _generic_diagnostic_report(
+                patient_ref,
+                encounter_ref,
+                [f"Observation/{observation['id']}" for observation in observations],
+            )
+        )
+
     entries = [{"resource": msg_header}]
-    if patient: entries.append({"resource": patient})
-    if encounter: entries.append({"resource": encounter})
-    entries.append({"resource": dr})
-    for o in observations:
-        entries.append({"resource": o})
-    return {"resourceType":"Bundle","type":"message","id":new_id("bundle"),"entry":entries}
+    if patient:
+        entries.append({"resource": patient})
+    if encounter:
+        entries.append({"resource": encounter})
+    entries.extend({"resource": report} for report in reports)
+    entries.extend({"resource": observation} for observation in observations)
+    return {
+        "resourceType": "Bundle",
+        "type": "message",
+        "id": new_id("bundle"),
+        "entry": entries,
+    }
+
 
 def convert_adt(parsed: Dict[str, Any]) -> Dict[str, Any]:
     msh = parsed["MSH"][0]["_fields"]
@@ -309,11 +462,18 @@ def convert_adt(parsed: Dict[str, Any]) -> Dict[str, Any]:
     msg_header = build_message_header(msh)
     patient = build_patient_from_pid(pid) if pid else None
     entries = [{"resource": msg_header}]
-    if patient: entries.append({"resource": patient})
+    if patient:
+        entries.append({"resource": patient})
     if pv1 and patient:
         enc = build_encounter_from_pv1(pv1, f"Patient/{patient['id']}")
         entries.append({"resource": enc})
-    return {"resourceType":"Bundle","type":"message","id":new_id("bundle"),"entry":entries}
+    return {
+        "resourceType": "Bundle",
+        "type": "message",
+        "id": new_id("bundle"),
+        "entry": entries,
+    }
+
 
 def convert_dft(parsed: Dict[str, Any]) -> Dict[str, Any]:
     msh = parsed["MSH"][0]["_fields"]
@@ -322,15 +482,27 @@ def convert_dft(parsed: Dict[str, Any]) -> Dict[str, Any]:
     msg_header = build_message_header(msh)
     patient = build_patient_from_pid(pid) if pid else None
     patient_ref = f"Patient/{patient['id']}" if patient else None
-    encounter = build_encounter_from_pv1(pv1, patient_ref) if pv1 and patient else None
+    encounter = (
+        build_encounter_from_pv1(pv1, patient_ref) if pv1 and patient else None
+    )
     encounter_ref = f"Encounter/{encounter['id']}" if encounter else None
-    claims = [build_account_from_ft1(ft["_fields"], patient_ref, encounter_ref) for ft in parsed.get("FT1", [])]
+    claims = [
+        build_account_from_ft1(ft["_fields"], patient_ref, encounter_ref)
+        for ft in parsed.get("FT1", [])
+    ]
     entries = [{"resource": msg_header}]
-    if patient: entries.append({"resource": patient})
-    if encounter: entries.append({"resource": encounter})
-    for c in claims:
-        entries.append({"resource": c})
-    return {"resourceType":"Bundle","type":"message","id":new_id("bundle"),"entry":entries}
+    if patient:
+        entries.append({"resource": patient})
+    if encounter:
+        entries.append({"resource": encounter})
+    entries.extend({"resource": claim} for claim in claims)
+    return {
+        "resourceType": "Bundle",
+        "type": "message",
+        "id": new_id("bundle"),
+        "entry": entries,
+    }
+
 
 def convert_message_to_bundle(hl7_text: str):
     parsed = parse_hl7(hl7_text)
@@ -343,7 +515,17 @@ def convert_message_to_bundle(hl7_text: str):
         return convert_dft(parsed), msg_type
     msh = parsed["MSH"][0]["_fields"]
     mh = build_message_header(msh)
-    patient = build_patient_from_pid(parsed["PID"][0]["_fields"]) if parsed.get("PID") else None
+    patient = (
+        build_patient_from_pid(parsed["PID"][0]["_fields"])
+        if parsed.get("PID")
+        else None
+    )
     entries = [{"resource": mh}]
-    if patient: entries.append({"resource": patient})
-    return {"resourceType":"Bundle","type":"message","id":new_id("bundle"),"entry":entries}, msg_type
+    if patient:
+        entries.append({"resource": patient})
+    return {
+        "resourceType": "Bundle",
+        "type": "message",
+        "id": new_id("bundle"),
+        "entry": entries,
+    }, msg_type
