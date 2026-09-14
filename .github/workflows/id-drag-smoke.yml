@@ -1,0 +1,38 @@
+name: ID DRAG smoke tests
+
+on:
+  push:
+    branches:
+      - experiment/id-drag
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  id-drag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout MediLacra
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install test dependencies
+        run: python -m pip install pytest duckdb streamlit faker pandas pyyaml
+
+      - name: Compile ID DRAG modules
+        run: |
+          python -m py_compile \
+            connectathon/id_drag.py \
+            pages/11_ID_DRAG.py \
+            tests/test_id_drag.py \
+            tests/test_id_drag_streamlit.py
+
+      - name: Run ID DRAG tests
+        run: |
+          python -m pytest -q \
+            tests/test_id_drag.py \
+            tests/test_id_drag_streamlit.py
