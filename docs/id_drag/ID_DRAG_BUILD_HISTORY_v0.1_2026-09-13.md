@@ -161,6 +161,21 @@ The v0.1 tests verify:
 
 The branch has a dedicated GitHub Actions smoke-test workflow triggered by pushes to `experiment/id-drag`.
 
+## Validation result
+
+GitHub Actions run `34800737710` completed successfully against commit
+`2a66fd4c44e04d9ff866441048a76981539d59b8`.
+
+Result:
+
+```text
+11 passed, 1 warning in 1.05s
+```
+
+The warning is an existing `DeprecationWarning` in `hl7_demo/utils.py` and is unrelated to ID DRAG.
+
+Both the Python compile step and the ID DRAG test step passed.
+
 ## Deferred by design
 
 The following remain explicitly out of scope for v0.1:
