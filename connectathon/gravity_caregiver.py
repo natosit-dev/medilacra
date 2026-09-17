@@ -1,8 +1,8 @@
 """Public Phase 1 API for the MediLacra Gravity caregiver baseline.
 
 Implementation is split by responsibility so the questionnaire definition, response capture,
-FHIR materialization, quality checks, and storage can evolve independently without creating a
-new healthcare ontology.
+FHIR/HL7 v2 materialization, quality checks, and storage can evolve independently without
+creating a new healthcare ontology.
 """
 
 from __future__ import annotations
@@ -12,6 +12,7 @@ import json
 import zipfile
 from typing import Any, Mapping
 
+from connectathon.gravity_hl7v2 import build_caregiver_oru
 from connectathon.gravity_materialize import (
     build_submission_bundle,
     bundle_resources,
@@ -40,23 +41,31 @@ ARTIFACT_FILENAMES = {
     "questionnaire": f"caregiver_health_baseline_questionnaire_v{QUESTIONNAIRE_VERSION}.json",
     "questionnaire_response": "caregiver_health_questionnaire_response.json",
     "bundle": "caregiver_health_phase1_bundle.json",
+    "hl7v2": "caregiver_health_oru_r01.hl7",
     "quality": "caregiver_health_quality_report.json",
     "cleanup": "caregiver_health_bundle_cleanup.json",
 }
 
 
 def build_artifact_files(result: Mapping[str, Any]) -> dict[str, bytes]:
-    """Serialize every Phase 1 output artifact as an individually downloadable JSON file."""
+    """Serialize every Phase 1 output artifact as an individually downloadable file."""
     files: dict[str, bytes] = {}
     for key, filename in ARTIFACT_FILENAMES.items():
         if key not in result:
             continue
-        files[filename] = json.dumps(
-            result[key],
-            indent=2,
-            sort_keys=True,
-            default=str,
-        ).encode("utf-8")
+        value = result[key]
+        if isinstance(value, bytes):
+            payload = value
+        elif isinstance(value, str):
+            payload = value.encode("utf-8")
+        else:
+            payload = json.dumps(
+                value,
+                indent=2,
+                sort_keys=True,
+                default=str,
+            ).encode("utf-8")
+        files[filename] = payload
     return files
 
 
@@ -79,6 +88,7 @@ __all__ = [
     "build_questionnaire_response",
     "extract_clinical_resources",
     "build_submission_bundle",
+    "build_caregiver_oru",
     "bundle_resources",
     "observation_by_loinc",
     "caregiver_quality_gate",
