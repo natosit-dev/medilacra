@@ -6,6 +6,7 @@ from dataclasses import asdict
 import streamlit as st
 
 from connectathon.gravity_caregiver import build_artifact_files, build_artifact_zip
+from connectathon.gravity_hl7v2 import build_caregiver_oru
 from connectathon.gravity_materialize import build_submission_bundle
 from connectathon.gravity_quality import caregiver_quality_gate
 from connectathon.gravity_questionnaire import PHQ_CHOICES, QUESTIONNAIRE_VERSION, build_questionnaire
@@ -23,7 +24,7 @@ from utils.db import reader
 st.set_page_config(page_title="MediLacra — Gravity Caregiver Health", layout="wide")
 st.title("Gravity — Caregiver Health Baseline")
 st.caption(
-    "One boring questionnaire. Preserve the response, materialize standard FHIR, "
+    "One boring questionnaire. Preserve the response, materialize FHIR and HL7 v2, "
     "then check whether the facts survived."
 )
 
@@ -334,6 +335,7 @@ if submit:
         declined=declined,
     )
     bundle, cleanup = build_submission_bundle(patient, questionnaire_response)
+    hl7v2 = build_caregiver_oru(patient, questionnaire_response)
     quality = caregiver_quality_gate(bundle)
 
     save_questionnaire_response(
@@ -347,6 +349,7 @@ if submit:
         "questionnaire": build_questionnaire(),
         "questionnaire_response": questionnaire_response,
         "bundle": bundle,
+        "hl7v2": hl7v2,
         "cleanup": cleanup,
         "quality": quality,
     }
@@ -372,11 +375,11 @@ if result:
     )
     st.caption(
         "ZIP contains the same individually downloadable Questionnaire, QuestionnaireResponse, "
-        "FHIR Bundle, quality report, and Bundle-cleanup receipt shown below."
+        "FHIR Bundle, HL7 v2 ORU^R01, quality report, and Bundle-cleanup receipt shown below."
     )
 
-    tab_questionnaire, tab_response, tab_bundle, tab_quality = st.tabs(
-        ["Questionnaire", "QuestionnaireResponse", "FHIR Bundle", "PIQITT-style checks"]
+    tab_questionnaire, tab_response, tab_bundle, tab_hl7v2, tab_quality = st.tabs(
+        ["Questionnaire", "QuestionnaireResponse", "FHIR Bundle", "HL7 v2", "PIQITT-style checks"]
     )
 
     with tab_questionnaire:
@@ -411,6 +414,20 @@ if result:
             "caregiver_health_bundle_cleanup.json",
             result["cleanup"],
             "cg_download_cleanup",
+        )
+
+    with tab_hl7v2:
+        st.caption(
+            "HL7 v2.5 ORU^R01 projection of the same QuestionnaireResponse. "
+            "No encounter, order, or medication-administration event is invented."
+        )
+        st.code(result["hl7v2"].replace("\r", "\n"), language="text")
+        st.download_button(
+            "Download HL7 v2 ORU^R01",
+            data=result["hl7v2"],
+            file_name="caregiver_health_oru_r01.hl7",
+            mime="text/plain",
+            key="cg_download_hl7v2",
         )
 
     with tab_quality:
