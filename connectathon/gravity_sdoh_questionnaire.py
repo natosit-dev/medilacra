@@ -49,3 +49,44 @@ def question(code: str, *, read_only: bool=False) -> dict[str,Any]:
     if read_only:
         item["readOnly"]=True
     return item
+
+def group(link_id: str, text: str, codes: Sequence[str]) -> dict[str,Any]:
+    return {
+        "linkId":link_id,
+        "text":text,
+        "type":"group",
+        "required":False,
+        "repeats":False,
+        "item":[question(code,read_only=(code==HVS_RISK)) for code in codes],
+    }
+
+def build_questionnaire() -> dict[str,Any]:
+    return {
+        "resourceType":"Questionnaire",
+        "id":QUESTIONNAIRE_ID,
+        "url":QUESTIONNAIRE_URL,
+        "version":QUESTIONNAIRE_VERSION,
+        "name":"MediLacraSDOHBaseline",
+        "title":"MediLacra SDOH Baseline",
+        "status":"active",
+        "experimental":True,
+        "date":"2026-09-25",
+        "publisher":"MediLacra",
+        "description":"MediLacra-owned baseline composed from Hunger Vital Sign and selected PRAPARE questions for semantic-preservation testing.",
+        "subjectType":["Patient"],
+        "derivedFrom":[HVS_SOURCE,PRAPARE_SOURCE],
+        "item":[
+            group("hvs","Hunger Vital Sign",[HVS_Q1,HVS_Q2,HVS_RISK]),
+            group("housing","Housing",[HOUSING,HOUSING_WORRY]),
+            group("resources","Money and resources",[MATERIAL_NEEDS,TRANSPORT]),
+            group("social-emotional","Social and emotional health",[SOCIAL,STRESS]),
+        ],
+    }
+
+def allowed_codes(code: str) -> set[str]:
+    return {value for value,_display in SPECS[code][1]}
+
+def display_for(code: str, answer_code: str) -> str | None:
+    return next((display for value,display in SPECS[code][1] if value==answer_code),None)
+
+assert set(SPECS)==set(ALL_CODES)
