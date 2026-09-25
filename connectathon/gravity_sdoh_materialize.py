@@ -5,7 +5,7 @@ from typing import Any, Mapping
 
 from connectathon.fhir_control import prepare_control_bundle
 from connectathon.gravity_materialize import bundle_resources
-from connectathon.gravity_response import answer_absent_reason, build_patient_resource, fhir_id
+from connectathon.gravity_response import answer_absent_reason, build_patient_resource, fhir_id, iter_response_items
 from connectathon.gravity_sdoh_questionnaire import build_questionnaire
 from connectathon.gravity_sdoh_response import answers_for
 from connectathon.gravity_sdoh_terminology import (
@@ -65,7 +65,7 @@ def extract_sdoh_resources(questionnaire_response: Mapping[str,Any]) -> list[dic
     authored=str(questionnaire_response.get("authored") or datetime.now(timezone.utc).isoformat(timespec="seconds"))
     resources=[]
     for question_code in DOMAINS:
-        items=[item for _path,item in __import__("connectathon.gravity_response",fromlist=["iter_response_items"]).iter_response_items(list(questionnaire_response.get("item") or [])) if item.get("linkId")==question_code]
+        items=[item for _path,item in iter_response_items(list(questionnaire_response.get("item") or [])) if item.get("linkId")==question_code]
         if not items:
             continue
         text=str(items[0].get("text") or question_code)
