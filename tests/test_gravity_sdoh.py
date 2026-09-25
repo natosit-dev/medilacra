@@ -112,3 +112,79 @@ def test_multiselect_answers_survive_as_separate_observations():
         for obs in observations
     ]
     assert values==["LA30125-1","LA30124-4"]
+
+def test_gravity_categories_and_decline_materialize_without_neg():
+    raw=dict(HAPPY)
+    raw[HOUSING_WORRY]=None
+    response,bundle,_=_bundle(raw,declined={HOUSING_WORRY})
+
+    food=observations_by_loinc(bundle,HVS_Q1)[0]
+    cats=_category_pairs(food)
+    assert (OBS_CAT_SYSTEM,"survey") in cats
+    assert (US_CORE_CAT_SYSTEM,"sdoh") in cats
+    assert (SDOH_CAT_SYSTEM,"food-insecurity") in cats
+    assert food["interpretation"][0]["coding"][0]["code"]=="POS"
+
+    declined=observations_by_loinc(bundle,HOUSING_WORRY)[0]
+    assert declined["dataAbsentReason"]["coding"][0]["code"]=="asked-declined"
+    assert "valueCodeableConcept" not in declined
+    assert "interpretation" not in declined
+
+    assert not any(
+        coding.get("code")=="NEG"
+        for obs in bundle_resources(bundle,"Observation")
+        for interpretation in obs.get("interpretation",[])
+        for coding in interpretation.get("coding",[])
+    )
+
+def test_screening_does_not_invent_downstream_clinical_actions():
+    _,bundle,_=_bundle()
+    types={resource.get("resourceType") for resource in bundle_resources(bundle)}
+    assert "Condition" not in types
+    assert "Goal" not in types
+    assert "ServiceRequest" not in types
+    assert "Procedure" not in types
+
+def test_quality_gate_passes_happy_path_and_fails_invalid_code():
+    _,bundle,_=_bundle()
+    report=sdoh_quality_gate(bundle)
+    assert report["status"]=="PASS"
+
+    raw=dict(HAPPY)
+    raw[STRESS]="NOT-A-LOINC-ANSWER"
+    response,bundle,_=_bundle(raw)
+    assert answer_absent_reason(answers_for(response,STRESS)[0])=="error"
+    report=sdoh_quality_gate(bundle)
+    assert report["status"]=="FAIL"
+    assert any(check["check"]=="response.valid_codes" and check["status"]=="FAIL" for check in report["checks"])
+
+def test_generic_duckdb_storage_preserves_sdoh_multiselect(tmp_path):
+    response,bundle,_=_bundle()
+    db_path=str(tmp_path/"sdoh.duckdb")
+    save_questionnaire_response(response,HAPPY,bundle=bundle,db_path=db_path)
+    rows=load_questionnaire_responses(limit=5,db_path=db_path)
+    assert len(rows)==1
+    material=[item for item in rows[0]["items"] if item["link_id"]==MATERIAL_NEEDS]
+    assert {item["code"] for item in material}=={"LA30125-1","LA30124-4"}
+
+def test_artifact_zip_contains_complete_output_set():
+    response,bundle,cleanup=_bundle()
+    result={
+        "questionnaire":build_questionnaire(),
+        "questionnaire_response":response,
+        "bundle":bundle,
+        "hl7v2":"MSH|^~\\\\&|TEST\\r",
+        "quality":sdoh_quality_gate(bundle),
+        "cleanup":cleanup,
+    }
+    files=build_artifact_files(result)
+    assert set(files)=={
+        f"sdoh_baseline_questionnaire_v{QUESTIONNAIRE_VERSION}.json",
+        "sdoh_questionnaire_response.json",
+        "sdoh_baseline_bundle.json",
+        "sdoh_baseline_oru_r01.hl7",
+        "sdoh_quality_report.json",
+        "sdoh_bundle_cleanup.json",
+    }
+    with zipfile.ZipFile(io.BytesIO(build_artifact_zip(result)),"r") as archive:
+        assert set(archive.namelist())==set(files)
