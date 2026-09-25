@@ -179,3 +179,58 @@ if submit:
         st.success("SDOH baseline materialized. Semantic/conformance checks passed.")
     else:
         st.warning("Assessment was preserved, but one or more checks failed.")
+
+result=st.session_state.get("sd_last_result")
+if result:
+    st.divider()
+    st.subheader("3. Materialized artifacts")
+    st.download_button(
+        "Download all artifacts (.zip)",
+        data=build_artifact_zip(result),
+        file_name="sdoh_baseline_phase1_artifacts.zip",
+        mime="application/zip",
+        key="sd_download_all",use_container_width=True,
+    )
+    tabs=st.tabs(["Questionnaire","QuestionnaireResponse","FHIR Bundle","HL7 v2","PIQITT-style checks"])
+    with tabs[0]:
+        st.json(result["questionnaire"])
+        _json_download("Download Questionnaire",f"sdoh_baseline_questionnaire_v{QUESTIONNAIRE_VERSION}.json",result["questionnaire"],"sd_download_q")
+    with tabs[1]:
+        st.json(result["questionnaire_response"])
+        _json_download("Download QuestionnaireResponse","sdoh_questionnaire_response.json",result["questionnaire_response"],"sd_download_qr")
+    with tabs[2]:
+        st.caption(f"Existing Connectathon bundle cleanup: {result['cleanup']}")
+        st.json(result["bundle"])
+        _json_download("Download Bundle","sdoh_baseline_bundle.json",result["bundle"],"sd_download_bundle")
+        _json_download("Download Bundle cleanup receipt","sdoh_bundle_cleanup.json",result["cleanup"],"sd_download_cleanup")
+    with tabs[3]:
+        st.caption("HL7 v2.5 ORU^R01 projection of the same QuestionnaireResponse; no encounter, diagnosis, referral, or intervention is invented.")
+        st.code(result["hl7v2"].replace("\\r","\\n"),language="text")
+        st.download_button("Download HL7 v2 ORU^R01",data=result["hl7v2"],file_name="sdoh_baseline_oru_r01.hl7",mime="text/plain",key="sd_download_hl7")
+    with tabs[4]:
+        st.write(f"**Result:** {result['quality']['status']}")
+        st.write(result["quality"]["claim"])
+        st.dataframe(result["quality"]["checks"],use_container_width=True,hide_index=True)
+        _json_download("Download quality report","sdoh_quality_report.json",result["quality"],"sd_download_quality")
+
+with st.expander("Recent persisted SDOH QuestionnaireResponses"):
+    try:
+        recent=[
+            row for row in load_questionnaire_responses(limit=100,db_path=db_path)
+            if row.get("questionnaire_url")==QUESTIONNAIRE_URL
+        ][:20]
+        if recent:
+            st.dataframe([
+                {
+                    "response_id":row["response_id"],
+                    "patient_id":row["patient_id"],
+                    "authored":row["authored"],
+                    "status":row["status"],
+                    "created_ts":row["created_ts"],
+                }
+                for row in recent
+            ],use_container_width=True,hide_index=True)
+        else:
+            st.info("No SDOH questionnaire responses persisted yet.")
+    except Exception as exc:
+        st.error(f"Unable to load recent responses: {exc}")
