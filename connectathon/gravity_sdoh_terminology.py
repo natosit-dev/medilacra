@@ -83,3 +83,14 @@ HVS_Q1_TEXT="Within the past 12 months we worried whether our food would run out
 
 HVS_Q1_TEXT += "to buy more"
 HVS_Q2_TEXT = "Within the past 12 months the food we bought just didn't last and we didn't have money to get more"
+
+HOUSING_TEXT = "Housing status"
+HOUSING_WORRY_TEXT = "Are you worried about losing your housing?"
+MATERIAL_TEXT = "In the past year, have you or any family members you live with been unable to get any of the following when it was really needed?"
+TRANSPORT_TEXT = "Has lack of transportation kept you from medical appointments, meetings, work, or from getting things needed for daily living?"
+SOCIAL_TEXT = "How often do you see or talk to people that you care about and feel close to (For example: talking to friends on the phone, visiting friends or family, going to church or club meetings)?"
+STRESS_TEXT = "Stress is when someone feels tense, nervous, anxious or can't sleep at night because their mind is troubled. How stressed are you?"
+
+INPUT_CODES=(HVS_Q1,HVS_Q2,HOUSING,HOUSING_WORRY,MATERIAL_NEEDS,TRANSPORT,SOCIAL,STRESS)
+ALL_CODES=INPUT_CODES+(HVS_RISK,)
+REPEATING_CODES={MATERIAL_NEEDS,TRANSPORT}
