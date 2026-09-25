@@ -58,3 +58,64 @@ def _label(question_code: str, code: str | None) -> str:
 def _json_download(label: str, filename: str, value: dict, key: str) -> None:
     st.download_button(label,data=json.dumps(value,indent=2,sort_keys=True,default=str),
                        file_name=filename,mime="application/fhir+json",key=key)
+
+from connectathon.gravity_sdoh_questionnaire import SPECS
+
+reset_cols=st.columns([1,4])
+with reset_cols[0]:
+    st.button("Reset assessment",key="sd_reset",on_click=_reset,use_container_width=True)
+
+with st.sidebar:
+    st.header("Baseline settings")
+    db_path=st.text_input("DuckDB path",DEFAULT_DB_PATH,key="sd_db_path")
+    st.write(f"Questionnaire version: **{QUESTIONNAIRE_VERSION}**")
+    st.write("Instrument: **Hunger Vital Sign + PRAPARE basics**")
+
+init_db(db_path)
+patients=_load_patients(db_path)
+
+st.subheader("1. Synthetic patient")
+patient_cols=st.columns([4,1])
+with patient_cols[1]:
+    if st.button("Generate patient",type="secondary",use_container_width=True):
+        generated=gen_patient()
+        upsert_patient(asdict(generated),db_path=db_path)
+        st.rerun()
+
+if not patients:
+    st.info("No synthetic patients are persisted yet. Generate one to start.")
+    st.stop()
+
+lookup={str(patient["patient_id"]):patient for patient in patients}
+selected_patient_id=st.selectbox(
+    "Patient",options=list(lookup),
+    format_func=lambda pid:f"{pid} — {lookup[pid].get('patient_name') or 'Unnamed synthetic patient'}",
+    key="sd_patient",
+)
+patient=lookup[selected_patient_id]
+
+def _single(code: str) -> tuple[str | None,bool]:
+    cols=st.columns([4,1])
+    with cols[1]:
+        declined=_decline(code)
+    options=[None,*[value for value,_display in SPECS[code][1]]]
+    with cols[0]:
+        value=st.selectbox(
+            SPECS[code][0],options=options,
+            format_func=lambda answer:_label(code,answer),
+            disabled=declined,key=f"sd_value_{code}",
+        )
+    return value,declined
+
+def _multi(code: str) -> tuple[list[str],bool]:
+    cols=st.columns([4,1])
+    with cols[1]:
+        declined=_decline(code)
+    options=[value for value,_display in SPECS[code][1]]
+    with cols[0]:
+        value=st.multiselect(
+            SPECS[code][0],options=options,
+            format_func=lambda answer:display_for(code,answer) or answer,
+            disabled=declined,key=f"sd_value_{code}",
+        )
+    return value,declined
