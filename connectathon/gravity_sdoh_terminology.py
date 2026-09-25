@@ -80,3 +80,6 @@ DOMAIN_DISPLAY={
 }
 
 HVS_Q1_TEXT="Within the past 12 months we worried whether our food would run out before we got money "
+
+HVS_Q1_TEXT += "to buy more"
+HVS_Q2_TEXT = "Within the past 12 months the food we bought just didn't last and we didn't have money to get more"
