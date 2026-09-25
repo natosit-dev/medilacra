@@ -78,3 +78,5 @@ DOMAIN_DISPLAY={
     "social-connection":"Social Connection",
     "stress":"Stress",
 }
+
+HVS_Q1_TEXT="Within the past 12 months we worried whether our food would run out before we got money "
