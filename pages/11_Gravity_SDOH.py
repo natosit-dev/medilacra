@@ -119,3 +119,63 @@ def _multi(code: str) -> tuple[list[str],bool]:
             disabled=declined,key=f"sd_value_{code}",
         )
     return value,declined
+
+st.divider()
+st.subheader("2. SDOH Baseline")
+
+st.markdown("#### Hunger Vital Sign")
+hvs1,hvs1_declined=_single(HVS_Q1)
+hvs2,hvs2_declined=_single(HVS_Q2)
+live_declined={code for code,flag in ((HVS_Q1,hvs1_declined),(HVS_Q2,hvs2_declined)) if flag}
+live_risk=derive_hvs_risk({HVS_Q1:hvs1,HVS_Q2:hvs2},live_declined)
+if live_risk:
+    st.info(f"Food insecurity risk — **{display_for(HVS_RISK,live_risk)}** (computed)")
+else:
+    st.caption("Food insecurity risk — not computed until the available answers support a result.")
+
+st.markdown("#### Housing")
+housing,housing_declined=_single(HOUSING)
+housing_worry,housing_worry_declined=_single(HOUSING_WORRY)
+
+st.markdown("#### Money and resources")
+material,material_declined=_multi(MATERIAL_NEEDS)
+transport,transport_declined=_multi(TRANSPORT)
+
+st.markdown("#### Social and emotional health")
+social,social_declined=_single(SOCIAL)
+stress,stress_declined=_single(STRESS)
+
+st.divider()
+submit=st.button("Submit assessment",type="primary",use_container_width=True)
+
+if submit:
+    declined={
+        code for code,flag in (
+            (HVS_Q1,hvs1_declined),(HVS_Q2,hvs2_declined),
+            (HOUSING,housing_declined),(HOUSING_WORRY,housing_worry_declined),
+            (MATERIAL_NEEDS,material_declined),(TRANSPORT,transport_declined),
+            (SOCIAL,social_declined),(STRESS,stress_declined),
+        ) if flag
+    }
+    raw_input={
+        HVS_Q1:hvs1,HVS_Q2:hvs2,HOUSING:housing,
+        HOUSING_WORRY:housing_worry,MATERIAL_NEEDS:material,
+        TRANSPORT:transport,SOCIAL:social,STRESS:stress,
+    }
+    response=build_questionnaire_response(selected_patient_id,raw_input,declined=declined)
+    bundle,cleanup=build_submission_bundle(patient,response)
+    hl7v2=build_sdoh_oru(patient,response)
+    quality=sdoh_quality_gate(bundle)
+    save_questionnaire_response(response,raw_input,bundle=bundle,db_path=db_path)
+    st.session_state.sd_last_result={
+        "questionnaire":build_questionnaire(),
+        "questionnaire_response":response,
+        "bundle":bundle,
+        "hl7v2":hl7v2,
+        "cleanup":cleanup,
+        "quality":quality,
+    }
+    if quality["status"]=="PASS":
+        st.success("SDOH baseline materialized. Semantic/conformance checks passed.")
+    else:
+        st.warning("Assessment was preserved, but one or more checks failed.")
