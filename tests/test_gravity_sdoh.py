@@ -60,3 +60,55 @@ def _category_pairs(observation):
         for category in observation.get("category",[])
         for coding in category.get("coding",[])
     }
+
+def test_questionnaire_freezes_hvs_and_prapare_basics():
+    q=build_questionnaire()
+    items=_question_items(q)
+    assert q["resourceType"]=="Questionnaire"
+    assert q["version"]==QUESTIONNAIRE_VERSION
+    assert set(items)=={HVS_Q1,HVS_Q2,HVS_RISK,HOUSING,HOUSING_WORRY,MATERIAL_NEEDS,TRANSPORT,SOCIAL,STRESS}
+    assert items[HVS_RISK]["readOnly"] is True
+    assert items[MATERIAL_NEEDS]["repeats"] is True
+    assert items[TRANSPORT]["repeats"] is True
+    assert items[HVS_Q1]["code"][0]["system"]==LOINC
+
+def test_hvs_risk_is_computed_not_human_entered():
+    response,_,_=_bundle()
+    risk=answers_for(response,HVS_RISK)
+    assert risk[0]["valueCoding"]["code"]==HVS_RISK_AT_RISK
+
+    no_risk=dict(HAPPY)
+    no_risk[HVS_Q1]="LA28398-8"
+    no_risk[HVS_Q2]="LA28398-8"
+    response,_,_=_bundle(no_risk)
+    assert answers_for(response,HVS_RISK)[0]["valueCoding"]["code"]==HVS_RISK_NO_RISK
+
+    incomplete=dict(no_risk)
+    incomplete[HVS_Q2]=None
+    response,_,_=_bundle(incomplete)
+    assert answers_for(response,HVS_RISK)==[]
+
+def test_coded_refusal_is_distinct_from_explicit_decline():
+    raw=dict(HAPPY)
+    raw[HVS_Q1]="LA15775-2"
+    response,_,_=_bundle(raw)
+    answer=answers_for(response,HVS_Q1)[0]
+    assert answer["valueCoding"]["code"]=="LA15775-2"
+    assert answer_absent_reason(answer) is None
+
+    raw[HVS_Q1]=None
+    response,_,_=_bundle(raw,declined={HVS_Q1})
+    answer=answers_for(response,HVS_Q1)[0]
+    assert answer_absent_reason(answer)=="asked-declined"
+    assert "valueCoding" not in answer
+
+def test_multiselect_answers_survive_as_separate_observations():
+    response,bundle,_=_bundle()
+    assert [a["valueCoding"]["code"] for a in answers_for(response,MATERIAL_NEEDS)]==["LA30125-1","LA30124-4"]
+    observations=observations_by_loinc(bundle,MATERIAL_NEEDS)
+    assert len(observations)==2
+    values=[
+        obs["valueCodeableConcept"]["coding"][0]["code"]
+        for obs in observations
+    ]
+    assert values==["LA30125-1","LA30124-4"]
