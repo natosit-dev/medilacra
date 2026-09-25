@@ -56,10 +56,7 @@ def response_item(question_code: str, raw: Any, declined: bool=False) -> dict[st
 
 def derive_hvs_risk(raw_input: Mapping[str,Any], declined: set[str] | None=None) -> str | None:
     declined=declined or set()
-    if HVS_Q1 in declined or HVS_Q2 in declined:
-        source=[]
-    else:
-        source=[]
+    source=[]
     for question_code in (HVS_Q1,HVS_Q2):
         if question_code in declined:
             continue
