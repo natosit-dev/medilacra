@@ -26,3 +26,24 @@ HVS_OPTIONS=[
 HVS_RISK_OPTIONS=[("LA19952-3","At risk"),("LA19983-8","No risk")]
 AT_RISK_SOURCE_CODES={"LA28397-0","LA6729-3"}
 NEVER_CODE="LA28398-8"
+
+HOUSING_OPTIONS=[
+    ("LA30189-7","I have housing"),
+    ("LA30190-5","I do not have housing (staying with others, in a hotel, in a shelter, living outside on the street, on a beach, in a car, or in a park)"),
+    ("LA30122-8","I choose not to answer this question"),
+]
+YES_NO_DECLINE=[
+    ("LA33-6","Yes"),
+    ("LA32-8","No"),
+    ("LA30122-8","I choose not to answer this question"),
+]
+MATERIAL_OPTIONS=[
+    ("LA30125-1","Food"),
+    ("LA30126-9","Clothing"),
+    ("LA30124-4","Utilities"),
+    ("LA30127-7","Child care"),
+    ("LA30128-5","Medicine or Any Health Care (Medical, Dental, Mental Health, Vision)"),
+    ("LA30129-3","Phone"),
+    ("LA46-8","Other"),
+    ("LA30122-8","I choose not to answer this question"),
+]
