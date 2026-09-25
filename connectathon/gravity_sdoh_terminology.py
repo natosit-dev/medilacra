@@ -47,3 +47,34 @@ MATERIAL_OPTIONS=[
     ("LA46-8","Other"),
     ("LA30122-8","I choose not to answer this question"),
 ]
+
+TRANSPORT_OPTIONS=[
+    ("LA30133-5","Yes, it has kept me from medical appointments or from getting my medications"),
+    ("LA30134-3","Yes, it has kept me from non-medical meetings, appointments, work, or from getting things that I need"),
+    ("LA32-8","No"),
+    ("LA30257-2","Patient unable to respond"),
+]
+SOCIAL_OPTIONS=[
+    ("LA27722-0","Less than once a week"),
+    ("LA30130-1","1 or 2 times a week"),
+    ("LA30131-9","3 to 5 times a week"),
+    ("LA30132-7","5 or more times a week"),
+    ("LA30122-8","I choose not to answer this question"),
+]
+STRESS_OPTIONS=[
+    ("LA6568-5","Not at all"),
+    ("LA13863-8","A little bit"),
+    ("LA13909-9","Somewhat"),
+    ("LA13902-4","Quite a bit"),
+    ("LA13914-9","Very much"),
+    ("LA30122-8","I choose not to answer this question"),
+]
+DOMAIN_DISPLAY={
+    "food-insecurity":"Food Insecurity",
+    "housing-instability":"Housing Instability",
+    "homelessness":"Homelessness",
+    "material-hardship":"Material Hardship",
+    "transportation-insecurity":"Transportation Insecurity",
+    "social-connection":"Social Connection",
+    "stress":"Stress",
+}
