@@ -4,11 +4,12 @@ from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 
 from hl7_demo.generators import gen_patient, gen_encounter, gen_transaction, gen_observation
+from hl7_demo.coverage import assign_coverage_profile
 from hl7_demo.reports import load_reports
 from hl7_demo.messages import build_adt, build_oru, build_dft
 from storage_duckdb_entities import (
     init_db, upsert_patient, upsert_encounter, upsert_observation,
-    upsert_transaction, append_message, DEFAULT_DB_PATH
+    upsert_transaction, upsert_coverage_profile, append_message, DEFAULT_DB_PATH
 )
 
 def _derive_account_number(encounter_id: str) -> str:
@@ -60,8 +61,15 @@ def run_and_persist(n_patients: int,
     for _ in range(n_patients):
         # Generate entities
         p = gen_patient()
+        coverage = assign_coverage_profile(
+            p,
+            seed=seed,
+        )
         e = gen_encounter(p.patient_id)
-        t = gen_transaction(e.encounter_id)
+        t = gen_transaction(
+            e.encounter_id,
+            coverage_profile=coverage,
+        )
         report_row = reports.sample(n=1).iloc[0]
         o = gen_observation(e, report_row)
 
@@ -72,12 +80,16 @@ def run_and_persist(n_patients: int,
 
         # Persist
         upsert_patient(prow, db_path=db_path)
+        upsert_coverage_profile(
+            coverage.__dict__ if hasattr(coverage, "__dict__") else dict(coverage),
+            db_path=db_path,
+        )
         upsert_encounter(erow, db_path=db_path)
         upsert_transaction(t.__dict__ if hasattr(t, "__dict__") else dict(t), db_path=db_path)
         upsert_observation(orow, db_path=db_path)
 
         # Build messages
-        adt = build_adt(p, e, miles=miles, obs=o)
+        adt = build_adt(p, e, tx=t, miles=miles, obs=o)
         oru = build_oru(p, e, [o])
         dft = build_dft(p, e, [t], [o])
 
