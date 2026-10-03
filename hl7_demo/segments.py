@@ -30,7 +30,7 @@ logger = get_logger(
 
 # --- Models & utilities --------------------------------------------------
 
-from .models import Patient, Encounter, Observation, Transaction
+from .models import Patient, Encounter, Observation, Transaction, CoverageProfile
 from .utils import (
     ts_hl7,
     hl7_name_from_full,
@@ -832,110 +832,139 @@ def seg_gt1(
 
 
 # =========================================================================
-# IN1 - Insurance
+# IN1 / IN2 - Insurance and employer context
 # =========================================================================
+
+
+def _hl7_date(value: str) -> str:
+    """Convert an ISO-like date string to HL7 YYYYMMDD when possible."""
+    if not value:
+        return ""
+
+    return str(value).replace("-", "")[:8]
 
 
 def seg_in1(
     tx: Transaction,
     *,
+    patient: Patient | None = None,
+    coverage_profile: CoverageProfile | None = None,
     set_id: int = 1,
 ) -> str:
     """
-    Build a basic IN1 Insurance segment.
+    Build an IN1 Insurance segment.
 
-    Currently populated:
+    CoverageProfile is authoritative when supplied. The Transaction fallback
+    remains for older callers that have not yet adopted CoverageProfile.
+
+    Coverage-enabled fields:
 
     IN1-1   Set ID
     IN1-2   Insurance Plan ID
+    IN1-3   Insurance Company ID
+    IN1-4   Insurance Company Name
     IN1-8   Group Number
-    IN1-14  Authorization Information
+    IN1-11  Insured's Group Employer Name
+    IN1-12  Plan Effective Date
+    IN1-13  Plan Expiration Date
     IN1-15  Plan Type
+    IN1-16  Name of Insured
     IN1-17  Insured's Relationship to Patient
     IN1-49  Insured's ID Number
 
-    MediLacra currently stores insurance plan information directly on
-    the Transaction rather than using a separate Coverage entity.
+    IN1-14 Authorization Information is intentionally left blank in this MVP.
+    Prior authorization belongs to a later AuthorizationCase workflow.
     """
     try:
-        # Allocate through IN1-49.
         fields = [""] * 50
 
         # IN1-1 Set ID
-        fields[1] = str(
-            set_id
+        fields[1] = str(set_id)
+
+        plan_id = (
+            coverage_profile.plan_id
+            if coverage_profile is not None
+            else getattr(tx, "insurance_plan_id", "")
+        )
+        plan_name = (
+            coverage_profile.plan_name
+            if coverage_profile is not None
+            else getattr(tx, "insurance_plan_name", "")
+        )
+        plan_type = (
+            coverage_profile.plan_type
+            if coverage_profile is not None
+            else getattr(tx, "plan_type", "")
+        )
+        group_number = (
+            coverage_profile.group_number
+            if coverage_profile is not None
+            else getattr(tx, "group_number", "")
+        )
+        member_id = (
+            coverage_profile.member_id
+            if coverage_profile is not None
+            else getattr(tx, "member_id", "")
+        )
+        subscriber_relationship = (
+            coverage_profile.subscriber_relationship
+            if coverage_profile is not None
+            else getattr(tx, "subscriber_relationship", "")
         )
 
         # IN1-2 Insurance Plan ID
-        #
-        # Keep the human-readable plan name alongside the synthetic
-        # plan identifier.
         fields[2] = _ce(
-            getattr(
-                tx,
-                "insurance_plan_id",
-                "",
-            ),
-            getattr(
-                tx,
-                "insurance_plan_name",
-                "",
-            ),
+            str(plan_id),
+            str(plan_name),
             "L",
         )
 
-        # IN1-8 Group Number
-        fields[8] = str(
-            getattr(
-                tx,
-                "group_number",
-                "",
+        if coverage_profile is not None:
+            # IN1-3 Insurance Company ID
+            fields[3] = str(
+                coverage_profile.payer_id
             )
-        )
 
-        # IN1-14 Authorization Information
-        #
-        # AUI components:
-        #   Authorization Number ^ Date ^ Source
-        #
-        # MediLacra currently only models the authorization number.
-        fields[14] = str(
-            getattr(
-                tx,
-                "authorization_number",
-                "",
+            # IN1-4 Insurance Company Name
+            fields[4] = hl7_escape(
+                str(coverage_profile.payer_name)
             )
-        )
+
+        # IN1-8 Group Number
+        fields[8] = str(group_number)
+
+        if coverage_profile is not None:
+            # IN1-11 Insured's Group Employer Name
+            fields[11] = hl7_escape(
+                str(coverage_profile.employer_name)
+            )
+
+            # IN1-12 / IN1-13 Plan dates
+            fields[12] = _hl7_date(
+                coverage_profile.effective_start
+            )
+            fields[13] = _hl7_date(
+                coverage_profile.effective_end
+            )
+
+        # IN1-14 intentionally blank.
 
         # IN1-15 Plan Type
-        fields[15] = str(
-            getattr(
-                tx,
-                "plan_type",
-                "",
+        fields[15] = str(plan_type)
+
+        # IN1-16 Name of Insured
+        if patient is not None:
+            fields[16] = hl7_name_from_display(
+                patient.patient_name
             )
-        )
 
         # IN1-17 Insured's Relationship to Patient
         fields[17] = _relationship_ce(
-            getattr(
-                tx,
-                "subscriber_relationship",
-                "",
-            )
+            str(subscriber_relationship)
         )
 
         # IN1-49 Insured's ID Number
-        #
-        # member_id is currently MediLacra's canonical identifier
-        # for the insured/member.
-        fields[49] = str(
-            getattr(
-                tx,
-                "member_id",
-                "",
-            )
-        )
+        fields[49] = str(member_id)
 
         in1 = (
             "IN1|"
@@ -946,26 +975,15 @@ def seg_in1(
             "IN1 built",
             extra={
                 "extra": {
-                    "insurance_plan_id": getattr(
-                        tx,
-                        "insurance_plan_id",
-                        None,
+                    "insurance_plan_id": plan_id,
+                    "insurance_plan_name": plan_name,
+                    "payer_id": (
+                        coverage_profile.payer_id
+                        if coverage_profile is not None
+                        else None
                     ),
-                    "insurance_plan_name": getattr(
-                        tx,
-                        "insurance_plan_name",
-                        None,
-                    ),
-                    "group_number": getattr(
-                        tx,
-                        "group_number",
-                        None,
-                    ),
-                    "plan_type": getattr(
-                        tx,
-                        "plan_type",
-                        None,
-                    ),
+                    "group_number": group_number,
+                    "plan_type": plan_type,
                 }
             },
         )
@@ -975,6 +993,60 @@ def seg_in1(
     except Exception as e:
         logger.error(
             "Error building IN1",
+            extra={
+                "extra": {
+                    "error": str(e),
+                }
+            },
+        )
+        raise
+
+
+def seg_in2(
+    coverage_profile: CoverageProfile,
+) -> str:
+    """
+    Build the minimal IN2 segment needed for employer projection.
+
+    IN2-3 is intentionally used for the insured employer despite its
+    person-shaped XCN datatype. The corporate employer is projected as:
+
+        employer_id ^ employer_name
+
+    This preserves the deliberately visible "corporation as person" shape
+    chosen for the experiment instead of hiding it behind an organization-
+    specific abstraction.
+    """
+    try:
+        # Allocate through IN2-3.
+        fields = [""] * 4
+
+        # IN2-3 Insured's Employer's Name and ID
+        fields[3] = (
+            f"{hl7_escape(str(coverage_profile.employer_id))}^"
+            f"{hl7_escape(str(coverage_profile.employer_name))}"
+        )
+
+        in2 = (
+            "IN2|"
+            + "|".join(fields[1:])
+        )
+
+        logger.info(
+            "IN2 built",
+            extra={
+                "extra": {
+                    "employer_id": coverage_profile.employer_id,
+                    "employer_name": coverage_profile.employer_name,
+                }
+            },
+        )
+
+        return in2
+
+    except Exception as e:
+        logger.error(
+            "Error building IN2",
             extra={
                 "extra": {
                     "error": str(e),
