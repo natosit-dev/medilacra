@@ -52,7 +52,7 @@ def build_demo():
         language="English",
         employer="UNASSIGNED",
         ssn="111-22-3333",
-        address="214 Market St",
+        address="MEDILACRA TEST ADDRESS 0001",
         phone="978-555-0142",
         email="jamie.rivera@example.invalid",
         zip_code="01852",
@@ -98,11 +98,6 @@ def build_demo():
         coverage_profile=coverage,
     )
 
-    # Make guarantor interpretation obvious in the demo while leaving all
-    # coverage fields exactly as projected from CoverageProfile.
-    transaction.guarantor_name = patient.patient_name
-    transaction.guarantor_relationship = "SELF"
-
     reality = {
         "seed": SEED,
         "patient": {
@@ -142,7 +137,12 @@ def build_demo():
             seg_evn(encounter, "A01"),
             seg_pid(patient),
             seg_pv1(encounter),
-            seg_gt1(transaction, set_id=1),
+            seg_gt1(
+                transaction,
+                patient=patient,
+                coverage_profile=coverage,
+                set_id=1,
+            ),
             seg_in1(
                 transaction,
                 patient=patient,
