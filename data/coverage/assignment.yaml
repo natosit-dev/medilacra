@@ -1,0 +1,24 @@
+version: 0.1
+
+assignment:
+  employer:
+    strategy: uniform
+
+  payer:
+    strategy: uniform
+
+  plan:
+    strategy: uniform
+
+  defaults:
+    worker_profile: DEFAULT_FULL_TIME_EMPLOYEE
+    subscriber_relationship: SELF
+
+  generated_identifiers:
+    member_id_prefix: MEM
+    group_number_prefix: GRP
+    policy_number_prefix: POL
+
+  effective_period:
+    start_date: "2026-01-01"
+    end_date: "2026-12-31"
