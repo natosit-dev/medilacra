@@ -1,0 +1,18 @@
+version: 0.1
+scope: synthetic_mvp_plan_primitives
+note: >
+  These are the only two plans used by MVP generation. They are deliberately
+  payer-agnostic synthetic primitives and are not claims about real products.
+
+plans:
+  STANDARD_PPO:
+    name: Standard PPO
+    plan_type: PPO
+    provenance:
+      status: synthetic
+
+  STANDARD_HMO:
+    name: Standard HMO
+    plan_type: HMO
+    provenance:
+      status: synthetic
