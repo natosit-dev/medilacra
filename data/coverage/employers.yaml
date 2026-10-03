@@ -1,0 +1,157 @@
+version: 0.1
+scope: large_us_employer_fixtures
+selection_note: >
+  This is an intentionally legible MVP fixture set of large U.S. employers,
+  not a canonical ranked top-10 table. Starbucks replaces Berkshire Hathaway
+  to make the business type easier to understand in demonstrations.
+
+employers:
+  WALMART:
+    name: Walmart Inc.
+    display_name: Walmart
+    business_type: general_retail
+    workforce:
+      us_employee_count: 1600000
+      count_type: approximate_reported
+      selection_weight: 1.0
+    hl7:
+      employer_name_field: IN2-3
+    provenance:
+      status: researched
+      as_of: 2026
+      source: https://stock.walmart.com/financials/annual-reports-and-proxies/default.aspx
+
+  AMAZON:
+    name: Amazon.com, Inc.
+    display_name: Amazon
+    business_type: ecommerce_logistics_technology
+    workforce:
+      us_employee_count: 1000000
+      count_type: approximate_lower_bound
+      selection_weight: 1.0
+    hl7:
+      employer_name_field: IN2-3
+    provenance:
+      status: researched
+      as_of: 2025
+      source: https://www.aboutamazon.com/news/job-creation-and-investment/amazon-economic-impact-report-2025
+
+  HOME_DEPOT:
+    name: The Home Depot, Inc.
+    display_name: Home Depot
+    business_type: home_improvement_retail
+    workforce:
+      us_employee_count: 422500
+      count_type: approximate_reported
+      selection_weight: 1.0
+    hl7:
+      employer_name_field: IN2-3
+    provenance:
+      status: researched
+      as_of: 2025
+      source: https://ir.homedepot.com/financial-reports/annual-reports
+
+  TARGET:
+    name: Target Corporation
+    display_name: Target
+    business_type: general_retail
+    workforce:
+      us_employee_count: 415000
+      count_type: approximate_reported
+      selection_weight: 1.0
+    hl7:
+      employer_name_field: IN2-3
+    provenance:
+      status: researched
+      as_of: 2026
+      source: https://corporate.target.com/investors/annual-reports-and-proxy-information
+
+  KROGER:
+    name: The Kroger Co.
+    display_name: Kroger
+    business_type: grocery_retail
+    workforce:
+      us_employee_count: 403000
+      count_type: approximate_reported
+      selection_weight: 1.0
+    hl7:
+      employer_name_field: IN2-3
+    provenance:
+      status: researched
+      as_of: 2026
+      source: https://ir.kroger.com/financials/annual-reports/default.aspx
+
+  FEDEX:
+    name: FedEx Corporation
+    display_name: FedEx
+    business_type: transportation_logistics
+    workforce:
+      us_employee_count: 375000
+      count_type: approximate_reported
+      selection_weight: 1.0
+    hl7:
+      employer_name_field: IN2-3
+    provenance:
+      status: researched
+      as_of: 2025
+      source: https://investors.fedex.com/financial-information/annual-reports/default.aspx
+
+  UPS:
+    name: United Parcel Service, Inc.
+    display_name: UPS
+    business_type: transportation_logistics
+    workforce:
+      us_employee_count: 370000
+      count_type: approximate_reported
+      selection_weight: 1.0
+    hl7:
+      employer_name_field: IN2-3
+    provenance:
+      status: researched
+      as_of: 2025
+      source: https://investors.ups.com/financials/sec-filings/default.aspx
+
+  HCA:
+    name: HCA Healthcare, Inc.
+    display_name: HCA Healthcare
+    business_type: health_system
+    workforce:
+      us_employee_count: 320000
+      count_type: approximate_reported
+      selection_weight: 1.0
+    hl7:
+      employer_name_field: IN2-3
+    provenance:
+      status: researched
+      as_of: 2025
+      source: https://investor.hcahealthcare.com/financials/sec-filings/default.aspx
+
+  CVS:
+    name: CVS Health Corporation
+    display_name: CVS Health
+    business_type: pharmacy_healthcare_insurance
+    workforce:
+      us_employee_count: 300000
+      count_type: approximate_lower_bound
+      selection_weight: 1.0
+    hl7:
+      employer_name_field: IN2-3
+    provenance:
+      status: researched
+      as_of: 2025
+      source: https://investors.cvshealth.com/financial-information/sec-filings/default.aspx
+
+  STARBUCKS:
+    name: Starbucks Corporation
+    display_name: Starbucks
+    business_type: food_service_retail
+    workforce:
+      us_employee_count: 223000
+      count_type: approximate_reported
+      selection_weight: 1.0
+    hl7:
+      employer_name_field: IN2-3
+    provenance:
+      status: researched
+      as_of: 2025
+      source: https://investor.starbucks.com/financial-data/annual-reports/default.aspx
