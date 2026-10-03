@@ -22,11 +22,16 @@ logger = get_logger(name="MediLacra", context={"component": "pipeline"})
 # -----------------------------
 try:
     from hl7_demo.generators import gen_patient, gen_encounter, gen_transaction, gen_observation
+    from hl7_demo.coverage import assign_coverage_profile
     from hl7_demo.reports import load_reports
     from hl7_demo.messages import build_adt, build_oru, build_dft, build_orm_labs, build_oru_labs
 except ModuleNotFoundError:
     try:
         from generators import gen_patient, gen_encounter, gen_transaction, gen_observation
+        try:
+            from coverage import assign_coverage_profile  # type: ignore
+        except Exception:
+            from .coverage import assign_coverage_profile  # type: ignore
         from reports import load_reports
         # Prefer local import if present; fall back to relative (package) import
         try:
@@ -45,6 +50,7 @@ try:
     from storage_duckdb_entities import (
         init_db as duck_init,
         upsert_patient, upsert_encounter, upsert_observation, upsert_transaction,
+        upsert_coverage_profile,
         append_message as duck_append_message,
         DEFAULT_DB_PATH as DUCK_DEFAULT_DB_PATH,
     )
@@ -193,15 +199,26 @@ def run_pipeline(
         try:
             # ---- Generate synthetic entities (one patient/encounter set)
             p = gen_patient()
+            coverage = assign_coverage_profile(
+                p,
+                seed=seed,
+            )
             e = gen_encounter(p.patient_id, profile=scenario_profile)
-            t = gen_transaction(e.encounter_id)
+            t = gen_transaction(
+                e.encounter_id,
+                coverage_profile=coverage,
+            )
             report_row = reports.sample(n=1).iloc[0]
             o = gen_observation(e, report_row)
 
             logger.info("Entities generated", extra={"extra": {
                 "i": idx + 1,
                 "patient_id": getattr(p, "patient_id", None),
-                "encounter_id": getattr(e, "encounter_id", None)
+                "encounter_id": getattr(e, "encounter_id", None),
+                "coverage_profile_id": getattr(coverage, "coverage_profile_id", None),
+                "employer_id": getattr(coverage, "employer_id", None),
+                "payer_id": getattr(coverage, "payer_id", None),
+                "plan_id": getattr(coverage, "plan_id", None)
             }})
 
             # ---- Persist entities (DuckDB only)
@@ -209,6 +226,7 @@ def run_pipeline(
                 try:
                     payload = lambda x: x.__dict__ if hasattr(x, "__dict__") else dict(x)
                     upsert_patient(payload(p), db_path=db_path)
+                    upsert_coverage_profile(payload(coverage), db_path=db_path)
                     upsert_encounter(payload(e), db_path=db_path)
                     upsert_transaction(payload(t), db_path=db_path)
                     upsert_observation(payload(o), db_path=db_path)
@@ -218,7 +236,7 @@ def run_pipeline(
 
             # ---- Build HL7 messages for this encounter
             adt = build_adt(
-                p, e, miles=miles, obs=o,
+                p, e, tx=t, miles=miles, obs=o,
                 add_places_obesity_obx=add_places_obesity_obx,
                 add_unemployment_obx=add_unemployment_obx
             )
