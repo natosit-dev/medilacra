@@ -9,8 +9,15 @@ coverage mapping is easy to inspect.
 from dataclasses import asdict
 import json
 import random
+import sys
+from pathlib import Path
 
 from faker import Faker
+
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from hl7_demo.coverage import assign_coverage_profile
 from hl7_demo.generators import gen_transaction
