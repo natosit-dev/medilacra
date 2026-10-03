@@ -29,7 +29,7 @@ logger.info("generators module loaded")
 
 # --- MediLacra imports ---------------------------------------------------
 
-from .models import Patient, Encounter, Transaction, Observation
+from .models import Patient, Encounter, Transaction, Observation, CoverageProfile
 from .utils import one_line
 from .refdata import sample_zip_city_state
 from utils.scenario_profile import compute_pv1_fields
@@ -503,21 +503,45 @@ def gen_encounter(
 # =========================================================================
 
 
-def gen_transaction(encounter_id: str) -> Transaction:
+def gen_transaction(
+    encounter_id: str,
+    coverage_profile: CoverageProfile | None = None,
+) -> Transaction:
     """
     Create one synthetic charge transaction linked to an encounter.
 
-    Insurance values are generated together so plan name and plan type
-    remain consistent.
+    When a CoverageProfile is supplied, insurance values are projected from
+    that already-established patient context. Without one, the legacy random
+    insurance behavior is retained for backward compatibility.
 
-    Guarantor and subscriber values are intentionally lightweight for now.
-    They can later be normalized into separate Coverage or Guarantor
-    entities if MediLacra needs a more complete financial model.
+    Authorization remains independent from CoverageProfile in this MVP.
     """
     try:
-        insurance_plan_name, plan_type = random.choice(
-            INSURANCE_PLANS
-        )
+        if coverage_profile is not None:
+            insurance_plan_id = coverage_profile.plan_id
+            insurance_plan_name = coverage_profile.plan_name
+            member_id = coverage_profile.member_id
+            group_number = coverage_profile.group_number
+            plan_type = coverage_profile.plan_type
+            subscriber_relationship = (
+                coverage_profile.subscriber_relationship
+            )
+        else:
+            insurance_plan_name, plan_type = random.choice(
+                INSURANCE_PLANS
+            )
+            insurance_plan_id = fake.unique.bothify(
+                "INS#######"
+            )
+            member_id = fake.unique.bothify(
+                "MEM########"
+            )
+            group_number = fake.bothify(
+                "GRP######"
+            )
+            subscriber_relationship = random.choice(
+                SUBSCRIBER_RELATIONSHIPS
+            )
 
         billing_provider_name = _provider_name()
         guarantor_name = _provider_name()
@@ -545,20 +569,12 @@ def gen_transaction(encounter_id: str) -> Transaction:
             ),
 
             # Insurance / coverage
-            insurance_plan_id=fake.unique.bothify(
-                "INS#######"
-            ),
+            insurance_plan_id=insurance_plan_id,
             insurance_plan_name=insurance_plan_name,
-            member_id=fake.unique.bothify(
-                "MEM########"
-            ),
-            group_number=fake.bothify(
-                "GRP######"
-            ),
+            member_id=member_id,
+            group_number=group_number,
             plan_type=plan_type,
-            subscriber_relationship=random.choice(
-                SUBSCRIBER_RELATIONSHIPS
-            ),
+            subscriber_relationship=subscriber_relationship,
             authorization_number=fake.bothify(
                 "AUTH########"
             ),
