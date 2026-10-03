@@ -2,6 +2,48 @@ from dataclasses import dataclass
 
 
 @dataclass
+class CoverageProfile:
+    # Coverage identity
+    coverage_profile_id: str
+    patient_id: str
+
+    # Employer
+    employer_id: str
+    employer_name: str
+
+    # Payer
+    payer_id: str
+    payer_name: str
+
+    # Synthetic MVP plan
+    plan_id: str
+    plan_name: str
+    plan_type: str
+
+    # Employment / subscriber context
+    worker_profile: str
+    subscriber_relationship: str
+
+    # Patient-specific coverage identifiers
+    member_id: str
+    group_number: str
+    policy_number: str
+
+    # Effective period
+    effective_start: str
+    effective_end: str
+
+    # Provenance
+    employer_provenance: str
+    payer_provenance: str
+    employer_payer_provenance: str
+    plan_provenance: str
+
+    # Deterministic assignment trace
+    assignment_seed: str
+
+
+@dataclass
 class Encounter:
     # Core encounter identifiers
     encounter_id: str
@@ -139,3 +181,7 @@ class Patient:
     zip_code: str
     city: str
     state: str
+
+    # Institutional context
+    # Populated by hl7_demo.coverage.assign_coverage_profile().
+    coverage_profile: CoverageProfile | None = None
