@@ -3,7 +3,7 @@
 **Version:** 0.1  
 **Date:** 2026-10-03  
 **Branch:** `experiment/employer-coverage`  
-**Status:** Implementation-ready  
+**Status:** Implemented / validated  
 **Parent build:** `docs/EMPLOYER_COVERAGE_BUILD_DESIGN_v0.1_2026-10-03.md`
 
 ---
@@ -333,3 +333,71 @@ The build is complete when:
 9. the deterministic coverage demo reflects the new behavior;
 10. focused GT1 tests pass;
 11. the complete repository regression suite passes.
+
+
+---
+
+# 11. Implementation Outcome
+
+Implemented on `experiment/employer-coverage`.
+
+Materialized changes:
+
+- `hl7_demo/segments.py`
+  - GT1 now accepts Patient and CoverageProfile.
+  - Coverage-aware GT1 uses the patient as self-guarantor.
+  - GT1-16, GT1-20, and GT1-29 project the CoverageProfile employer context.
+  - GT1-17, GT1-18, and GT1-19 remain intentionally blank.
+  - Legacy Transaction guarantor behavior remains available when CoverageProfile is absent.
+
+- `hl7_demo/messages.py`
+  - Added encounter-relative age calculation.
+  - Added the strict `age > 18` GT1 rule.
+  - Invalid/unparseable age suppresses GT1.
+  - ADT and DFT now apply the same age gate.
+  - IN1 and IN2 remain independent of the age gate.
+
+- `tests/test_gt1_employer_mvp.py`
+  - Added boundary, birthday, invalid-DOB, employer consistency, deferred-field, ADT, DFT, and minor-coverage tests.
+
+- `scripts/demo_employer_coverage.py`
+  - Removed manual guarantor overrides.
+  - Uses the coverage-aware GT1 builder.
+  - Replaced the hand-written plausible street address with `MEDILACRA TEST ADDRESS 0001`.
+
+- `.github/workflows/employer-coverage-ci.yml`
+  - Added the GT1 MVP suite to focused employer-coverage CI.
+
+## Validation
+
+Final CI result:
+
+```text
+Focused employer coverage + GT1 suite:
+31 passed
+
+Full repository regression:
+44 passed
+```
+
+The deterministic adult demo now emits matching employer reality:
+
+```text
+GT1|1||RIVERA^JAMIE||||||||SEL^Self^HL70063|||||The Home Depot, Inc.||||1|||||||||HOME_DEPOT
+IN1|1|STANDARD_HMO^Standard HMO^L|AETNA|Aetna||||GRP-HOME_DEPOT-554241|||The Home Depot, Inc.|20260101|20261231||HMO|RIVERA^JAMIE|SEL^Self^HL70063||||||||||||||||||||||||||||||||MEM-63576915
+IN2|||HOME_DEPOT^The Home Depot, Inc.
+```
+
+The invariant is now materialized:
+
+```text
+Patient.employer
+GT1 employer
+IN1 employer
+IN2 employer
+        |
+        v
+CoverageProfile
+```
+
+For patients age 18 or younger, GT1 is omitted while IN1 and IN2 coverage context remains available.
