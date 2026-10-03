@@ -66,6 +66,68 @@ from .generators import (
 AIRNOW_MILES_DEFAULT = 75
 
 
+def _patient_age_at_encounter(
+    patient: Patient,
+    encounter: Encounter,
+) -> int | None:
+    """
+    Return the patient's age on the encounter/admit date.
+
+    If either date cannot be interpreted as YYYY-MM-DD (optionally followed
+    by time), return None so callers can avoid inventing an adult guarantor
+    relationship.
+    """
+    try:
+        dob = datetime.strptime(
+            str(patient.date_of_birth)[:10],
+            "%Y-%m-%d",
+        ).date()
+
+        encounter_date = datetime.strptime(
+            str(encounter.admit_datetime)[:10],
+            "%Y-%m-%d",
+        ).date()
+
+        return (
+            encounter_date.year
+            - dob.year
+            - (
+                (
+                    encounter_date.month,
+                    encounter_date.day,
+                )
+                < (
+                    dob.month,
+                    dob.day,
+                )
+            )
+        )
+
+    except (TypeError, ValueError):
+        return None
+
+
+def _should_emit_gt1(
+    patient: Patient,
+    encounter: Encounter,
+) -> bool:
+    """
+    GT1 MVP rule: only emit for patients strictly older than 18.
+
+    Age 18 or younger, or an unparseable age, produces no GT1 because
+    family/dependent guarantor relationships are intentionally out of scope.
+    """
+    age = _patient_age_at_encounter(
+        patient,
+        encounter,
+    )
+
+    return (
+        age is not None
+        and age > 18
+    )
+
+
 # =========================================================================
 # ADT^A01
 # =========================================================================
@@ -101,7 +163,7 @@ def build_adt(
         PV1
         OBX  SDOH / vitals / Gender Harmony
         DG1  admitting diagnosis
-        GT1  guarantor, when transaction data is available
+        GT1  self-guarantor/employer, for patients >18 when transaction data is available
         IN1  insurance, when transaction data is available
 
     Transaction is optional so existing callers can still build an ADT
@@ -372,18 +434,24 @@ def build_adt(
     # Transaction is optional to keep build_adt backward compatible.
 
     if tx is not None:
-        parts.append(
-            seg_gt1(
-                tx,
-                set_id=1,
-            )
-        )
-
         coverage_profile = getattr(
             p,
             "coverage_profile",
             None,
         )
+
+        if _should_emit_gt1(
+            p,
+            enc,
+        ):
+            parts.append(
+                seg_gt1(
+                    tx,
+                    patient=p,
+                    coverage_profile=coverage_profile,
+                    set_id=1,
+                )
+            )
 
         parts.append(
             seg_in1(
@@ -503,7 +571,7 @@ def build_dft(
         PV1
         FT1...
         DG1...
-        GT1
+        GT1  (only when patient age >18)
         IN1
 
     DFT requires an EVN segment in HL7 v2.5.
@@ -598,18 +666,24 @@ def build_dft(
     if txs:
         primary_transaction = txs[0]
 
-        parts.append(
-            seg_gt1(
-                primary_transaction,
-                set_id=1,
-            )
-        )
-
         coverage_profile = getattr(
             p,
             "coverage_profile",
             None,
         )
+
+        if _should_emit_gt1(
+            p,
+            enc,
+        ):
+            parts.append(
+                seg_gt1(
+                    primary_transaction,
+                    patient=p,
+                    coverage_profile=coverage_profile,
+                    set_id=1,
+                )
+            )
 
         parts.append(
             seg_in1(
