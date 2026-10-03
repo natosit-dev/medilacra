@@ -1,0 +1,92 @@
+version: 0.1
+scope: payer_brand_fixtures
+documentation_note: >
+  The payer records are brand-level MVP fixtures. Actual legal underwriting
+  entities and products vary by state, employer, funding arrangement, and
+  product. actual_plan_references are documentation for later expansion only
+  and MUST NOT be consumed by MVP assignment logic.
+
+payers:
+  UHC:
+    name: UnitedHealthcare
+    hl7:
+      insurance_company_id: UHC
+      insurance_company_name: UnitedHealthcare
+    provenance:
+      status: researched
+      source: https://uhc.com/
+    actual_plan_references:
+      status: documented_for_future_use
+      plans:
+        - name: UnitedHealthcare Choice Plus
+          source: https://uhc-gpd-green.uhc.com/employer/products-solutions/medical-plans
+        - name: UnitedHealthcare Navigate
+          source: https://uhc-gpd-green.uhc.com/employer/products-solutions/medical-plans
+
+  AETNA:
+    name: Aetna
+    hl7:
+      insurance_company_id: AETNA
+      insurance_company_name: Aetna
+    provenance:
+      status: researched
+      source: https://www.aetna.com/
+    actual_plan_references:
+      status: documented_for_future_use
+      plans:
+        - name: Aetna Open Choice PPO
+          source: https://www.aetna.com/health-insurance-plans/ppo.html
+        - name: Aetna HMO
+          source: https://www.aetna.com/health-insurance-plans/hmo.html
+
+  CIGNA:
+    name: Cigna Healthcare
+    hl7:
+      insurance_company_id: CIGNA
+      insurance_company_name: Cigna Healthcare
+    provenance:
+      status: researched
+      source: https://www.cigna.com/employers/medical-plans
+    actual_plan_references:
+      status: documented_for_future_use
+      plans:
+        - name: Cigna Open Access Plus
+          source: https://www.cigna.com/employers/medical-plans/oap
+        - name: Cigna Preferred Provider Organization
+          source: https://www.cigna.com/employers/medical-plans/ppo
+
+  KAISER:
+    name: Kaiser Permanente
+    hl7:
+      insurance_company_id: KAISER
+      insurance_company_name: Kaiser Permanente
+    provenance:
+      status: researched
+      source: https://healthy.kaiserpermanente.org/
+    actual_plan_references:
+      status: documented_for_future_use
+      plans:
+        - name: Traditional HMO Employee Plan
+          source: https://healthy.kaiserpermanente.org/southern-california/shop-plans/employee-plans
+        - name: Deductible HMO Plan
+          source: https://healthy.kaiserpermanente.org/northern-california/shop-plans/employee-plans/deductible-hmo-plan
+
+  BCBS:
+    name: Blue Cross Blue Shield
+    hl7:
+      insurance_company_id: BCBS
+      insurance_company_name: Blue Cross Blue Shield
+    provenance:
+      status: researched
+      source: https://www.bcbs.com/explore-affordable-health-plans/employer-health-insurance
+    actual_plan_references:
+      status: documented_for_future_use
+      scope_note: >
+        BCBS is a federation of local Blue companies, so products vary by
+        geography. These two examples are documented BCBS Massachusetts
+        employer plan names, retained only as future reference examples.
+      plans:
+        - name: Blue Care Elect Saver - Choice (PPO)
+          source: https://www.bluecrossma.org/
+        - name: Network Blue New England Deductible (HMO)
+          source: https://www.bluecrossma.org/
