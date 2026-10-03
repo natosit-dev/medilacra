@@ -139,7 +139,7 @@ def hl7_name_from_full(display_name: str) -> str:
 
 
 def hl7_escape(value: Optional[str]) -> str:
-    """
+    r"""
     Escape HL7 special characters in a value per v2 encoding rules.
     Mapping (unchanged):
       \  -> \\E\\
