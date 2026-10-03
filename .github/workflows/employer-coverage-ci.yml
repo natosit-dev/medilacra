@@ -9,6 +9,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
     steps:
       - name: Check out branch
         uses: actions/checkout@v4
@@ -24,5 +25,13 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
 
-      - name: Run tests
+      - name: Run employer coverage pytest suite
+        run: |
+          pytest -q \
+            tests/test_coverage.py \
+            tests/test_coverage_contracts.py \
+            tests/test_coverage_storage.py \
+            tests/test_coverage_pipeline_integration.py
+
+      - name: Run full regression suite
         run: pytest -q
