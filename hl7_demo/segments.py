@@ -748,53 +748,112 @@ def seg_pv1(enc: Encounter) -> str:
 # =========================================================================
 
 
+_GT1_EMPLOYMENT_STATUS_BY_WORKER_PROFILE = {
+    # HL7 table 0066: 1 = Full time employed.
+    "DEFAULT_FULL_TIME_EMPLOYEE": "1",
+}
+
+
 def seg_gt1(
     tx: Transaction,
     *,
+    patient: Patient | None = None,
+    coverage_profile: CoverageProfile | None = None,
     set_id: int = 1,
 ) -> str:
     """
-    Build a basic GT1 Guarantor segment.
+    Build a GT1 Guarantor segment.
 
-    Currently populated:
+    Coverage-aware adult path:
 
     GT1-1   Set ID
     GT1-3   Guarantor Name
     GT1-11  Guarantor Relationship
+    GT1-16  Guarantor Employer Name
+    GT1-20  Employment Status
+    GT1-29  Guarantor Employer ID
 
-    The MediLacra Transaction currently contains only guarantor name
-    and relationship, so the segment intentionally remains simple.
+    When Patient and CoverageProfile are supplied, the patient is treated as
+    the self-guarantor and employer values are projected from CoverageProfile.
+    The message builder is responsible for applying the >18 age gate.
+
+    When CoverageProfile is absent, the legacy Transaction guarantor fields
+    remain available for backward compatibility.
     """
     try:
-        fields = [""] * 12
+        # Allocate through GT1-29.
+        fields = [""] * 30
 
         # GT1-1 Set ID
         fields[1] = str(
             set_id
         )
 
-        # GT1-3 Guarantor Name
-        guarantor_name = getattr(
-            tx,
-            "guarantor_name",
-            "",
-        )
+        if patient is not None and coverage_profile is not None:
+            # GT1-3 Guarantor Name
+            fields[3] = hl7_name_from_display(
+                patient.patient_name
+            )
 
-        if guarantor_name:
-            fields[3] = (
-                hl7_name_from_display(
-                    guarantor_name
+            # GT1-11 Guarantor Relationship
+            fields[11] = _relationship_ce(
+                "SELF"
+            )
+
+            # GT1-16 Guarantor Employer Name
+            fields[16] = hl7_escape(
+                str(
+                    coverage_profile.employer_name
                 )
             )
 
-        # GT1-11 Guarantor Relationship
-        fields[11] = _relationship_ce(
-            getattr(
+            # GT1-17 Employer Address intentionally blank.
+            # GT1-18 Employer Phone Number intentionally blank.
+            # GT1-19 Employee ID intentionally blank.
+
+            # GT1-20 Employment Status
+            fields[20] = (
+                _GT1_EMPLOYMENT_STATUS_BY_WORKER_PROFILE.get(
+                    str(
+                        coverage_profile.worker_profile
+                    ),
+                    "",
+                )
+            )
+
+            # GT1-29 Guarantor Employer ID
+            fields[29] = hl7_escape(
+                str(
+                    coverage_profile.employer_id
+                )
+            )
+
+            guarantor_name = patient.patient_name
+            relationship = "SELF"
+
+        else:
+            guarantor_name = getattr(
+                tx,
+                "guarantor_name",
+                "",
+            )
+
+            if guarantor_name:
+                fields[3] = (
+                    hl7_name_from_display(
+                        guarantor_name
+                    )
+                )
+
+            relationship = getattr(
                 tx,
                 "guarantor_relationship",
                 "",
             )
-        )
+
+            fields[11] = _relationship_ce(
+                relationship
+            )
 
         gt1 = (
             "GT1|"
@@ -805,13 +864,16 @@ def seg_gt1(
             "GT1 built",
             extra={
                 "extra": {
-                    "guarantor_name": (
-                        guarantor_name
+                    "guarantor_name": guarantor_name,
+                    "relationship": relationship,
+                    "coverage_aware": (
+                        patient is not None
+                        and coverage_profile is not None
                     ),
-                    "relationship": getattr(
-                        tx,
-                        "guarantor_relationship",
-                        None,
+                    "employer_id": (
+                        coverage_profile.employer_id
+                        if coverage_profile is not None
+                        else None
                     ),
                 }
             },
