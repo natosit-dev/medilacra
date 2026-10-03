@@ -25,6 +25,7 @@ from .segments import (
     seg_dg1,
     seg_gt1,
     seg_in1,
+    seg_in2,
     seg_obx_gender_identity,
     seg_obx_pronouns,
     seg_obx_spcu,
@@ -378,12 +379,27 @@ def build_adt(
             )
         )
 
+        coverage_profile = getattr(
+            p,
+            "coverage_profile",
+            None,
+        )
+
         parts.append(
             seg_in1(
                 tx,
+                patient=p,
+                coverage_profile=coverage_profile,
                 set_id=1,
             )
         )
+
+        if coverage_profile is not None:
+            parts.append(
+                seg_in2(
+                    coverage_profile,
+                )
+            )
 
 
     return "\r".join(parts)
@@ -589,12 +605,27 @@ def build_dft(
             )
         )
 
+        coverage_profile = getattr(
+            p,
+            "coverage_profile",
+            None,
+        )
+
         parts.append(
             seg_in1(
                 primary_transaction,
+                patient=p,
+                coverage_profile=coverage_profile,
                 set_id=1,
             )
         )
+
+        if coverage_profile is not None:
+            parts.append(
+                seg_in2(
+                    coverage_profile,
+                )
+            )
 
 
     return "\r".join(parts)
