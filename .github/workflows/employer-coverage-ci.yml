@@ -32,7 +32,8 @@ jobs:
             tests/test_coverage_contracts.py \
             tests/test_coverage_storage.py \
             tests/test_coverage_pipeline_integration.py \
-            tests/test_gt1_employer_mvp.py
+            tests/test_gt1_employer_mvp.py \
+            tests/test_fhir_coverage_conversion.py
 
       - name: Run full regression suite
         run: pytest -q
