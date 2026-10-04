@@ -22,6 +22,18 @@ def get_field(fields: List[str], idx_1_based: int) -> str:
         return ""
     return fields[idx_1_based - 1]
 
+def get_msh_field(msh_fields: List[str], msh_idx: int) -> str:
+    """
+    Return true MSH-N from parsed MSH fields.
+
+    MSH-1 is the field separator itself, so after splitting on "|" the first
+    stored item is MSH-2. MSH therefore cannot use the generic field accessor.
+    """
+    adjusted = msh_idx - 2
+    if adjusted < 0 or adjusted >= len(msh_fields):
+        return ""
+    return msh_fields[adjusted]
+
 def comp(field: str, i: int) -> str:
     comps = field.split("^") if field else []
     return comps[i-1] if 0 <= i-1 < len(comps) else ""
@@ -91,13 +103,13 @@ def codeable_concept_from_ce(ce_field: str) -> Dict[str, Any]:
     return cc
 
 def build_message_header(msh_fields: List[str]) -> Dict[str, Any]:
-    ev = get_field(msh_fields, 9)
+    ev = get_msh_field(msh_fields, 9)
     ev_code = comp(ev, 1)
     ev_trigger = comp(ev, 2)
-    sending_app = get_field(msh_fields, 3)
-    sending_fac = get_field(msh_fields, 4)
-    receiving_app = get_field(msh_fields, 5)
-    receiving_fac = get_field(msh_fields, 6)
+    sending_app = get_msh_field(msh_fields, 3)
+    sending_fac = get_msh_field(msh_fields, 4)
+    receiving_app = get_msh_field(msh_fields, 5)
+    receiving_fac = get_msh_field(msh_fields, 6)
     return {
         "resourceType": "MessageHeader",
         "id": new_id("msg"),
@@ -181,6 +193,319 @@ def build_encounter_from_pv1(pv1_fields: List[str], patient_ref: str) -> Dict[st
     if extensions:
         encounter["extension"] = extensions
     return encounter
+
+FHIR_RESOURCE_ID_CHARS = set(
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-."
+)
+
+
+def _is_fhir_resource_id(value: str) -> bool:
+    return bool(value) and len(value) <= 64 and all(
+        ch in FHIR_RESOURCE_ID_CHARS for ch in value
+    )
+
+
+def _relationship_codeable_concept(relationship_field: str) -> Optional[Dict[str, Any]]:
+    """
+    Map the current self-subscriber relationship into FHIR Coverage.relationship.
+
+    Family/dependent relationships are intentionally deferred. Unknown values are
+    retained only as display text rather than guessed into a relationship code.
+    """
+    source_code = comp(relationship_field, 1).strip().upper()
+    source_text = comp(relationship_field, 2).strip()
+
+    if source_code in {"SEL", "SELF"}:
+        return {
+            "coding": [
+                {
+                    "system": "http://terminology.hl7.org/CodeSystem/subscriber-relationship",
+                    "code": "self",
+                    "display": "Self",
+                }
+            ]
+        }
+
+    if source_text:
+        return {"text": source_text}
+
+    if source_code:
+        return {"text": source_code}
+
+    return None
+
+
+def _distinct_nonempty(values: List[str]) -> List[str]:
+    seen = []
+    for value in values:
+        normalized = (value or "").strip()
+        if normalized and normalized not in seen:
+            seen.append(normalized)
+    return seen
+
+
+def extract_coverage_context(parsed: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """
+    Coalesce GT1 + IN1 + IN2 into one normalized coverage context.
+
+    IN1 is the minimum source requirement for this MVP. IN2 and GT1 provide
+    employer identity and corroborating evidence. Deterministic precedence:
+      employer id   IN2-3.1 -> GT1-29
+      employer name IN2-3.2 -> IN1-11 -> GT1-16
+    """
+    if not parsed.get("IN1"):
+        return None
+
+    in1 = parsed["IN1"][0]["_fields"]
+    gt1 = parsed["GT1"][0]["_fields"] if parsed.get("GT1") else None
+    in2 = parsed["IN2"][0]["_fields"] if parsed.get("IN2") else None
+
+    in2_employer = get_field(in2, 3) if in2 else ""
+    in2_employer_id = comp(in2_employer, 1).strip()
+    in2_employer_name = comp(in2_employer, 2).strip()
+
+    gt1_employer_id = get_field(gt1, 29).strip() if gt1 else ""
+    gt1_employer_name = get_field(gt1, 16).strip() if gt1 else ""
+    in1_employer_name = get_field(in1, 11).strip()
+
+    employer_id = in2_employer_id or gt1_employer_id
+    employer_name = (
+        in2_employer_name
+        or in1_employer_name
+        or gt1_employer_name
+    )
+
+    employer_ids = _distinct_nonempty([
+        in2_employer_id,
+        gt1_employer_id,
+    ])
+    employer_names = _distinct_nonempty([
+        in2_employer_name,
+        in1_employer_name,
+        gt1_employer_name,
+    ])
+
+    conflicts = []
+    if len(employer_ids) > 1:
+        conflicts.append("employer_id")
+    if len(employer_names) > 1:
+        conflicts.append("employer_name")
+
+    plan = get_field(in1, 2)
+    relationship = get_field(in1, 17)
+
+    return {
+        "employer_id": employer_id,
+        "employer_name": employer_name,
+        "payer_id": get_field(in1, 3).strip(),
+        "payer_name": get_field(in1, 4).strip(),
+        "plan_id": comp(plan, 1).strip(),
+        "plan_name": comp(plan, 2).strip(),
+        "plan_type": get_field(in1, 15).strip(),
+        "group_number": get_field(in1, 8).strip(),
+        "member_id": get_field(in1, 49).strip(),
+        "effective_start": get_field(in1, 12).strip(),
+        "effective_end": get_field(in1, 13).strip(),
+        "subscriber_name": get_field(in1, 16).strip(),
+        "subscriber_relationship": relationship,
+        "patient_is_subscriber": (
+            comp(relationship, 1).strip().upper()
+            in {"SEL", "SELF"}
+        ),
+        # Recognized but deliberately not projected in this MVP.
+        "gt1_employment_status": (
+            get_field(gt1, 20).strip()
+            if gt1
+            else ""
+        ),
+        "conflicts": conflicts,
+    }
+
+
+def build_organization(
+    source_id: str,
+    name: str,
+    *,
+    role: str,
+) -> Optional[Dict[str, Any]]:
+    """Build an employer or payer Organization while preserving source identity."""
+    source_id = (source_id or "").strip()
+    name = (name or "").strip()
+
+    if not source_id and not name:
+        return None
+
+    organization: Dict[str, Any] = {
+        "resourceType": "Organization",
+        "id": new_id("org"),
+    }
+
+    if source_id:
+        organization["identifier"] = [
+            {
+                "system": f"urn:medilacra:{role}",
+                "value": source_id,
+            }
+        ]
+
+    if name:
+        organization["name"] = name
+
+    return organization
+
+
+def build_coverage(
+    context: Dict[str, Any],
+    *,
+    patient_ref: str,
+    employer_ref: Optional[str],
+    payer_ref: str,
+) -> Dict[str, Any]:
+    """Build one FHIR R4 Coverage from one normalized v2 coverage context."""
+    coverage: Dict[str, Any] = {
+        "resourceType": "Coverage",
+        "id": new_id("cov"),
+        "status": "active",
+        "beneficiary": {"reference": patient_ref},
+        "payor": [{"reference": payer_ref}],
+    }
+
+    if context.get("patient_is_subscriber"):
+        coverage["subscriber"] = {"reference": patient_ref}
+
+    member_id = context.get("member_id")
+    if member_id:
+        # Deliberate local mapping decision for the current synthetic model.
+        coverage["subscriberId"] = member_id
+
+    relationship = _relationship_codeable_concept(
+        context.get("subscriber_relationship", "")
+    )
+    if relationship:
+        coverage["relationship"] = relationship
+
+    if employer_ref:
+        coverage["policyHolder"] = {
+            "reference": employer_ref
+        }
+
+    effective_start = to_iso_date(
+        context.get("effective_start", "")
+    )
+    effective_end = to_iso_date(
+        context.get("effective_end", "")
+    )
+    if effective_start or effective_end:
+        coverage["period"] = {}
+        if effective_start:
+            coverage["period"]["start"] = effective_start
+        if effective_end:
+            coverage["period"]["end"] = effective_end
+
+    plan_type = context.get("plan_type")
+    if plan_type:
+        coverage["type"] = {"text": plan_type}
+
+    classes = []
+
+    group_number = context.get("group_number")
+    if group_number:
+        classes.append(
+            {
+                "type": {
+                    "coding": [
+                        {
+                            "system": "http://terminology.hl7.org/CodeSystem/coverage-class",
+                            "code": "group",
+                        }
+                    ]
+                },
+                "value": group_number,
+            }
+        )
+
+    plan_id = context.get("plan_id")
+    plan_name = context.get("plan_name")
+    if plan_id:
+        plan_class: Dict[str, Any] = {
+            "type": {
+                "coding": [
+                    {
+                        "system": "http://terminology.hl7.org/CodeSystem/coverage-class",
+                        "code": "plan",
+                    }
+                ]
+            },
+            "value": plan_id,
+        }
+        if plan_name:
+            plan_class["name"] = plan_name
+        classes.append(plan_class)
+
+    if classes:
+        coverage["class"] = classes
+
+    return coverage
+
+
+def build_coverage_resources(
+    parsed: Dict[str, Any],
+    patient_ref: Optional[str],
+) -> List[Dict[str, Any]]:
+    """
+    Materialize one coherent coverage graph for ADT/DFT.
+
+    Coverage.payor is required, so no Coverage is emitted without both patient
+    context and payer identity. Employer Organization is optional.
+    """
+    if not patient_ref:
+        return []
+
+    context = extract_coverage_context(parsed)
+    if not context:
+        return []
+
+    if not (
+        context.get("payer_id")
+        or context.get("payer_name")
+    ):
+        return []
+
+    employer = build_organization(
+        context.get("employer_id", ""),
+        context.get("employer_name", ""),
+        role="employer",
+    )
+    payer = build_organization(
+        context.get("payer_id", ""),
+        context.get("payer_name", ""),
+        role="payer",
+    )
+
+    if payer is None:
+        return []
+
+    employer_ref = (
+        f"Organization/{employer['id']}"
+        if employer is not None
+        else None
+    )
+    payer_ref = f"Organization/{payer['id']}"
+
+    coverage = build_coverage(
+        context,
+        patient_ref=patient_ref,
+        employer_ref=employer_ref,
+        payer_ref=payer_ref,
+    )
+
+    resources = []
+    if employer is not None:
+        resources.append(employer)
+    resources.append(payer)
+    resources.append(coverage)
+    return resources
+
 
 def build_observation_from_obx(obx_fields: List[str], patient_ref: str, encounter_ref: Optional[str]) -> Dict[str, Any]:
     vtype = get_field(obx_fields, 2).upper()
@@ -274,7 +599,7 @@ def build_account_from_ft1(ft1_fields: List[str], patient_ref: str, encounter_re
 def detect_message_type(parsed: Dict[str, Any]) -> str:
     if not parsed.get("MSH"):
         return "UNKNOWN"
-    ev = get_field(parsed["MSH"][0]["_fields"], 9)
+    ev = get_msh_field(parsed["MSH"][0]["_fields"], 9)
     return f"{comp(ev,1)}^{comp(ev,2)}".upper()
 
 def convert_oru(parsed: Dict[str, Any]) -> Dict[str, Any]:
@@ -308,12 +633,30 @@ def convert_adt(parsed: Dict[str, Any]) -> Dict[str, Any]:
     pv1 = parsed["PV1"][0]["_fields"] if parsed.get("PV1") else None
     msg_header = build_message_header(msh)
     patient = build_patient_from_pid(pid) if pid else None
+    patient_ref = f"Patient/{patient['id']}" if patient else None
+
     entries = [{"resource": msg_header}]
-    if patient: entries.append({"resource": patient})
-    if pv1 and patient:
-        enc = build_encounter_from_pv1(pv1, f"Patient/{patient['id']}")
+    if patient:
+        entries.append({"resource": patient})
+    if pv1 and patient_ref:
+        enc = build_encounter_from_pv1(
+            pv1,
+            patient_ref,
+        )
         entries.append({"resource": enc})
-    return {"resourceType":"Bundle","type":"message","id":new_id("bundle"),"entry":entries}
+
+    for resource in build_coverage_resources(
+        parsed,
+        patient_ref,
+    ):
+        entries.append({"resource": resource})
+
+    return {
+        "resourceType": "Bundle",
+        "type": "message",
+        "id": new_id("bundle"),
+        "entry": entries,
+    }
 
 def convert_dft(parsed: Dict[str, Any]) -> Dict[str, Any]:
     msh = parsed["MSH"][0]["_fields"]
@@ -322,15 +665,50 @@ def convert_dft(parsed: Dict[str, Any]) -> Dict[str, Any]:
     msg_header = build_message_header(msh)
     patient = build_patient_from_pid(pid) if pid else None
     patient_ref = f"Patient/{patient['id']}" if patient else None
-    encounter = build_encounter_from_pv1(pv1, patient_ref) if pv1 and patient else None
-    encounter_ref = f"Encounter/{encounter['id']}" if encounter else None
-    claims = [build_account_from_ft1(ft["_fields"], patient_ref, encounter_ref) for ft in parsed.get("FT1", [])]
+    encounter = (
+        build_encounter_from_pv1(
+            pv1,
+            patient_ref,
+        )
+        if pv1 and patient_ref
+        else None
+    )
+    encounter_ref = (
+        f"Encounter/{encounter['id']}"
+        if encounter
+        else None
+    )
+
+    claims = [
+        build_account_from_ft1(
+            ft["_fields"],
+            patient_ref,
+            encounter_ref,
+        )
+        for ft in parsed.get("FT1", [])
+    ]
+
     entries = [{"resource": msg_header}]
-    if patient: entries.append({"resource": patient})
-    if encounter: entries.append({"resource": encounter})
-    for c in claims:
-        entries.append({"resource": c})
-    return {"resourceType":"Bundle","type":"message","id":new_id("bundle"),"entry":entries}
+    if patient:
+        entries.append({"resource": patient})
+    if encounter:
+        entries.append({"resource": encounter})
+
+    for resource in build_coverage_resources(
+        parsed,
+        patient_ref,
+    ):
+        entries.append({"resource": resource})
+
+    for claim in claims:
+        entries.append({"resource": claim})
+
+    return {
+        "resourceType": "Bundle",
+        "type": "message",
+        "id": new_id("bundle"),
+        "entry": entries,
+    }
 
 def convert_message_to_bundle(hl7_text: str):
     parsed = parse_hl7(hl7_text)
