@@ -3,7 +3,7 @@
 **Version:** 0.1  
 **Date:** 2026-10-04  
 **Branch:** `experiment/employer-coverage`  
-**Status:** Implementation-ready  
+**Status:** Implemented / validated  
 **Pre-build head:** `708855704ec4cb453f5e731b2abbd54424378008`
 
 ---
@@ -710,3 +710,101 @@ Disco Inferno
 ```
 
 The architecture is **semantic compression without semantic collapse**: redundant HL7 v2 representations enter; one coherent FHIR coverage graph leaves.
+
+
+---
+
+# 19. Implementation Outcome
+
+Implemented on `experiment/employer-coverage`.
+
+## Materialized changes
+
+### `fhir/fhir_convert_backend.py`
+
+- Ported PIQITT-style MSH-specific indexing via `get_msh_field()`.
+- Corrected MessageHeader source/destination/event extraction.
+- Corrected message-type detection for ADT, DFT, and ORU.
+- Added `extract_coverage_context()` as the semantic coalescence layer.
+- Added employer conflict detection with deterministic precedence.
+- Added employer and payer Organization construction.
+- Added one Coverage resource construction for the current single-coverage MVP.
+- Added group and plan `Coverage.class` projection.
+- Added member ID -> `Coverage.subscriberId`.
+- Added SELF -> `Coverage.relationship`.
+- Added employer -> `Coverage.policyHolder`.
+- Added payer -> `Coverage.payor`.
+- Added effective period conversion.
+- Added coverage resources to ADT and DFT bundles.
+- Left ORU conversion unchanged.
+- Recognizes GT1-20 in normalized context but deliberately does not project it.
+
+### `tests/test_fhir_coverage_conversion.py`
+
+Added dedicated tests for:
+
+- MSH structural normalization;
+- ADT / DFT / ORU message-type detection;
+- GT1 + IN1 + IN2 semantic coalescence;
+- employer fallback behavior;
+- employer mismatch detection;
+- one-Coverage invariant;
+- employer Organization;
+- payer Organization;
+- Patient subscriber / beneficiary references;
+- policyHolder / payor references;
+- member, group, plan, relationship, and period survival;
+- GT1-20 deliberate non-projection;
+- DFT Claim preservation;
+- ORU non-expansion;
+- no-IN1 behavior;
+- no-payer safety behavior;
+- illegal source business IDs such as `HOME_DEPOT`;
+- FHIR-valid generated Resource.id values;
+- referential closure within the generated Bundle.
+
+### CI
+
+The employer-coverage workflow now runs the FHIR coverage projection suite as part of the focused branch tests.
+
+## Validation result
+
+Final CI:
+
+```text
+Focused employer coverage + GT1 + FHIR suite:
+43 passed
+
+Full repository regression:
+56 passed
+```
+
+No failures were reported.
+
+## Resulting projection
+
+The tested CVS / Kaiser specimen now follows:
+
+```text
+GT1 + IN1 + IN2
+       |
+       v
+normalized coverage context
+       |
+       +--> Organization [CVS employer]
+       +--> Organization [Kaiser payer]
+       '--> Coverage
+              ├── beneficiary -> Patient
+              ├── subscriber -> Patient
+              ├── relationship = self
+              ├── policyHolder -> CVS
+              ├── payor -> Kaiser
+              ├── subscriberId = MEM-01374522
+              ├── group = GRP-CVS-398915
+              ├── plan = STANDARD_PPO / Standard PPO
+              '--> period = 2026-01-01 .. 2026-12-31
+```
+
+GT1-20 remains intentionally outside the FHIR projection and ZMC / material-context work remains on the roadmap.
+
+The Resource Identity Canon also remains deferred: source business identifiers are preserved in `Organization.identifier`, while legal generated FHIR Resource.id values are used for current Bundle references.
