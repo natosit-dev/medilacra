@@ -3,7 +3,7 @@
 **Version:** 0.1  
 **Date:** 2026-10-06  
 **Branch:** `experiment/employer-coverage`  
-**Status:** Implementation-ready
+**Status:** Implemented / validated
 
 ---
 
@@ -343,3 +343,202 @@ The page is complete when the normal MediLacra Streamlit application exposes an 
 8. visibly confirm in Scenario 2 that the 270 says `KELLEY` while the 271 says `KELLY`.
 
 The UI remains a test harness. The institutional and payer boundaries remain unchanged.
+
+
+---
+
+# 15. Implementation Outcome
+
+Implemented on `experiment/employer-coverage`.
+
+## New Streamlit page
+
+Created:
+
+```text
+pages/8_X12_Eligibility.py
+```
+
+The page exposes exactly the two first X12 scenarios:
+
+```text
+Clean Active Eligibility
+Identity Divergence — Payer Name Differs
+```
+
+The page shows clinical and payer realities side by side before execution, runs the exchange only when the user clicks the explicit button, then displays:
+
+- member match outcome;
+- eligibility outcome;
+- payer plan;
+- request/response trace;
+- coverage period;
+- identity conflict warning when present;
+- full 270 interchange;
+- full 271 interchange.
+
+## Thin scenario/workflow harness
+
+Created:
+
+```text
+x12/scenarios.py
+```
+
+This module owns demo fixtures and UI orchestration so the Streamlit page does not become another source of payer or X12 domain logic.
+
+It provides:
+
+```text
+build_scenario()
+list_scenarios()
+run_scenario()
+build_exchange_zip()
+```
+
+The runner uses the already-built architecture:
+
+```text
+clinical Patient + CoverageProfile
+        |
+        v
+270 transaction + envelope
+        |
+        v
+parse_270_to_inquiry()
+        |
+        v
+payer-side identity resolution
+        |
+        v
+payer-side eligibility evaluation
+        |
+        v
+271 transaction + envelope
+```
+
+No payer logic was added to Streamlit.
+
+## Scenario behavior
+
+Clean scenario:
+
+```text
+Clinical: KELLEY / DEVIN
+270:      KELLEY / DEVIN
+Payer:    KELLEY / DEVIN
+271:      KELLEY / DEVIN
+```
+
+Identity divergence scenario:
+
+```text
+Clinical: KELLEY / DEVIN
+270:      KELLEY / DEVIN
+Payer:    KELLY / DEVIN
+Match:    MATCHED, conflict = last_name
+271:      KELLY / DEVIN
+```
+
+The payer still evaluates from payer-held state only.
+
+## Datetime-stamped downloads
+
+Each exchange run captures one timestamp and reuses it for every artifact.
+
+Format:
+
+```text
+YYYYMMDD_HHMMSS
+```
+
+Downloads:
+
+```text
+medilacra_270_YYYYMMDD_HHMMSS.x12
+medilacra_271_YYYYMMDD_HHMMSS.x12
+medilacra_x12_exchange_YYYYMMDD_HHMMSS.zip
+```
+
+ZIP contents:
+
+```text
+medilacra_270_YYYYMMDD_HHMMSS.x12
+medilacra_271_YYYYMMDD_HHMMSS.x12
+exchange_summary_YYYYMMDD_HHMMSS.json
+```
+
+The JSON summary records the selected scenario, run time, service date, trace, matching result, eligibility result, conflicts, institutional identities, payer/plan/group, and generated filenames.
+
+## Session-state behavior
+
+The generated exchange result is stored in:
+
+```text
+st.session_state["x12_eligibility_result"]
+```
+
+This prevents download-button or display reruns from generating a new trace or timestamp.
+
+If the user changes the scenario or service date after a run, the old result is hidden until the exchange is run again.
+
+## Persistence boundary
+
+The UI remains entirely in memory.
+
+No:
+
+- DuckDB writes;
+- output-directory writes;
+- HL7 pipeline integration;
+- payer-state persistence.
+
+## Tests added
+
+Created:
+
+```text
+tests/test_x12_ui_scenarios.py
+```
+
+Coverage includes:
+
+- scenario inventory;
+- clean institutional identity;
+- divergent institutional identity;
+- clean ACTIVE full-interchange workflow;
+- divergent MATCHED/ACTIVE workflow;
+- clinical 270 versus payer-authored 271 identity;
+- datetime-stamped filenames;
+- ZIP contents;
+- JSON summary contents;
+- Streamlit page compilation;
+- session-state/download controls.
+
+## CI validation
+
+Final code-bearing CI run:
+
+```text
+Focused branch suite:
+78 passed
+
+Full repository regression:
+91 passed
+```
+
+Successful run:
+
+```text
+https://github.com/natosit-dev/medilacra/actions/runs/37476147589
+```
+
+No failures were reported.
+
+## Remaining manual validation
+
+Automated tests validate the scenario/workflow layer and confirm the Streamlit page compiles.
+
+The remaining user-facing check is to pull the branch, launch the normal MediLacra Streamlit app, open **X12 Eligibility**, run both scenarios, visually inspect the interchanges, and exercise the browser download buttons.
+
+No additional backend work is required for that manual test.
