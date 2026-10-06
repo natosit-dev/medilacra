@@ -3,7 +3,7 @@
 **Version:** 0.1  
 **Date:** 2026-10-05  
 **Branch:** `experiment/employer-coverage`  
-**Status:** Implementation-ready  
+**Status:** Implemented / validated  
 **Pre-build head:** `e0110ecbd2a9c7af5040a12e9fe0336c509e4a9c`
 
 ---
@@ -752,3 +752,222 @@ The architectural milestone is:
 > **Two synthetic institutions can hold different records about the same hidden synthetic person without sharing operational state.**
 
 Only after that boundary is demonstrated should X12 270/271 be added as an adapter around the payer engine.
+
+
+---
+
+# 19. Implementation Outcome
+
+Implemented on `experiment/employer-coverage`.
+
+## New hidden-truth package
+
+```text
+reality/
+    __init__.py
+    models.py
+```
+
+Added:
+
+- `PersonTruth`
+- `CoverageTruth`
+- `GroundTruthLink`
+
+Truth objects are immutable dataclasses. `GroundTruthLink` is oracle-only state and is not imported by the operational payer engine.
+
+## New reusable identity package
+
+```text
+identity/
+    __init__.py
+    models.py
+    normalize.py
+    matcher.py
+```
+
+Added:
+
+- `IdentityQuery`
+- `IdentityCandidate`
+- `MatchResult`
+- `MatchOutcome`
+- deterministic exact-match normalization
+- exact member-ID matching
+- exact name + DOB matching without member ID
+- ambiguity detection
+- demographic discrepancy reporting
+- simple deterministic match score
+
+The matcher is independent of clinical and payer model classes.
+
+## New payer engine
+
+```text
+payer/
+    __init__.py
+    models.py
+    materialize.py
+    system.py
+```
+
+Added payer-local primitives:
+
+- `MemberRecord`
+- `EnrollmentRecord`
+- `BenefitPlan`
+- `EligibilityInquiry`
+- `EligibilityResponse`
+- `PayerSystem`
+
+Added payer materialization from hidden truth with stable payer-local record IDs.
+
+Added eligibility evaluation for:
+
+- ACTIVE
+- INACTIVE
+- NOT_FOUND
+- AMBIGUOUS
+- CANNOT_DETERMINE
+
+The operational `PayerSystem` has no dependency on `Patient`, `CoverageProfile`, or `GroundTruthLink`.
+
+## Boundary behavior demonstrated
+
+The implementation proves the intended institutional split:
+
+```text
+hidden truth
+    |
+    +--> clinical state
+    |
+    '--> copied payer-local state
+```
+
+Payer records contain no clinical foreign keys.
+
+A clinical Patient may be modified after payer materialization without changing the payer MemberRecord or EnrollmentRecord.
+
+Member resolution operates only on payer-held identity candidates and inquiry values.
+
+## Test suites added
+
+```text
+tests/test_reality_separation.py
+tests/test_payer_matching.py
+tests/test_payer_eligibility.py
+```
+
+Coverage includes:
+
+- forbidden clinical foreign keys absent from payer primitives;
+- no clinical/oracle objects imported into payer operational logic;
+- independent payer materialization;
+- truth identity consistency checks;
+- exact member-ID matching;
+- demographic conflict preservation;
+- no demographic fallback after an unknown supplied member ID;
+- exact name + DOB matching;
+- duplicate-member ambiguity;
+- ACTIVE eligibility;
+- out-of-period INACTIVE eligibility;
+- explicitly INACTIVE enrollment;
+- no-enrollment CANNOT_DETERMINE;
+- NOT_FOUND propagation;
+- AMBIGUOUS propagation;
+- payer-side demographic divergence;
+- payer mismatch isolation;
+- invalid service-date handling.
+
+## CI validation
+
+Final CI result:
+
+```text
+Focused employer coverage + GT1 + FHIR + institutional reality/payer suite:
+63 passed
+
+Full repository regression:
+76 passed
+```
+
+Workflow run:
+
+```text
+https://github.com/natosit-dev/medilacra/actions/runs/37399334192
+```
+
+No failures were reported.
+
+---
+
+# 20. Resulting MVP Boundary
+
+The built architecture is now:
+
+```text
+PersonTruth / CoverageTruth
+          |
+          | simulation materialization
+          v
+    +-----+-------------------+
+    |                         |
+    v                         v
+Clinical Reality          Payer Reality
+(existing)                (new)
+Patient                   MemberRecord
+CoverageProfile           EnrollmentRecord
+                          BenefitPlan
+                               |
+                               v
+                        Identity Matcher
+                               |
+                               v
+                        Eligibility Engine
+```
+
+There is still no X12 code.
+
+That is intentional.
+
+The next 270/271 build can now be an adapter problem:
+
+```text
+future X12 270
+      |
+      v
+EligibilityInquiry
+      |
+      v
+PayerSystem
+      |
+      v
+EligibilityResponse
+      |
+      v
+future X12 271
+```
+
+without allowing X12 or payer logic to dereference clinical state.
+
+---
+
+# 21. Deferred Roadmap
+
+Still deferred:
+
+- X12 270 parsing / generation;
+- X12 271 projection;
+- interchange / functional-group envelopes;
+- EB / AAA semantics;
+- detailed benefit configuration;
+- accumulators;
+- trading-partner authorization;
+- persisted payer DuckDB;
+- fuzzy/probabilistic MPI;
+- family/dependent matching;
+- 278 / prior authorization;
+- 837 / 835;
+- ZMC/material-context work.
+
+The MVP establishes the primitive boundary first: **institutional records may disagree while hidden simulation truth remains stable.**
