@@ -37,7 +37,8 @@ jobs:
             tests/test_reality_separation.py \
             tests/test_payer_matching.py \
             tests/test_payer_eligibility.py \
-            tests/test_x12_270_271.py
+            tests/test_x12_270_271.py \
+            tests/test_x12_ui_scenarios.py
 
       - name: Run full regression suite
         run: pytest -q
