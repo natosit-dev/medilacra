@@ -36,7 +36,8 @@ jobs:
             tests/test_fhir_coverage_conversion.py \
             tests/test_reality_separation.py \
             tests/test_payer_matching.py \
-            tests/test_payer_eligibility.py
+            tests/test_payer_eligibility.py \
+            tests/test_x12_270_271.py
 
       - name: Run full regression suite
         run: pytest -q
