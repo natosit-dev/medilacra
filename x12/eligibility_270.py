@@ -251,6 +251,7 @@ def parse_270_to_inquiry(text: str) -> Parsed270:
         date_of_birth=_to_iso_date(dmg.element(2)),
         administrative_sex=dmg.element(3) or None,
         service_date=_to_iso_date(dtp.element(3)),
+        service_type=eq.element(1),
     )
 
     return Parsed270(
