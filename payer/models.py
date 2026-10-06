@@ -58,6 +58,7 @@ class EligibilityInquiry:
     last_name: str | None = None
     date_of_birth: str | None = None
     administrative_sex: str | None = None
+    service_type: str = "30"
 
 
 @dataclass(frozen=True)
