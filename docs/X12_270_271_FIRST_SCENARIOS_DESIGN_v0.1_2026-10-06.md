@@ -3,7 +3,7 @@
 **Version:** 0.1  
 **Date:** 2026-10-06  
 **Branch:** `experiment/employer-coverage`  
-**Status:** Design only — not implemented
+**Status:** Implemented / validated
 
 ---
 
@@ -676,3 +676,253 @@ The first X12 implementation should prove:
 > **The 270 carries what the clinical institution knows; the payer resolves against its own records; the 271 carries what the payer knows.**
 
 That is the minimum meaningful 270/271 experiment for MediLacra.
+
+
+---
+
+# 15. Implementation Outcome
+
+Implemented on `experiment/employer-coverage`.
+
+## New X12 adapter package
+
+```text
+x12/
+    __init__.py
+    models.py
+    parser.py
+    envelope.py
+    eligibility_270.py
+    eligibility_271.py
+```
+
+The payer engine remains unchanged in role: X12 is an adapter around semantic eligibility behavior rather than the location where payer decisions are made.
+
+## Exchange-layer primitives
+
+Added:
+
+```text
+X12Party
+EligibilityExchange
+EnvelopeConfig
+```
+
+`EligibilityExchange` owns trace/control metadata for the inter-institutional exchange and is intentionally separate from both clinical and payer state.
+
+## 270 implementation
+
+Added:
+
+```text
+build_270_transaction()
+build_270_from_clinical()
+parse_270_to_inquiry()
+```
+
+The first 270 implementation supports the subscriber-is-patient path and projects:
+
+- payer identity;
+- requester/provider organization;
+- subscriber name;
+- payer-assigned member ID;
+- DOB;
+- administrative sex;
+- requested plan/service date;
+- generic service type 30;
+- request trace;
+- transaction control/reference metadata.
+
+The clinical helper reads the existing clinical `Patient` + `CoverageProfile` values but the parser emits the representation-neutral payer `EligibilityInquiry`.
+
+No payer decision logic exists in the 270 adapter.
+
+## 271 implementation
+
+Added:
+
+```text
+build_271_transaction()
+parse_271()
+```
+
+The first 271 builder intentionally supports only the ACTIVE outcome required by Scenarios 1 and 2.
+
+The response projects payer-held:
+
+- subscriber/member identity;
+- member ID;
+- DOB / sex;
+- coverage start;
+- coverage end;
+- active plan name;
+- group number;
+- generic plan coverage status;
+- response trace.
+
+The 271 builder requires a payer-side `MemberRecord` and `BenefitPlan`; it does not import or receive clinical `Patient` / `CoverageProfile`.
+
+## Public-X12 alignment refinement
+
+The design originally showed only:
+
+```text
+EB*1**30**<plan>
+```
+
+During implementation, the public X12 interpretation for a generic `EQ*30` request was reviewed. X12 indicates that the generic response also returns active-status information for the standard service-type set.
+
+The implementation therefore emits:
+
+```text
+EB*1**30**<plan>
+EB*1**1>33>35>47>86>88>98>AL>MH>UC
+```
+
+This does **not** add detailed financial benefits. Copays, deductibles, coinsurance, accumulators, PCP, and network detail remain out of scope.
+
+The single-plan MVP also returns the payer-held group number as:
+
+```text
+REF*6P*<group>
+```
+
+Known plan end date is emitted with `DTP*347` in addition to plan begin `DTP*346`.
+
+## Envelope support
+
+Added a deliberately small envelope wrapper for one transaction set:
+
+```text
+ISA
+GS
+ST ... SE
+GE
+IEA
+```
+
+Eligibility semantics remain independent from envelope/control scaffolding.
+
+The tokenizer can read either the bare transaction set or the MediLacra-generated envelope.
+
+## Scenario 1 — Clean ACTIVE
+
+Validated path:
+
+```text
+Clinical Patient / CoverageProfile
+        |
+        v
+270
+        |
+        v
+parse_270_to_inquiry()
+        |
+        v
+PayerSystem
+        |
+        v
+MATCHED + ACTIVE
+        |
+        v
+271 from payer-held MemberRecord / Enrollment / BenefitPlan
+```
+
+Validated surviving facts include:
+
+```text
+member = MEM-01374522
+subscriber = KELLEY / DEVIN
+payer = KAISER
+plan = Standard PPO
+group = GRP-CVS-398915
+coverage = 2026-01-01 .. 2026-12-31
+service type = 30
+trace = TRACE-270-0001
+```
+
+## Scenario 2 — Institutional divergence
+
+Validated:
+
+```text
+270 clinical identity:
+KELLEY / DEVIN
+
+payer MemberRecord:
+KELLY / DEVIN
+
+matcher:
+MATCHED
+conflicting_fields = ["last_name"]
+
+271 payer identity:
+KELLY / DEVIN
+```
+
+The 271 does not echo the clinical spelling from the request. It projects the payer's own MemberRecord.
+
+This is the first standards transaction in MediLacra that visibly demonstrates the institutional-reality separation.
+
+## Test suite
+
+Added:
+
+```text
+tests/test_x12_270_271.py
+```
+
+Coverage includes:
+
+- Scenario 1 end-to-end semantic path;
+- Scenario 2 identity divergence;
+- 270 parsing into `EligibilityInquiry`;
+- service type 30 preservation;
+- request/response trace correlation;
+- plan begin/end dates;
+- group number;
+- generic active service-type status set;
+- ST/SE segment counts and control-number correlation;
+- parsing a 270 inside the generated ISA/GS envelope;
+- explicit refusal to build non-ACTIVE 271 outcomes in this MVP;
+- no GroundTruthLink import into the X12 adapters;
+- no clinical Patient/CoverageProfile dependency in the 271 builder;
+- payer engine remains X12-agnostic.
+
+## CI validation
+
+Final branch CI:
+
+```text
+Focused employer coverage + GT1 + FHIR + payer + X12 suite:
+70 passed
+
+Full repository regression:
+83 passed
+```
+
+Successful run:
+
+```text
+https://github.com/natosit-dev/medilacra/actions/runs/37471025198
+```
+
+No failures were reported.
+
+## Scope boundary retained
+
+Still not implemented:
+
+- NOT_FOUND / AMBIGUOUS / INACTIVE 271 projections;
+- AAA;
+- dependents;
+- family coverage;
+- detailed benefit financials;
+- accumulators;
+- requester authorization;
+- clearinghouse behavior;
+- batch transactions;
+- generalized X12 schema validation;
+- 278 / 837 / 835.
+
+The first two scenarios therefore remain intentionally narrow: **clinical-side knowledge enters the 270; payer-side knowledge determines and authors the 271.**
