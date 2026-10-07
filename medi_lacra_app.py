@@ -63,7 +63,12 @@ with st.sidebar:
     add_places_obesity_obx = st.checkbox("Include Places/Obesity OBX", value=False)
     add_unemployment_obx = st.checkbox("Include Unemployment OBX", value=False)
     include_labs = st.checkbox("Include Labs (ORM/ORU)", value=True)
-    persist = st.radio("Persist to", ["duckdb", "none"], index=0, help="Store entities and messages in DuckDB")
+    include_x12 = st.checkbox(
+        "Include X12 Eligibility (270/271)",
+        value=False,
+        help="Generate one 270/271 eligibility pair per encounter.",
+    )
+    persist = st.radio("Persist to", ["duckdb", "none"], index=0, help="Store entities and HL7 messages in DuckDB; payer primitives are also stored when X12 is enabled.")
     run_btn = st.button("Generate Messages", type="primary", use_container_width=True)
     st.subheader("Scenario")
     profile_files = ["(none)"] + _list_profiles()
@@ -127,6 +132,7 @@ if run_btn:
                 "add_places_obesity_obx": bool(add_places_obesity_obx),
                 "add_unemployment_obx": bool(add_unemployment_obx),
                 "include_labs": bool(include_labs),
+                "include_x12": bool(include_x12),
                 "persist": persist,
             }
         },
@@ -148,14 +154,22 @@ if run_btn:
                 add_places_obesity_obx=add_places_obesity_obx,
                 add_unemployment_obx=add_unemployment_obx,
                 include_labs=include_labs,
+                include_x12=include_x12,
                 persist=persist,
                 scenario_profile=scenario_profile
             )
         dur = time.time() - start
-        st.success(
-            f"Done in {dur:.2f}s — ADT: {counts.get('ADT',0)}, ORU: {counts.get('ORU',0)}, "
-            f"DFT: {counts.get('DFT',0)}, ORM: {counts.get('ORM',0)}, ORU_LABS: {counts.get('ORU_LABS',0)}"
+        summary = (
+            f"Done in {dur:.2f}s — ADT: {counts.get('ADT',0)}, "
+            f"ORU: {counts.get('ORU',0)}, DFT: {counts.get('DFT',0)}, "
+            f"ORM: {counts.get('ORM',0)}, ORU_LABS: {counts.get('ORU_LABS',0)}"
         )
+        if include_x12:
+            summary += (
+                f", X12_270: {counts.get('X12_270',0)}, "
+                f"X12_271: {counts.get('X12_271',0)}"
+            )
+        st.success(summary)
         logger.info("Pipeline completed", extra={"extra": {"duration_sec": round(dur, 3), **{k: int(v) for k, v in counts.items()}}})
     except Exception as e:
         dur = time.time() - start
@@ -165,7 +179,11 @@ if run_btn:
     # Show recent files written (last 3 minutes)
     now = time.time()
     rows = []
-    for path in glob.glob(os.path.join(out_dir, "*.hl7")):
+    message_paths = (
+        glob.glob(os.path.join(out_dir, "*.hl7"))
+        + glob.glob(os.path.join(out_dir, "*.x12"))
+    )
+    for path in message_paths:
         try:
             mtime = os.path.getmtime(path)
             rows.append((mtime, path))
@@ -187,4 +205,4 @@ if run_btn:
                 st.code(f"{datetime.fromtimestamp(mtime):%Y-%m-%d %H:%M:%S}  {os.path.basename(path)}")
             logger.info("Fallback file listing shown", extra={"extra": {"listed_count": min(30, len(rows))}})
     else:
-        logger.info("No HL7 files found to list", extra={"extra": {"out_dir": out_dir}})
+        logger.info("No message files found to list", extra={"extra": {"out_dir": out_dir}})
