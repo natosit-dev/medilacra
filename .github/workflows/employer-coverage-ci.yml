@@ -43,12 +43,15 @@ jobs:
             tests/test_payer_storage.py \
             tests/test_x12_pipeline_integration.py \
             tests/test_x12_pipeline_ui_wiring.py \
-            tests/test_core_generator_offline_sdoh.py
+            tests/test_core_generator_offline_sdoh.py \
+            tests/test_fhir_eligibility_r4.py \
+            tests/test_fhir_x12_semantic_equivalence.py \
+            tests/test_fhir_pipeline_integration.py
 
       - name: Run full regression suite
         run: pytest -q
 
-      - name: Run small offline scaled X12 workload
+      - name: Run small offline scaled eligibility workload
         run: python scripts/demo_x12_scale.py --n 25
 
       - name: Print deterministic coverage reality demo
