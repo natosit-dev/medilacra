@@ -73,6 +73,7 @@ def main() -> None:
         out_dir=str(out_dir),
         miles=0,
         include_labs=False,
+        include_sdoh=False,
         include_x12=True,
         persist="duckdb",
         duckdb_path=str(db_path),
