@@ -143,6 +143,7 @@ def build_adt(
     add_unemployment_obx: bool = False,
     miles: int = AIRNOW_MILES_DEFAULT,
     obs: Optional[Observation] = None,
+    include_sdoh: bool = True,
 
     # Gender Harmony flags.
     #
@@ -168,6 +169,10 @@ def build_adt(
 
     Transaction is optional so existing callers can still build an ADT
     without financial/insurance information.
+
+    include_sdoh is a master switch for external SDOH enrichment. When false,
+    AirNow/Census/PLACES/BLS lookups are skipped entirely. Synthetic vitals
+    still render using neutral local inputs (poverty=0, AQI=50).
     """
 
     # ---------------------------------------------------------------------
@@ -190,7 +195,7 @@ def build_adt(
     # Air quality
     # ---------------------------------------------------------------------
 
-    if add_air_obx and getattr(p, "zip_code", ""):
+    if include_sdoh and add_air_obx and getattr(p, "zip_code", ""):
         aq = get_air_quality_by_zip(
             p.zip_code
         )
@@ -209,7 +214,7 @@ def build_adt(
     # Poverty
     # ---------------------------------------------------------------------
 
-    if add_poverty_obx and getattr(p, "zip_code", ""):
+    if include_sdoh and add_poverty_obx and getattr(p, "zip_code", ""):
         poverty = get_poverty_pct_by_zcta(
             p.zip_code
         )
@@ -240,25 +245,31 @@ def build_adt(
             ).year
         )
 
-        poverty = (
-            get_poverty_pct_by_zcta(
+        if include_sdoh:
+            poverty = (
+                get_poverty_pct_by_zcta(
+                    p.zip_code
+                )
+                or 0.0
+            )
+
+            air_quality = get_air_quality_by_zip(
                 p.zip_code
             )
-            or 0.0
-        )
 
-        air_quality = get_air_quality_by_zip(
-            p.zip_code
-        )
-
-        if air_quality:
-            aqi_value = float(
-                air_quality.get(
-                    "aqi",
-                    50,
+            if air_quality:
+                aqi_value = float(
+                    air_quality.get(
+                        "aqi",
+                        50,
+                    )
                 )
-            )
+            else:
+                aqi_value = 50.0
         else:
+            # Offline/default core generation: preserve synthetic vitals
+            # without making external SDOH requests.
+            poverty = 0.0
             aqi_value = 50.0
 
         vital_values = predict_vitals(
@@ -289,7 +300,7 @@ def build_adt(
     # Additional public SDOH measures
     # ---------------------------------------------------------------------
 
-    if add_places_obesity_obx:
+    if include_sdoh and add_places_obesity_obx:
         obesity_obx = build_obx_places_obesity(
             p.zip_code,
             set_id=set_id,
@@ -300,7 +311,7 @@ def build_adt(
             set_id += 1
 
 
-    if add_unemployment_obx:
+    if include_sdoh and add_unemployment_obx:
         unemployment_obx = build_obx_unemployment(
             p.zip_code,
             set_id=set_id,
