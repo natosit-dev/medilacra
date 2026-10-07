@@ -11,7 +11,11 @@ def test_main_generator_exposes_x12_toggle_and_compiles():
     assert "include_sdoh=include_sdoh" in source
     assert "Include X12 Eligibility (270/271)" in source
     assert "include_x12=include_x12" in source
+    assert "Include FHIR Eligibility (R4 4.0.1)" in source
+    assert "include_fhir_eligibility=include_fhir_eligibility" in source
     assert '"*.x12"' in source
+    assert '"*.json"' in source
+    assert '"*.ndjson"' in source
 
 
 def test_generate_and_persist_uses_primary_pipeline_and_exposes_payer_tables():
@@ -24,6 +28,8 @@ def test_generate_and_persist_uses_primary_pipeline_and_exposes_payer_tables():
     assert "Include external SDOH enrichment" in source
     assert "include_sdoh=bool(include_sdoh)" in source
     assert "Include X12 Eligibility (270/271)" in source
+    assert "Include FHIR Eligibility (R4 4.0.1)" in source
+    assert "include_fhir_eligibility=bool(include_fhir_eligibility)" in source
     assert 'persist="duckdb"' in source
     assert '"payer_members"' in source
     assert '"payer_enrollments"' in source
