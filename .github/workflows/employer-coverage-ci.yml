@@ -48,5 +48,8 @@ jobs:
       - name: Run full regression suite
         run: pytest -q
 
+      - name: Run small offline scaled X12 workload
+        run: python scripts/demo_x12_scale.py --n 25
+
       - name: Print deterministic coverage reality demo
         run: python scripts/demo_employer_coverage.py
