@@ -3,7 +3,7 @@
 **Version:** 0.1  
 **Date:** 2026-10-07  
 **Branch:** `experiment/employer-coverage`  
-**Status:** Implementation-ready  
+**Status:** Implemented / validated  
 **Pre-build head:** `d582ee0ffd44ecb069b64c3a8d12eab9c3c2d9c5`
 
 ---
@@ -821,3 +821,370 @@ with:
 - offline generation still offline by default;
 - focused tests green;
 - full regression green.
+
+
+---
+
+# 28. Implementation Outcome
+
+Implemented on `experiment/employer-coverage`.
+
+## Shared semantic eligibility layer
+
+Created:
+
+```text
+eligibility/__init__.py
+eligibility/generation.py
+```
+
+Added:
+
+```text
+EligibilityExchangeIdentity
+EligibilityRunContext
+build_eligibility_inquiry_from_clinical()
+```
+
+The normal pipeline now materializes one semantic `EligibilityInquiry` from:
+
+```text
+Patient
+CoverageProfile
+Encounter
+```
+
+and evaluates the payer once:
+
+```text
+EligibilityInquiry
+      |
+      v
+PayerSystem.evaluate_eligibility()
+      |
+      v
+EligibilityResponse
+```
+
+X12 and FHIR then consume the same semantic inquiry/response.
+
+## X12 refactor
+
+Added:
+
+```text
+generate_x12_eligibility_artifacts()
+```
+
+The normal scaled X12 path no longer uses a parsed 270 to make the payer decision.
+
+The X12 adapter still parses its generated 270 internally to provide the transport/correlation context expected by the existing 271 renderer, but that parsed representation does not determine payer semantics.
+
+The existing single-exchange UI helper remains backward compatible through:
+
+```text
+generate_eligibility_exchange()
+```
+
+## Direct FHIR R4 generation
+
+Created:
+
+```text
+fhir/eligibility_r4.py
+fhir/eligibility_generation.py
+fhir/__init__.py
+```
+
+The new FHIR path does not import X12 and does not call `parse_270_to_inquiry()`.
+
+It projects directly from:
+
+```text
+clinical Patient
+clinical CoverageProfile
+payer MemberRecord
+payer EnrollmentRecord
+payer BenefitPlan
+EligibilityInquiry
+EligibilityResponse
+EligibilityExchangeIdentity
+```
+
+## Request bundle
+
+Each request artifact is:
+
+```text
+Bundle / collection
+  CoverageEligibilityRequest
+  Patient                  clinical
+  Coverage                 clinical
+  Organization             requester
+  Organization             payer
+  Organization             employer
+```
+
+The request includes:
+
+```text
+status = active
+purpose = validation + benefits
+servicedDate = encounter service date
+provider = requester Organization
+insurer = payer Organization
+insurance.coverage = clinical Coverage
+```
+
+Clinical Coverage includes payer, subscriber/member, group, plan, effective period, and employer `policyHolder`.
+
+## Response bundle
+
+Each response artifact is:
+
+```text
+Bundle / collection
+  CoverageEligibilityResponse
+  CoverageEligibilityRequest
+  Patient                  clinical
+  Coverage                 clinical
+  Patient                  payer
+  Coverage                 payer
+  Organization             requester
+  Organization             payer
+  Organization             employer
+```
+
+The response's own patient and coverage references point to payer-local resources.
+
+The embedded request continues to point to clinical-side resources.
+
+For the current ACTIVE MVP:
+
+```text
+CoverageEligibilityResponse.outcome = complete
+insurance.inforce = true
+```
+
+Payer Coverage contains no employer `policyHolder`.
+
+## Deterministic FHIR IDs
+
+FHIR resource IDs are deterministic SHA-256-derived identifiers based on synthetic source identity.
+
+They are not X12 control numbers and do not use random UUID generation.
+
+## Shared exchange identity
+
+One semantic exchange identity is allocated per encounter:
+
+```text
+YYYYMMDDHHMMSS-NNNNN
+```
+
+It is shared by:
+
+```text
+X12 trace/reference
+FHIR CoverageEligibilityRequest.identifier
+FHIR CoverageEligibilityResponse.identifier
+```
+
+X12 ST/ISA controls remain representation-specific.
+
+## Pipeline integration
+
+Added:
+
+```python
+include_fhir_eligibility: bool = False
+```
+
+Supported combinations:
+
+```text
+X12 only
+FHIR only
+X12 + FHIR
+neither
+```
+
+Payer state materializes whenever either eligibility representation is enabled.
+
+Counts now include, when enabled:
+
+```text
+FHIR_ELIGIBILITY_REQUEST
+FHIR_ELIGIBILITY_RESPONSE
+```
+
+## FHIR output files
+
+Per-encounter:
+
+```text
+FHIR_R4_4.0.1_CoverageEligibilityRequest_<encounter>_YYYYMMDD_HHMMSS.json
+
+FHIR_R4_4.0.1_CoverageEligibilityResponse_<encounter>_YYYYMMDD_HHMMSS.json
+```
+
+Bulk:
+
+```text
+FHIR_R4_4.0.1_CoverageEligibilityRequest_YYYYMMDD_HHMMSS.ndjson
+
+FHIR_R4_4.0.1_CoverageEligibilityResponse_YYYYMMDD_HHMMSS.ndjson
+```
+
+Each NDJSON line contains one complete FHIR Bundle.
+
+This remains MediLacra packaging rather than a Bulk Data IG claim.
+
+## UI / CLI
+
+Both normal generation pages now expose:
+
+```text
+Include FHIR Eligibility (R4 4.0.1)
+```
+
+independently of X12.
+
+The main recent-files display includes:
+
+```text
+*.hl7
+*.x12
+*.json
+*.ndjson
+```
+
+CLI support:
+
+```text
+--include-fhir-eligibility
+```
+
+## Persistence boundary
+
+Raw FHIR is not written to DuckDB.
+
+Clinical and payer primitives continue to persist as institutional state.
+
+Raw HL7 remains in the existing message log.
+
+FHIR and X12 representation persistence remains deferred to a future representation-neutral artifact table.
+
+## New pytest coverage
+
+Added:
+
+```text
+tests/test_fhir_eligibility_r4.py
+tests/test_fhir_x12_semantic_equivalence.py
+tests/test_fhir_pipeline_integration.py
+```
+
+Updated UI wiring tests also verify the FHIR controls.
+
+Coverage includes:
+
+- R4 collection Bundle structure;
+- required request/response resources;
+- internal reference resolution;
+- request-side clinical authorship;
+- response-side payer authorship;
+- clinical employer policyHolder versus payer omission;
+- response `outcome=complete` versus `insurance.inforce=true`;
+- FHIR-only generation without X12;
+- shared X12/FHIR semantic inquiry and payer response;
+- X12/FHIR service date/member/payer/group/coverage-date equivalence;
+- no FHIR dependency on X12 parsing;
+- timestamped JSON/NDJSON filenames;
+- NDJSON one-bundle-per-line behavior;
+- payer persistence under FHIR-only generation.
+
+## Automated validation
+
+Successful final code-bearing workflow:
+
+```text
+https://github.com/natosit-dev/medilacra/actions/runs/37697515913
+```
+
+Results:
+
+```text
+Focused employer/coverage/payer/X12/FHIR suite:
+100 passed
+
+Full repository regression:
+113 passed
+```
+
+Small normal-pipeline scaled run:
+
+```text
+Patients:              25
+Payer members:         25
+Payer enrollments:     25
+X12 270 generated:     25
+X12 271 generated:     25
+FHIR requests:         25
+FHIR responses:        25
+FHIR request lines:    25
+FHIR response lines:   25
+Control collisions:    0
+Elapsed seconds:       7.41
+```
+
+The first CI attempt exposed an incomplete persistence fixture in the new FHIR pipeline integration test. The fixture was corrected to use complete Encounter/Transaction/Observation records; no production-code workaround was introduced.
+
+---
+
+# 29. Current Eligibility Architecture
+
+```text
+                   SYNTHETIC REALITY
+                         |
+                         v
+                EligibilityInquiry
+                         |
+          +--------------+--------------+
+          |                             |
+          v                             v
+       X12 270                     FHIR R4 Request
+          |                             |
+          +-------------+---------------+
+                        |
+                        v
+                    PayerSystem
+                        |
+                        v
+                EligibilityResponse
+                        |
+          +-------------+---------------+
+          |                             |
+          v                             v
+       X12 271                    FHIR R4 Response
+```
+
+The FHIR representation is not downstream of X12.
+
+---
+
+# 30. Remaining External Acceptance
+
+Automated structure and semantic-equivalence validation is complete.
+
+The remaining manual interoperability test is to generate a small set of request/response JSON bundles and load them into IRIS FHIR tooling.
+
+Target:
+
+- parses as FHIR R4 4.0.1 JSON;
+- Bundle entries are accepted;
+- references resolve;
+- CoverageEligibilityRequest is structurally accepted;
+- CoverageEligibilityResponse is structurally accepted.
+
+This is external parser validation, not exhaustive implementation-guide certification.
