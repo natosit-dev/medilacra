@@ -7,6 +7,8 @@ def test_main_generator_exposes_x12_toggle_and_compiles():
 
     compile(source, str(path), "exec")
 
+    assert "Include external SDOH enrichment" in source
+    assert "include_sdoh=include_sdoh" in source
     assert "Include X12 Eligibility (270/271)" in source
     assert "include_x12=include_x12" in source
     assert '"*.x12"' in source
@@ -19,6 +21,8 @@ def test_generate_and_persist_uses_primary_pipeline_and_exposes_payer_tables():
     compile(source, str(path), "exec")
 
     assert "from hl7_demo.pipeline import run_pipeline" in source
+    assert "Include external SDOH enrichment" in source
+    assert "include_sdoh=bool(include_sdoh)" in source
     assert "Include X12 Eligibility (270/271)" in source
     assert 'persist="duckdb"' in source
     assert '"payer_members"' in source
