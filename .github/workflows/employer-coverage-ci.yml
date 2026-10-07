@@ -41,7 +41,8 @@ jobs:
             tests/test_x12_ui_scenarios.py \
             tests/test_x12_scaled_generation.py \
             tests/test_payer_storage.py \
-            tests/test_x12_pipeline_integration.py
+            tests/test_x12_pipeline_integration.py \
+            tests/test_x12_pipeline_ui_wiring.py
 
       - name: Run full regression suite
         run: pytest -q
