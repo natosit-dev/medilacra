@@ -42,6 +42,14 @@ except ModuleNotFoundError:
         logger.error("Failed to import generators/reports/messages", extra={"extra": {"error": str(e)}})
         raise
 
+from payer.materialize import materialize_payer_from_clinical
+from payer.system import PayerSystem
+from x12.generation import (
+    X12RunContext,
+    generate_eligibility_exchange,
+    write_x12_artifacts,
+)
+
 # -----------------------------
 # Optional persistence backend (DuckDB)
 # -----------------------------
@@ -51,6 +59,7 @@ try:
         init_db as duck_init,
         upsert_patient, upsert_encounter, upsert_observation, upsert_transaction,
         upsert_coverage_profile,
+        upsert_payer_member, upsert_payer_enrollment, upsert_payer_plan,
         append_message as duck_append_message,
         DEFAULT_DB_PATH as DUCK_DEFAULT_DB_PATH,
     )
@@ -132,6 +141,7 @@ def run_pipeline(
     add_places_obesity_obx: bool = False,
     add_unemployment_obx: bool = False,
     include_labs: bool = True,
+    include_x12: bool = False,
     persist: str = "none",
     scenario_profile: dict | None = None,
     duckdb_path: Optional[str] = None
@@ -164,11 +174,25 @@ def run_pipeline(
     logger.info("Reports loaded", extra={"extra": {"report_glob": report_glob, "report_rows": getattr(reports, 'shape', ('?', '?'))[0] if hasattr(reports, 'shape') else "unknown"}})
 
     # ---- Generate a run id (used in message log persistence)
-    run_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_at = datetime.now()
+    run_ts = run_at.strftime("%Y%m%d_%H%M%S")
     run_id = f"run_{run_ts}"
 
     # ---- Counters (return value)
-    counts: Dict[str, int] = {"ADT": 0, "ORU": 0, "DFT": 0, "ORM": 0, "ORU_LABS": 0}
+    counts: Dict[str, int] = {
+        "ADT": 0,
+        "ORU": 0,
+        "DFT": 0,
+        "ORM": 0,
+        "ORU_LABS": 0,
+    }
+    if include_x12:
+        counts["X12_270"] = 0
+        counts["X12_271"] = 0
+
+    # ---- Optional X12 workload state
+    x12_run_context = X12RunContext(run_at) if include_x12 else None
+    payer_systems: Dict[str, PayerSystem] = {}
 
     # ---- Optional DuckDB init
     db_path = duckdb_path or DUCK_DEFAULT_DB_PATH
@@ -190,6 +214,7 @@ def run_pipeline(
         "per_encounter": per_encounter,
         "bulk": bulk,
         "include_labs": include_labs,
+        "include_x12": include_x12,
         "persist": persist,
         "miles": miles,
         "sdoh_flags": {"places_obesity": add_places_obesity_obx, "unemployment": add_unemployment_obx},
@@ -211,6 +236,50 @@ def run_pipeline(
             report_row = reports.sample(n=1).iloc[0]
             o = gen_observation(e, report_row)
 
+            payer_member = None
+            payer_enrollment = None
+            payer_plan = None
+            payer_system = None
+            x12_artifacts = None
+
+            if include_x12:
+                payer_member, payer_enrollment, payer_plan = (
+                    materialize_payer_from_clinical(
+                        p,
+                        coverage,
+                    )
+                )
+
+                payer_system = payer_systems.get(
+                    coverage.payer_id
+                )
+                if payer_system is None:
+                    payer_system = PayerSystem(
+                        coverage.payer_id
+                    )
+                    payer_systems[coverage.payer_id] = (
+                        payer_system
+                    )
+
+                payer_system.add_member(payer_member)
+                payer_system.add_enrollment(
+                    payer_enrollment
+                )
+                payer_system.add_plan(payer_plan)
+
+                assert x12_run_context is not None
+                x12_artifacts = (
+                    generate_eligibility_exchange(
+                        patient=p,
+                        coverage_profile=coverage,
+                        encounter=e,
+                        payer_system=payer_system,
+                        payer_member=payer_member,
+                        payer_plan=payer_plan,
+                        run_context=x12_run_context,
+                    )
+                )
+
             logger.info("Entities generated", extra={"extra": {
                 "i": idx + 1,
                 "patient_id": getattr(p, "patient_id", None),
@@ -230,6 +299,23 @@ def run_pipeline(
                     upsert_encounter(payload(e), db_path=db_path)
                     upsert_transaction(payload(t), db_path=db_path)
                     upsert_observation(payload(o), db_path=db_path)
+
+                    if include_x12:
+                        assert payer_member is not None
+                        assert payer_enrollment is not None
+                        assert payer_plan is not None
+                        upsert_payer_member(
+                            payload(payer_member),
+                            db_path=db_path,
+                        )
+                        upsert_payer_enrollment(
+                            payload(payer_enrollment),
+                            db_path=db_path,
+                        )
+                        upsert_payer_plan(
+                            payload(payer_plan),
+                            db_path=db_path,
+                        )
                 except Exception as pe:
                     logger.error("DuckDB entity upsert failed", extra={"extra": {"error": str(pe)}})
                     raise
@@ -322,6 +408,38 @@ def run_pipeline(
                             logger.error("DuckDB message log append failed", extra={"extra": {"type": name, "path": path, "error": str(le)}})
                             raise
 
+            # ---- Write X12 eligibility pair separately from HL7 persistence
+            if include_x12:
+                assert x12_artifacts is not None
+                try:
+                    x12_paths = write_x12_artifacts(
+                        x12_artifacts,
+                        out_dir=out_dir,
+                        run_ts=run_ts,
+                        per_encounter=per_encounter,
+                        safe_encounter=safe_enc,
+                    )
+                    counts["X12_270"] += 1
+                    counts["X12_271"] += 1
+                    logger.info(
+                        "Wrote X12 eligibility pair",
+                        extra={"extra": {
+                            "encounter_id": e.encounter_id,
+                            "trace_id": x12_artifacts.trace_id,
+                            "x270_path": x12_paths["X12_270"],
+                            "x271_path": x12_paths["X12_271"],
+                        }},
+                    )
+                except OSError as ioe:
+                    logger.error(
+                        "X12 file write failed",
+                        extra={"extra": {
+                            "encounter_id": e.encounter_id,
+                            "error": str(ioe),
+                        }},
+                    )
+                    raise
+
         except Exception as e:
             # A single encounter failure is bubbled up (unchanged behavior),
             # but we include a detailed log entry to diagnose quickly.
@@ -381,6 +499,7 @@ if __name__ == "__main__":
     ap.add_argument("--miles", type=int, default=0, help="Distance delta for SDOH logic in ADT")
     ap.add_argument("--add-places-obesity-obx", action="store_true", help="Emit Places/Obesity OBX in ADT")
     ap.add_argument("--add-unemployment-obx", action="store_true", help="Emit Unemployment OBX in ADT")
+    ap.add_argument("--include-x12", action="store_true", help="Generate X12 270/271 eligibility output")
     ap.add_argument("--persist", choices=["duckdb", "none"], default="duckdb", help="Where to persist")
     ap.add_argument("--duckdb-path", type=str, default=None, help="DuckDB database path")
     args = ap.parse_args()
@@ -396,6 +515,7 @@ if __name__ == "__main__":
         miles=args.miles,
         add_places_obesity_obx=args.add_places_obesity_obx,
         add_unemployment_obx=args.add_unemployment_obx,
+        include_x12=args.include_x12,
         persist=args.persist,
         duckdb_path=args.duckdb_path,
     )
