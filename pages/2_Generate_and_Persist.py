@@ -19,7 +19,23 @@ with st.sidebar:
     per_enc = st.toggle("Per-encounter files", value=False, key="gp_perenc")
     report_glob = st.text_input("Report CSV glob", "./input/reports/*.csv", key="gp_glob")
     out_dir = st.text_input("Output folder", "./output", key="gp_outdir")
-    miles = st.number_input("AirNow radius (miles)", 1, 200, 75, key="gp_miles")
+    include_sdoh = st.checkbox(
+        "Include external SDOH enrichment",
+        value=False,
+        key="gp_sdoh",
+        help=(
+            "Opt in to AirNow, Census, PLACES, and BLS lookups. "
+            "When off, generation stays offline and vitals use neutral local inputs."
+        ),
+    )
+    miles = st.number_input(
+        "AirNow radius (miles)",
+        1,
+        200,
+        75,
+        key="gp_miles",
+        disabled=not include_sdoh,
+    )
     db_path = st.text_input("DuckDB path", DEFAULT_DB_PATH, key="gp_db")
     go = st.button("Run & Persist", type="primary", use_container_width=True)
     include_labs = st.checkbox("Include Labs (ORM + ORU)", value=True, key="gp_labs")
@@ -29,8 +45,18 @@ with st.sidebar:
         key="gp_x12",
         help="Generate one X12 270/271 pair per encounter and persist payer primitives.",
     )
-    add_places_obesity_obx = st.checkbox("Add Places/Obesity OBX to ADT", value=False, key="gp_places")
-    add_unemployment_obx = st.checkbox("Add Unemployment OBX to ADT", value=False, key="gp_unemp")
+    add_places_obesity_obx = st.checkbox(
+        "Add Places/Obesity OBX to ADT",
+        value=False,
+        key="gp_places",
+        disabled=not include_sdoh,
+    )
+    add_unemployment_obx = st.checkbox(
+        "Add Unemployment OBX to ADT",
+        value=False,
+        key="gp_unemp",
+        disabled=not include_sdoh,
+    )
     col1, col2 = st.columns(2)
 
 # Ensure DB/tables exist
@@ -48,6 +74,7 @@ if go:
         add_places_obesity_obx=bool(add_places_obesity_obx),
         add_unemployment_obx=bool(add_unemployment_obx),
         include_labs=bool(include_labs),
+        include_sdoh=bool(include_sdoh),
         include_x12=bool(include_x12),
         persist="duckdb",
         duckdb_path=db_path,
