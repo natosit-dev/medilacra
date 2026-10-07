@@ -91,7 +91,23 @@ with st.sidebar:
         value=False,
         help="Generate one 270/271 eligibility pair per encounter.",
     )
-    persist = st.radio("Persist to", ["duckdb", "none"], index=0, help="Store entities and HL7 messages in DuckDB; payer primitives are also stored when X12 is enabled.")
+    include_fhir_eligibility = st.checkbox(
+        "Include FHIR Eligibility (R4 4.0.1)",
+        value=False,
+        help=(
+            "Generate one CoverageEligibilityRequest/Response bundle pair "
+            "per encounter directly from synthetic reality."
+        ),
+    )
+    persist = st.radio(
+        "Persist to",
+        ["duckdb", "none"],
+        index=0,
+        help=(
+            "Store entities and HL7 messages in DuckDB; payer primitives "
+            "are also stored when X12 or FHIR eligibility is enabled."
+        ),
+    )
     run_btn = st.button("Generate Messages", type="primary", use_container_width=True)
     st.subheader("Scenario")
     profile_files = ["(none)"] + _list_profiles()
@@ -157,6 +173,9 @@ if run_btn:
                 "include_labs": bool(include_labs),
                 "include_sdoh": bool(include_sdoh),
                 "include_x12": bool(include_x12),
+                "include_fhir_eligibility": bool(
+                    include_fhir_eligibility
+                ),
                 "persist": persist,
             }
         },
@@ -180,6 +199,7 @@ if run_btn:
                 include_labs=include_labs,
                 include_sdoh=include_sdoh,
                 include_x12=include_x12,
+                include_fhir_eligibility=include_fhir_eligibility,
                 persist=persist,
                 scenario_profile=scenario_profile
             )
@@ -194,6 +214,13 @@ if run_btn:
                 f", X12_270: {counts.get('X12_270',0)}, "
                 f"X12_271: {counts.get('X12_271',0)}"
             )
+        if include_fhir_eligibility:
+            summary += (
+                ", FHIR requests: "
+                f"{counts.get('FHIR_ELIGIBILITY_REQUEST',0)}, "
+                "FHIR responses: "
+                f"{counts.get('FHIR_ELIGIBILITY_RESPONSE',0)}"
+            )
         st.success(summary)
         logger.info("Pipeline completed", extra={"extra": {"duration_sec": round(dur, 3), **{k: int(v) for k, v in counts.items()}}})
     except Exception as e:
@@ -207,6 +234,8 @@ if run_btn:
     message_paths = (
         glob.glob(os.path.join(out_dir, "*.hl7"))
         + glob.glob(os.path.join(out_dir, "*.x12"))
+        + glob.glob(os.path.join(out_dir, "*.json"))
+        + glob.glob(os.path.join(out_dir, "*.ndjson"))
     )
     for path in message_paths:
         try:
