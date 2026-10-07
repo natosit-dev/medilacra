@@ -36,21 +36,42 @@ def _to_iso_date(value: str) -> str:
     return f"{compact[:4]}-{compact[4:6]}-{compact[6:8]}"
 
 
-def _split_clinical_name(value: str) -> tuple[str, str]:
+def _normalize_clinical_name(value: str) -> str:
     """
-    Split current MediLacra HL7-style patient_name into first/last components.
+    Normalize MediLacra's clinical display name to LAST^FIRST.
 
-    The current clinical model stores names as LAST^FIRST.
+    General generation currently stores names as LAST, FIRST. Early X12
+    fixtures used LAST^FIRST. Support both at the transform boundary without
+    changing the canonical Patient model.
     """
-    parts = (value or "").split("^")
-    last_name = parts[0].strip() if parts else ""
-    first_name = parts[1].strip() if len(parts) > 1 else ""
+    raw = (value or "").strip()
+
+    if "^" in raw:
+        last_name, first_name = [
+            part.strip()
+            for part in raw.split("^", 1)
+        ]
+    elif "," in raw:
+        last_name, first_name = [
+            part.strip()
+            for part in raw.split(",", 1)
+        ]
+    else:
+        raise ValueError(
+            "Clinical patient_name must contain LAST, FIRST or LAST^FIRST"
+        )
 
     if not first_name or not last_name:
         raise ValueError(
-            "Clinical patient_name must contain LAST^FIRST for the X12 MVP"
+            "Clinical patient_name must contain both last and first name"
         )
 
+    return f"{last_name}^{first_name}"
+
+
+def _split_clinical_name(value: str) -> tuple[str, str]:
+    normalized = _normalize_clinical_name(value)
+    last_name, first_name = normalized.split("^", 1)
     return first_name, last_name
 
 
