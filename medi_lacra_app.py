@@ -59,9 +59,32 @@ with st.sidebar:
     per_encounter = st.toggle("Per-encounter files", value=False, help="One file per encounter")
     report_glob = st.text_input("Report CSV glob", "./input/reports/*.csv")
     out_dir = st.text_input("Output folder", "./output")
-    miles = st.number_input("AirNow radius (miles)", min_value=1, max_value=200, value=int(AIRNOW_MILES_DEFAULT), step=1)
-    add_places_obesity_obx = st.checkbox("Include Places/Obesity OBX", value=False)
-    add_unemployment_obx = st.checkbox("Include Unemployment OBX", value=False)
+    include_sdoh = st.checkbox(
+        "Include external SDOH enrichment",
+        value=False,
+        help=(
+            "Opt in to AirNow, Census, PLACES, and BLS lookups. "
+            "When off, core generation stays offline and vitals use neutral local inputs."
+        ),
+    )
+    miles = st.number_input(
+        "AirNow radius (miles)",
+        min_value=1,
+        max_value=200,
+        value=int(AIRNOW_MILES_DEFAULT),
+        step=1,
+        disabled=not include_sdoh,
+    )
+    add_places_obesity_obx = st.checkbox(
+        "Include Places/Obesity OBX",
+        value=False,
+        disabled=not include_sdoh,
+    )
+    add_unemployment_obx = st.checkbox(
+        "Include Unemployment OBX",
+        value=False,
+        disabled=not include_sdoh,
+    )
     include_labs = st.checkbox("Include Labs (ORM/ORU)", value=True)
     include_x12 = st.checkbox(
         "Include X12 Eligibility (270/271)",
@@ -132,6 +155,7 @@ if run_btn:
                 "add_places_obesity_obx": bool(add_places_obesity_obx),
                 "add_unemployment_obx": bool(add_unemployment_obx),
                 "include_labs": bool(include_labs),
+                "include_sdoh": bool(include_sdoh),
                 "include_x12": bool(include_x12),
                 "persist": persist,
             }
@@ -154,6 +178,7 @@ if run_btn:
                 add_places_obesity_obx=add_places_obesity_obx,
                 add_unemployment_obx=add_unemployment_obx,
                 include_labs=include_labs,
+                include_sdoh=include_sdoh,
                 include_x12=include_x12,
                 persist=persist,
                 scenario_profile=scenario_profile
