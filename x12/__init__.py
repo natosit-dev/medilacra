@@ -12,6 +12,7 @@ from .generation import (
     X12EligibilityArtifacts,
     X12RunContext,
     generate_eligibility_exchange,
+    generate_x12_eligibility_artifacts,
     write_x12_artifacts,
 )
 from .models import EligibilityExchange, X12Party
@@ -28,6 +29,7 @@ __all__ = [
     "build_270_transaction",
     "build_271_transaction",
     "generate_eligibility_exchange",
+    "generate_x12_eligibility_artifacts",
     "parse_270_to_inquiry",
     "parse_271",
     "wrap_interchange",
