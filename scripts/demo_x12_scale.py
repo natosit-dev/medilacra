@@ -32,8 +32,8 @@ def _table_count(db_path: str, table: str) -> int:
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=(
-            "Generate a scaled MediLacra X12 270/271 workload "
-            "through the normal run_pipeline path."
+            "Generate a scaled MediLacra eligibility workload in X12 and "
+            "FHIR R4 4.0.1 through the normal run_pipeline path."
         )
     )
     parser.add_argument(
@@ -75,6 +75,7 @@ def main() -> None:
         include_labs=False,
         include_sdoh=False,
         include_x12=True,
+        include_fhir_eligibility=True,
         persist="duckdb",
         duckdb_path=str(db_path),
     )
@@ -83,10 +84,27 @@ def main() -> None:
 
     x270_files = list(out_dir.glob("X12_270_*.x12"))
     x271_files = list(out_dir.glob("X12_271_*.x12"))
+    fhir_request_files = list(
+        out_dir.glob(
+            "FHIR_R4_4.0.1_CoverageEligibilityRequest_*.ndjson"
+        )
+    )
+    fhir_response_files = list(
+        out_dir.glob(
+            "FHIR_R4_4.0.1_CoverageEligibilityResponse_*.ndjson"
+        )
+    )
 
     if len(x270_files) != 1 or len(x271_files) != 1:
         raise RuntimeError(
             "Expected exactly one bulk 270 file and one bulk 271 file"
+        )
+    if (
+        len(fhir_request_files) != 1
+        or len(fhir_response_files) != 1
+    ):
+        raise RuntimeError(
+            "Expected exactly one bulk FHIR request file and one response file"
         )
 
     x270 = x270_files[0].read_text(encoding="utf-8")
@@ -94,6 +112,17 @@ def main() -> None:
 
     controls = CONTROL_RE.findall(x270) + CONTROL_RE.findall(x271)
     collisions = len(controls) - len(set(controls))
+
+    fhir_request_count = len(
+        fhir_request_files[0].read_text(
+            encoding="utf-8"
+        ).splitlines()
+    )
+    fhir_response_count = len(
+        fhir_response_files[0].read_text(
+            encoding="utf-8"
+        ).splitlines()
+    )
 
     patient_count = _table_count(str(db_path), "patients")
     member_count = _table_count(str(db_path), "payer_members")
@@ -107,6 +136,16 @@ def main() -> None:
     print(f"Payer enrollments:     {enrollment_count}")
     print(f"X12 270 generated:     {counts.get('X12_270', 0)}")
     print(f"X12 271 generated:     {counts.get('X12_271', 0)}")
+    print(
+        "FHIR requests:         "
+        f"{counts.get('FHIR_ELIGIBILITY_REQUEST', 0)}"
+    )
+    print(
+        "FHIR responses:        "
+        f"{counts.get('FHIR_ELIGIBILITY_RESPONSE', 0)}"
+    )
+    print(f"FHIR request lines:    {fhir_request_count}")
+    print(f"FHIR response lines:   {fhir_response_count}")
     print(f"Control collisions:    {collisions}")
     print(f"Elapsed seconds:       {elapsed:.2f}")
     print(f"Output directory:      {out_dir}")
@@ -129,6 +168,22 @@ def main() -> None:
         raise RuntimeError("270 count does not match requested population")
     if counts.get("X12_271") != expected:
         raise RuntimeError("271 count does not match requested population")
+    if counts.get("FHIR_ELIGIBILITY_REQUEST") != expected:
+        raise RuntimeError(
+            "FHIR request count does not match requested population"
+        )
+    if counts.get("FHIR_ELIGIBILITY_RESPONSE") != expected:
+        raise RuntimeError(
+            "FHIR response count does not match requested population"
+        )
+    if fhir_request_count != expected:
+        raise RuntimeError(
+            "FHIR request NDJSON line count does not match population"
+        )
+    if fhir_response_count != expected:
+        raise RuntimeError(
+            "FHIR response NDJSON line count does not match population"
+        )
     if collisions:
         raise RuntimeError(
             f"Found {collisions} X12 control-number collisions"
