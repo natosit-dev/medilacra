@@ -45,6 +45,15 @@ with st.sidebar:
         key="gp_x12",
         help="Generate one X12 270/271 pair per encounter and persist payer primitives.",
     )
+    include_fhir_eligibility = st.checkbox(
+        "Include FHIR Eligibility (R4 4.0.1)",
+        value=False,
+        key="gp_fhir_eligibility",
+        help=(
+            "Generate one FHIR CoverageEligibilityRequest/Response bundle "
+            "pair per encounter directly from synthetic reality."
+        ),
+    )
     add_places_obesity_obx = st.checkbox(
         "Add Places/Obesity OBX to ADT",
         value=False,
@@ -76,6 +85,7 @@ if go:
         include_labs=bool(include_labs),
         include_sdoh=bool(include_sdoh),
         include_x12=bool(include_x12),
+        include_fhir_eligibility=bool(include_fhir_eligibility),
         persist="duckdb",
         duckdb_path=db_path,
     )
@@ -90,19 +100,28 @@ if go:
             f", X12_270: {counts.get('X12_270',0)}, "
             f"X12_271: {counts.get('X12_271',0)}"
         )
+    if include_fhir_eligibility:
+        summary += (
+            ", FHIR requests: "
+            f"{counts.get('FHIR_ELIGIBILITY_REQUEST',0)}, "
+            "FHIR responses: "
+            f"{counts.get('FHIR_ELIGIBILITY_RESPONSE',0)}"
+        )
     st.success(summary)
 
     # Show recent message files
     recent_paths = (
         glob.glob(os.path.join(out_dir, "*.hl7"))
         + glob.glob(os.path.join(out_dir, "*.x12"))
+        + glob.glob(os.path.join(out_dir, "*.json"))
+        + glob.glob(os.path.join(out_dir, "*.ndjson"))
     )
     files = sorted(recent_paths, key=os.path.getmtime, reverse=True)[:25]
     st.subheader("Recent message files")
     for f in files:
         st.code(os.path.basename(f))
 
-st.caption("Persists clinical entities/messages plus coverage; payer members, enrollments, and plans are persisted when X12 is enabled.")
+st.caption("Persists clinical entities/messages plus coverage; payer members, enrollments, and plans are persisted when X12 or FHIR eligibility is enabled. Raw X12/FHIR artifacts remain filesystem-only.")
 
 # -------------------------
 # Preview entities section
