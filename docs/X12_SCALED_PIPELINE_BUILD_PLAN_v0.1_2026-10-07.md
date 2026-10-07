@@ -3,7 +3,7 @@
 **Version:** 0.1  
 **Date:** 2026-10-07  
 **Branch:** `experiment/employer-coverage`  
-**Status:** Implementation-ready  
+**Status:** Implemented / validated  
 **Pre-build head:** `2932907727f9a15dc85f6f31d3e68f036bcb06a0`
 
 ---
@@ -895,3 +895,359 @@ with:
 - full regression green.
 
 The external acceptance test is that IRIS consumes the generated 270/271 workload at scale.
+
+
+---
+
+# 26. Implementation Outcome
+
+Implemented on `experiment/employer-coverage`.
+
+## General X12 generation boundary
+
+Created:
+
+```text
+x12/generation.py
+```
+
+Added:
+
+```text
+X12RunContext
+X12ControlSet
+X12EligibilityArtifacts
+generate_eligibility_exchange()
+write_x12_artifacts()
+```
+
+The normal pipeline calls this boundary without learning X12 segment semantics.
+
+## Name transform
+
+The X12 clinical-name transform now accepts both:
+
+```text
+LAST, FIRST
+LAST^FIRST
+```
+
+and normalizes internally to:
+
+```text
+LAST^FIRST
+```
+
+before X12 component extraction.
+
+The canonical MediLacra `Patient.patient_name` representation was not changed.
+
+## Control numbering
+
+Scaled X12 generation now uses one run-scoped allocator.
+
+Human-readable exchange IDs use:
+
+```text
+TRACE-270-YYYYMMDDHHMMSS-NNNNN
+ELIG-REQ-YYYYMMDDHHMMSS-NNNNN
+```
+
+X12 constrained control fields use:
+
+```text
+HHMM + five-digit monotonic message sequence
+```
+
+Example:
+
+```text
+270 -> 114500001
+271 -> 114500002
+next 270 -> 114500003
+next 271 -> 114500004
+```
+
+The control allocator was tested across 1,000 exchange pairs / 2,000 messages with no collisions.
+
+## General payer materialization
+
+Added:
+
+```text
+materialize_payer_from_clinical()
+```
+
+to `payer/materialize.py`.
+
+`run_pipeline()` does not construct hidden truth/oracle primitives directly.
+
+The helper converts generated clinical-side state into independent payer-local:
+
+```text
+MemberRecord
+EnrollmentRecord
+BenefitPlan
+```
+
+Normal generation does not inject identity divergence.
+
+## `run_pipeline()` integration
+
+Added:
+
+```python
+include_x12: bool = False
+```
+
+When enabled, the primary pipeline now:
+
+```text
+generates Patient / CoverageProfile / Encounter
+        |
+        v
+materializes payer-local state
+        |
+        v
+adds state to run-scoped PayerSystem registry
+        |
+        v
+generates 270 using encounter admission date
+        |
+        v
+payer evaluates parsed inquiry
+        |
+        v
+generates 271
+        |
+        v
+writes X12 files
+```
+
+Counts expose:
+
+```text
+X12_270
+X12_271
+```
+
+only when X12 output is enabled, preserving the previous return shape for existing callers with `include_x12=False`.
+
+## File outputs
+
+Bulk mode:
+
+```text
+X12_270_YYYYMMDD_HHMMSS.x12
+X12_271_YYYYMMDD_HHMMSS.x12
+```
+
+Each bulk file contains sequential complete `ISA..IEA` interchanges.
+
+Per-encounter mode:
+
+```text
+X12_270_<encounter>_YYYYMMDD_HHMMSS.x12
+X12_271_<encounter>_YYYYMMDD_HHMMSS.x12
+```
+
+No shared multi-transaction interchange batching was introduced.
+
+## DuckDB payer state
+
+Added tables:
+
+```text
+payer_members
+payer_enrollments
+payer_plans
+```
+
+Added storage functions:
+
+```text
+upsert_payer_member()
+upsert_payer_enrollment()
+upsert_payer_plan()
+```
+
+Existing:
+
+```text
+coverage_profiles
+```
+
+continues to represent clinical-side coverage knowledge.
+
+Payer plan persistence uses the composite identity:
+
+```text
+(payer_id, plan_id)
+```
+
+and repeated plan upserts are idempotent.
+
+## Raw X12 persistence boundary
+
+Raw X12 payloads are **not** written to:
+
+```text
+messages.raw_hl7
+```
+
+The integration test explicitly confirms the existing message log remains HL7-only.
+
+A representation-neutral artifact table remains deferred to the next storage phase.
+
+## UI / CLI surfaces
+
+The main Streamlit generator now exposes:
+
+```text
+Include X12 Eligibility (270/271)
+```
+
+and lists both `.hl7` and `.x12` output files.
+
+`pages/2_Generate_and_Persist.py` now uses the primary:
+
+```text
+hl7_demo.pipeline.run_pipeline
+```
+
+instead of implementing another X12 path through the legacy DuckDB pipeline.
+
+It exposes the X12 toggle and payer table previews.
+
+CLI support:
+
+```text
+--include-x12
+```
+
+## Scale harness
+
+Created:
+
+```text
+scripts/demo_x12_scale.py
+```
+
+Usage:
+
+```bash
+python scripts/demo_x12_scale.py --n 1000
+```
+
+It calls the normal `run_pipeline()`, creates a fresh timestamped output directory and DuckDB, and validates:
+
+- patient count;
+- payer member count;
+- payer enrollment count;
+- generated 270 count;
+- generated 271 count;
+- control-number collisions.
+
+A temporary CI attempt to run the full unmocked generation path was intentionally removed from permanent branch checks because the existing ADT generation path performs network-dependent SDOH enrichment. Scaled X12 semantics and controls are covered in deterministic tests; the 1,000-record full-pipeline run remains the local/IRIS acceptance test.
+
+## Tests added
+
+```text
+tests/test_x12_scaled_generation.py
+tests/test_payer_storage.py
+tests/test_x12_pipeline_integration.py
+tests/test_x12_pipeline_ui_wiring.py
+```
+
+Coverage includes:
+
+- comma-to-caret name normalization;
+- compatibility with existing caret fixtures;
+- 1,000 exchange pairs / 2,000 unique monotonic controls;
+- generated clinical -> independent payer materialization;
+- encounter admission date -> 270 requested service date;
+- bulk and per-encounter datetime-stamped X12 filenames;
+- payer DuckDB schema and round-trip;
+- idempotent payer-plan persistence;
+- primary `run_pipeline()` X12 generation;
+- payer/coverage linkage;
+- no X12 payloads in `raw_hl7`;
+- X12-disabled backwards compatibility;
+- main Streamlit wiring;
+- Generate & Persist primary-pipeline wiring.
+
+## Automated validation
+
+Final code-bearing CI run:
+
+```text
+Focused branch suite:
+89 passed
+
+Full repository regression:
+102 passed
+```
+
+Successful workflow:
+
+```text
+https://github.com/natosit-dev/medilacra/actions/runs/37620159856
+```
+
+No test failures were reported.
+
+---
+
+# 27. Current Architecture
+
+```text
+run_pipeline()
+     |
+     +------------------------- clinical outputs
+     |                             |
+     |                             +-- ADT
+     |                             +-- ORU
+     |                             +-- DFT
+     |                             +-- ORM
+     |
+     +--> payer materialization
+             |
+             +--> DuckDB payer state
+             |
+             +--> x12/generation.py
+                       |
+                       +--> X12 270
+                       |
+                       +--> PayerSystem
+                       |
+                       '--> X12 271
+```
+
+`pipeline.py` coordinates the branch but contains no X12 segment construction.
+
+---
+
+# 28. Remaining Acceptance Test
+
+The implementation is ready for the intended scale test:
+
+```bash
+python scripts/demo_x12_scale.py --n 1000
+```
+
+Then feed the generated bulk files into IRIS:
+
+```text
+X12_270_<timestamp>.x12
+X12_271_<timestamp>.x12
+```
+
+Target:
+
+```text
+1,000 recognized HIPAA_5010:270 transactions
+1,000 recognized HIPAA_5010:271 transactions
+0 structural parse failures
+```
+
+That is the remaining external acceptance step, not an architecture/code prerequisite.
