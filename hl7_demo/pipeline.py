@@ -141,6 +141,7 @@ def run_pipeline(
     add_places_obesity_obx: bool = False,
     add_unemployment_obx: bool = False,
     include_labs: bool = True,
+    include_sdoh: bool = False,
     include_x12: bool = False,
     persist: str = "none",
     scenario_profile: dict | None = None,
@@ -157,6 +158,10 @@ def run_pipeline(
     persist:
       - "duckdb": upsert entities + append message log using storage_duckdb_entities
       - "none"  : filesystem only (no DB persistence)
+
+    include_sdoh:
+      - False by default: no AirNow/Census/PLACES/BLS lookups are attempted
+      - True: enable external SDOH enrichment for ADT generation
     """
     from faker import Faker  # local import to avoid module cost if unused by caller
 
@@ -214,6 +219,7 @@ def run_pipeline(
         "per_encounter": per_encounter,
         "bulk": bulk,
         "include_labs": include_labs,
+        "include_sdoh": include_sdoh,
         "include_x12": include_x12,
         "persist": persist,
         "miles": miles,
@@ -322,9 +328,22 @@ def run_pipeline(
 
             # ---- Build HL7 messages for this encounter
             adt = build_adt(
-                p, e, tx=t, miles=miles, obs=o,
-                add_places_obesity_obx=add_places_obesity_obx,
-                add_unemployment_obx=add_unemployment_obx
+                p,
+                e,
+                tx=t,
+                miles=miles,
+                obs=o,
+                include_sdoh=include_sdoh,
+                add_air_obx=include_sdoh,
+                add_poverty_obx=include_sdoh,
+                add_places_obesity_obx=(
+                    include_sdoh
+                    and add_places_obesity_obx
+                ),
+                add_unemployment_obx=(
+                    include_sdoh
+                    and add_unemployment_obx
+                ),
             )
             oru = build_oru(p, e, [o])
             dft = build_dft(p, e, [t], [o])
@@ -464,6 +483,7 @@ def run_and_persist(
     # New flags accepted silently by older callers
     add_places_obesity_obx: bool = False,
     add_unemployment_obx: bool = False,
+    include_sdoh: bool = False,
 ) -> Dict[str, int]:
     """
     Legacy entry point matching older callers (kept to avoid breaking pages).
@@ -480,6 +500,7 @@ def run_and_persist(
         miles=miles,
         add_places_obesity_obx=add_places_obesity_obx,
         add_unemployment_obx=add_unemployment_obx,
+        include_sdoh=include_sdoh,
         persist="duckdb",
         duckdb_path=db_path,
     )
@@ -498,7 +519,8 @@ if __name__ == "__main__":
     ap.add_argument("--out", type=str, default="out", help="Output folder")
     ap.add_argument("--miles", type=int, default=0, help="Distance delta for SDOH logic in ADT")
     ap.add_argument("--add-places-obesity-obx", action="store_true", help="Emit Places/Obesity OBX in ADT")
-    ap.add_argument("--add-unemployment-obx", action="store_true", help="Emit Unemployment OBX in ADT")
+    ap.add_argument("--add-unemployment-obx", action="store_true", help="Emit Unemployment OBX in ADT when --include-sdoh is enabled")
+    ap.add_argument("--include-sdoh", action="store_true", help="Enable external AirNow/Census/PLACES/BLS SDOH enrichment")
     ap.add_argument("--include-x12", action="store_true", help="Generate X12 270/271 eligibility output")
     ap.add_argument("--persist", choices=["duckdb", "none"], default="duckdb", help="Where to persist")
     ap.add_argument("--duckdb-path", type=str, default=None, help="DuckDB database path")
@@ -515,6 +537,7 @@ if __name__ == "__main__":
         miles=args.miles,
         add_places_obesity_obx=args.add_places_obesity_obx,
         add_unemployment_obx=args.add_unemployment_obx,
+        include_sdoh=args.include_sdoh,
         include_x12=args.include_x12,
         persist=args.persist,
         duckdb_path=args.duckdb_path,
