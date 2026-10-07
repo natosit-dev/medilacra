@@ -66,23 +66,94 @@ def _message(message_type):
     )
 
 
+def _encounter(patient_id, encounter_id):
+    return SimpleNamespace(
+        encounter_id=encounter_id,
+        patient_id=patient_id,
+        visit_number="VN0000000001",
+        account_number="ACC-FHIR-001",
+        patient_class="OUTPATIENT",
+        assigned_patient_location="RAD_DEPT1",
+        admit_datetime="2026-10-03 13:45:00",
+        discharge_datetime="2026-10-03 14:45:00",
+        hospital_service="RAD",
+        admit_source="1",
+        discharge_disposition="01",
+        ordering_provider_id="R000001",
+        ordering_provider_name="ORDERING, TEST",
+        attending_provider_id="P000001",
+        attending_provider_name="ATTENDING, TEST",
+        attending_provider_taxonomy="2085R0202X",
+        attending_provider_specialty="Diagnostic Radiology",
+        mid_level_provider_id="",
+        mid_level_provider_name="",
+        referring_provider_id="",
+        referring_provider_name="",
+        placer_order_number="PLACER-FHIR-001",
+        filler_order_number="FILLER-FHIR-001",
+        place_of_service_code="22",
+        place_of_service_description="Outpatient Hospital",
+    )
+
+
+def _transaction(encounter_id):
+    return SimpleNamespace(
+        transaction_id="TX-FHIR-PIPE-001",
+        encounter_id=encounter_id,
+        transaction_date="2026-10-03 14:00:00",
+        transaction_amount=100.0,
+        unit_cost=100.0,
+        transaction_quantity=1,
+        fee_schedule="DEFAULT",
+        insurance_plan_id="STANDARD_PPO",
+        insurance_plan_name="Standard PPO",
+        member_id="MEM-FHIR-001",
+        group_number="GRP-FHIR-001",
+        plan_type="PPO",
+        subscriber_relationship="SELF",
+        authorization_number="",
+        billing_provider_id="BILL-1",
+        billing_provider_name="BILLING, TEST",
+        billing_provider_npi="1111111111",
+        guarantor_name="FHIR, PIPELINE",
+        guarantor_relationship="SELF",
+    )
+
+
+def _observation(encounter):
+    return SimpleNamespace(
+        encounter_id=encounter.encounter_id,
+        observation_id="OBS-FHIR-PIPE-001",
+        cpt_code="70000",
+        cpt_description="Synthetic imaging",
+        procedure_description="Synthetic imaging",
+        icd_code="Z00.00",
+        icd_description="General exam",
+        diagnosis_type="F",
+        diagnosis_rank=1,
+        placer_order_number=encounter.placer_order_number,
+        filler_order_number=encounter.filler_order_number,
+        observation_text="Synthetic result",
+        observation_sub_id="1",
+        result_status="F",
+        completed_time="2026-10-03 14:15:00",
+        performing_provider_id="PERF-1",
+        performing_provider_name="PERFORMING, TEST",
+    )
+
+
 def test_run_pipeline_can_generate_fhir_eligibility_without_x12(
     tmp_path,
     monkeypatch,
 ):
     patient = _patient()
     coverage = _coverage(patient.patient_id)
-    encounter = SimpleNamespace(
-        encounter_id="ENC-FHIR-PIPE-001",
-        patient_id=patient.patient_id,
-        admit_datetime="2026-10-03 13:45:00",
+    encounter = _encounter(
+        patient.patient_id,
+        "ENC-FHIR-PIPE-001",
     )
-    transaction = SimpleNamespace(
-        transaction_id="TX-FHIR-PIPE-001",
-    )
-    observation = SimpleNamespace(
-        observation_id="OBS-FHIR-PIPE-001",
-    )
+    transaction = _transaction(encounter.encounter_id)
+    observation = _observation(encounter)
 
     monkeypatch.setattr(pipeline, "gen_patient", lambda: patient)
     monkeypatch.setattr(
@@ -201,10 +272,9 @@ def test_run_pipeline_generates_matching_x12_and_fhir_counts(
 ):
     patient = _patient()
     coverage = _coverage(patient.patient_id)
-    encounter = SimpleNamespace(
-        encounter_id="ENC-BOTH-001",
-        patient_id=patient.patient_id,
-        admit_datetime="2026-10-03 13:45:00",
+    encounter = _encounter(
+        patient.patient_id,
+        "ENC-BOTH-001",
     )
 
     monkeypatch.setattr(pipeline, "gen_patient", lambda: patient)
@@ -221,16 +291,14 @@ def test_run_pipeline_generates_matching_x12_and_fhir_counts(
     monkeypatch.setattr(
         pipeline,
         "gen_transaction",
-        lambda encounter_id, coverage_profile=None: SimpleNamespace(
-            transaction_id="TX-BOTH-001"
+        lambda encounter_id, coverage_profile=None: _transaction(
+            encounter_id
         ),
     )
     monkeypatch.setattr(
         pipeline,
         "gen_observation",
-        lambda enc, report_row: SimpleNamespace(
-            observation_id="OBS-BOTH-001"
-        ),
+        lambda enc, report_row: _observation(enc),
     )
     monkeypatch.setattr(
         pipeline,
