@@ -99,6 +99,11 @@ with st.sidebar:
             "per encounter directly from synthetic reality."
         ),
     )
+    include_claims_epa = st.checkbox(
+        "Include Claims + ePA (X12 and FHIR R4)",
+        value=False,
+        help="Synthetic 837P/835 and 278 request/response plus sibling FHIR Claim/ClaimResponse bundles. Test-only.",
+    )
     persist = st.radio(
         "Persist to",
         ["duckdb", "none"],
@@ -176,6 +181,7 @@ if run_btn:
                 "include_fhir_eligibility": bool(
                     include_fhir_eligibility
                 ),
+                "include_claims_epa": bool(include_claims_epa),
                 "persist": persist,
             }
         },
@@ -200,6 +206,7 @@ if run_btn:
                 include_sdoh=include_sdoh,
                 include_x12=include_x12,
                 include_fhir_eligibility=include_fhir_eligibility,
+                include_claims_epa=include_claims_epa,
                 persist=persist,
                 scenario_profile=scenario_profile
             )
@@ -221,6 +228,8 @@ if run_btn:
                 "FHIR responses: "
                 f"{counts.get('FHIR_ELIGIBILITY_RESPONSE',0)}"
             )
+        if include_claims_epa:
+            summary += f", Claims/ePA: {counts.get('X12_837P', 0)} exchanges, 8 artifacts each"
         st.success(summary)
         logger.info("Pipeline completed", extra={"extra": {"duration_sec": round(dur, 3), **{k: int(v) for k, v in counts.items()}}})
     except Exception as e:
