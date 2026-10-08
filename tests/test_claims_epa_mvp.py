@@ -222,3 +222,34 @@ def test_files_and_cli(tmp_path):
         assert (path / "278_response.x12").exists()
         assert (path / "epa_response.fhir.json").exists()
     assert {case["authorization_status"] for case in summary["cases"]} == {"pended"}
+
+
+def test_payer_authoring_preserves_identity_divergence():
+    p, coverage, encounter, txn, obs, member, enrollment = demo_sources()
+    # Payer-local demographic divergence is not silently overwritten by the
+    # request's clinical Patient name.
+    payer_member = replace(member, last_name="PAYERONLY")
+    case = build_case(
+        patient=p, coverage=coverage, encounter=encounter,
+        transaction=txn, observation=obs, run_at=RUN_AT,
+        payer_member=payer_member, payer_enrollment=enrollment,
+    )
+    result = generate(case, RUN_AT)
+    assert "NM1*IL*1*KELLEY*DEVIN" in result.x837p
+    assert "NM1*QC*1*PAYERONLY*DEVIN" in result.x835
+    assert "NM1*IL*1*KELLEY*DEVIN" in result.x278_request
+    assert "NM1*IL*1*PAYERONLY*DEVIN" in result.x278_response
+    payer_patient = _resolve(
+        result.claim_response,
+        _find(result.claim_response, "ClaimResponse")["patient"]["reference"],
+    )
+    assert payer_patient["name"][0]["family"] == "PAYERONLY"
+
+
+def test_tampered_payer_routing_identity_fails_closed():
+    case = demo_case(run_at=RUN_AT)
+    modified = replace(
+        case, payer_subject=replace(case.payer_subject, member_id="WRONG"),
+    )
+    with pytest.raises(ValueError, match="payer"):
+        generate(modified, RUN_AT)
