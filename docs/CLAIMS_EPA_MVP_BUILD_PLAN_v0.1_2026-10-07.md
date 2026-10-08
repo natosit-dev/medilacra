@@ -4,7 +4,7 @@
 **Date:** 2026-10-07 (America/New_York)  
 **Branch:** `experiment/claims-epa`  
 **Base:** `experiment/employer-coverage`  
-**Status:** Design checkpoint; implementation and audit recorded separately
+**Status:** Implemented / CLI regression tested; external TR3/PAS conformance pending
 
 ---
 
@@ -116,14 +116,22 @@ No FHIR R5, no institutional/dental 837, no bulk transaction batching into a sha
 
 ## 10. Definition of Done
 
-- [ ] New branch from `experiment/employer-coverage`.
-- [ ] Prompt history, gap analysis and plan committed **before** implementation.
-- [ ] Semantic requests/responses separate from X12/FHIR rendering.
-- [ ] Claims X12 837P + 835 and FHIR Claim/ClaimResponse examples.
-- [ ] ePA X12 278 request/response and FHIR Claim/ClaimResponse examples.
-- [ ] Same exchange identity and same clinical/payer facts across representations.
-- [ ] Reuses existing envelope and clinical/coverage data models where practical.
-- [ ] Executable CLI, dated outputs, test-only warnings.
-- [ ] Pytest CLI results recorded; no fabricated test outcomes.
-- [ ] Audited against all rows above; explicit deferred external validation.
-- [ ] Branch left unmerged for human review.
+- [x] New branch from `experiment/employer-coverage`.
+- [x] Prompt history, gap analysis and plan committed **before** implementation.
+- [x] Semantic requests/responses separate from X12/FHIR rendering.
+- [x] Claims X12 837P + 835 and FHIR Claim/ClaimResponse examples.
+- [x] ePA X12 278 request/response and FHIR Claim/ClaimResponse examples.
+- [x] Same exchange identity and same clinical/payer facts across representations.
+- [x] Reuses existing envelope and clinical/coverage data models where practical.
+- [x] Executable CLI, dated outputs, test-only warnings.
+- [x] Pytest CLI results recorded; no fabricated test outcomes.
+- [x] Audited against all rows above; explicit deferred external validation.
+- [x] Branch left unmerged for human review.
+
+## 11. Implementation Outcome (post-build annotation)
+
+The original versioned design was committed **before** implementation in `1c3a12e`. Subsequent code and corrective commits are recorded in [Build History](CLAIMS_EPA_MVP_BUILD_HISTORY_v0.1_2026-10-07.md). The plan-to-code crosswalk, exact pytest CLI results and unresolved external acceptance requirements are recorded in [Test Results and Audit](CLAIMS_EPA_MVP_TEST_RESULTS_AND_AUDIT_v0.1_2026-10-07.md).
+
+Final **code-bearing** test head: `0097fc1287e3d23673c086878fc18c6c066a8e46`. Successful CI: https://github.com/natosit-dev/medilacra/actions/runs/37722418933. Results: 15 focused pass; 130 full-suite pass (2 preexisting model-version warnings); five CLI cases, 10 output artifacts per case. The code includes audit fixes for independent payer member authorship and separate clinical-claim/prospective-authorization dates.
+
+**Acceptance boundary:** all scoped MVP build tasks are complete. X12 837P/835/278 licensed-guide conformance, Da Vinci PAS profile validation, production traffic, live SHN integration and external IRIS ingestion **remain unverified**, not implicitly checked off.
