@@ -44,7 +44,7 @@ def generate(case: SemanticCase, run_at: datetime) -> DualArtifacts:
         semantic=case,
         x837p=build_837p(case.claim, run_at),
         x835=build_835(case.claim, case.claim_decision, run_at,
-                       case.payer_subject),
+                       case.payer_subject, case.payer_contact),
         x278_request=build_278(case.authorization, run_at),
         x278_response=build_278(case.authorization, run_at,
                                  case.authorization_decision, case.payer_subject),
