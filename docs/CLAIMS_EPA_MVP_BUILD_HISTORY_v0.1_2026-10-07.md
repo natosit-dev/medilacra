@@ -110,6 +110,16 @@ Corrective changes:
 
 This is a substantive architectural correction, not formatting cleanup.
 
+### G. Temporal separation correction during audit
+
+The initial fixture used the same service date for a billed claim and a prospective authorization for the same CPT. That created a misleading implied workflow relationship. The synthetic case now represents **two distinct events**:
+
+- claim date from the existing clinical Encounter (demo: 2026-10-03);
+- ePA proposed service date at least 14 days later than both the encounter date and run date (demo: 2026-10-21);
+- payer coverage evaluated **separately** at each date.
+
+A regression case terminates coverage between the dates, producing a paid existing claim and a denied future authorization. This demonstrates independent decisions rather than making ePA approval a prerequisite of an unrelated billed service. There is still no true clinical order lifecycle or multi-service history; that remains out of scope.
+
 ## 4. New verification and CI
 
 Added:
