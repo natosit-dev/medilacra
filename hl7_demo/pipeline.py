@@ -42,6 +42,11 @@ except ModuleNotFoundError:
         logger.error("Failed to import generators/reports/messages", extra={"extra": {"error": str(e)}})
         raise
 
+from claims_epa.models import build_case as build_claims_epa_case
+from claims_epa.generation import (
+    generate as generate_claims_epa,
+    write_artifacts as write_claims_epa_artifacts,
+)
 from eligibility.generation import (
     EligibilityRunContext,
     build_eligibility_inquiry_from_clinical,
@@ -152,6 +157,7 @@ def run_pipeline(
     include_sdoh: bool = False,
     include_x12: bool = False,
     include_fhir_eligibility: bool = False,
+    include_claims_epa: bool = False,
     persist: str = "none",
     scenario_profile: dict | None = None,
     duckdb_path: Optional[str] = None
@@ -176,6 +182,10 @@ def run_pipeline(
       - include_x12 generates X12 270/271
       - include_fhir_eligibility generates FHIR R4 4.0.1 request/response
       - both consume the same semantic inquiry and payer response
+
+    include_claims_epa: additionally project one Claims (837P/835 + FHIR)
+    and one ePA (278 request/response + FHIR) case per encounter.
+    Test-only; no TR3/PAS certification is claimed.
     """
     from faker import Faker  # local import to avoid module cost if unused by caller
 
@@ -211,11 +221,18 @@ def run_pipeline(
     if include_fhir_eligibility:
         counts["FHIR_ELIGIBILITY_REQUEST"] = 0
         counts["FHIR_ELIGIBILITY_RESPONSE"] = 0
+    if include_claims_epa:
+        for name in ("X12_837P", "X12_835", "X12_278_REQUEST",
+                     "X12_278_RESPONSE", "FHIR_CLAIM_REQUEST",
+                     "FHIR_CLAIM_RESPONSE", "FHIR_EPA_REQUEST",
+                     "FHIR_EPA_RESPONSE"):
+            counts[name] = 0
 
     # ---- Optional eligibility workload state
     include_eligibility = (
         include_x12
         or include_fhir_eligibility
+        or include_claims_epa
     )
     eligibility_run_context = (
         EligibilityRunContext(run_at)
@@ -252,6 +269,7 @@ def run_pipeline(
         "include_sdoh": include_sdoh,
         "include_x12": include_x12,
         "include_fhir_eligibility": include_fhir_eligibility,
+        "include_claims_epa": include_claims_epa,
         "persist": persist,
         "miles": miles,
         "sdoh_flags": {"places_obesity": add_places_obesity_obx, "unemployment": add_unemployment_obx},
@@ -282,6 +300,7 @@ def run_pipeline(
             eligibility_response = None
             x12_artifacts = None
             fhir_eligibility_artifacts = None
+            claims_epa_artifacts = None
 
             if include_eligibility:
                 payer_member, payer_enrollment, payer_plan = (
@@ -354,6 +373,18 @@ def run_pipeline(
                             payer_plan=payer_plan,
                             encounter_id=e.encounter_id,
                         )
+                    )
+
+                if include_claims_epa:
+                    claims_epa_semantic = build_claims_epa_case(
+                        patient=p, coverage=coverage, encounter=e,
+                        transaction=t, observation=o,
+                        payer_member=payer_member,
+                        payer_enrollment=payer_enrollment,
+                        run_at=run_at, ordinal=idx + 1,
+                    )
+                    claims_epa_artifacts = generate_claims_epa(
+                        claims_epa_semantic, run_at,
                     )
 
             logger.info("Entities generated", extra={"extra": {
@@ -567,6 +598,25 @@ def run_pipeline(
                     )
                     raise
 
+            # ---- Claims/ePA artifacts are separate from HL7 message persistence
+            if include_claims_epa:
+                assert claims_epa_artifacts is not None
+                folder = os.path.join(
+                    out_dir, f"CLAIMS_EPA_{run_ts}_{idx+1:05d}_{safe_enc}"
+                )
+                paths = write_claims_epa_artifacts(
+                    claims_epa_artifacts, folder,
+                )
+                for key in ("X12_837P", "X12_835", "X12_278_REQUEST",
+                            "X12_278_RESPONSE", "FHIR_CLAIM_REQUEST",
+                            "FHIR_CLAIM_RESPONSE", "FHIR_EPA_REQUEST",
+                            "FHIR_EPA_RESPONSE"):
+                    counts[key] += 1
+                logger.info("Wrote Claims/ePA dual-format synthetic artifacts",
+                            extra={"extra": {"encounter_id": e.encounter_id,
+                                             "path": folder,
+                                             "artifact_count": len(paths)}})
+
         except Exception as e:
             # A single encounter failure is bubbled up (unchanged behavior),
             # but we include a detailed log entry to diagnose quickly.
@@ -594,6 +644,7 @@ def run_and_persist(
     include_sdoh: bool = False,
     include_x12: bool = False,
     include_fhir_eligibility: bool = False,
+    include_claims_epa: bool = False,
 ) -> Dict[str, int]:
     """
     Legacy entry point matching older callers (kept to avoid breaking pages).
@@ -613,6 +664,7 @@ def run_and_persist(
         include_sdoh=include_sdoh,
         include_x12=include_x12,
         include_fhir_eligibility=include_fhir_eligibility,
+        include_claims_epa=include_claims_epa,
         persist="duckdb",
         duckdb_path=db_path,
     )
@@ -635,6 +687,7 @@ if __name__ == "__main__":
     ap.add_argument("--include-sdoh", action="store_true", help="Enable external AirNow/Census/PLACES/BLS SDOH enrichment")
     ap.add_argument("--include-x12", action="store_true", help="Generate X12 270/271 eligibility output")
     ap.add_argument("--include-fhir-eligibility", action="store_true", help="Generate FHIR R4 4.0.1 eligibility request/response bundles")
+    ap.add_argument("--include-claims-epa", action="store_true", help="Generate synthetic Claims and ePA X12 + FHIR R4 pairs")
     ap.add_argument("--persist", choices=["duckdb", "none"], default="duckdb", help="Where to persist")
     ap.add_argument("--duckdb-path", type=str, default=None, help="DuckDB database path")
     args = ap.parse_args()
@@ -653,6 +706,7 @@ if __name__ == "__main__":
         include_sdoh=args.include_sdoh,
         include_x12=args.include_x12,
         include_fhir_eligibility=args.include_fhir_eligibility,
+        include_claims_epa=args.include_claims_epa,
         persist=args.persist,
         duckdb_path=args.duckdb_path,
     )
