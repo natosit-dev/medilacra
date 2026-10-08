@@ -102,8 +102,8 @@ def demo_sources(seed: int = 43):
         encounter_id=eid, patient_id=pid, visit_number=f"V{seed:06d}",
         account_number=f"A{seed:06d}", patient_class="OUTPATIENT",
         assigned_patient_location="RAD1",
-        admit_datetime="2026-10-15 09:00:00",
-        discharge_datetime="2026-10-15 11:00:00",
+        admit_datetime="2026-10-03 09:00:00",
+        discharge_datetime="2026-10-03 11:00:00",
         hospital_service="RAD", admit_source="Physician Referral",
         discharge_disposition="Home",
         ordering_provider_id="PR1", ordering_provider_name="SMITH, ALEX",
@@ -117,7 +117,7 @@ def demo_sources(seed: int = 43):
     )
     txn = Transaction(
         transaction_id=f"TX{seed:06d}", encounter_id=eid,
-        transaction_date="2026-10-15 10:00:00", transaction_amount=425.00,
+        transaction_date="2026-10-03 10:00:00", transaction_amount=425.00,
         unit_cost=425.00, transaction_quantity=1, fee_schedule="TEST",
         insurance_plan_id=coverage.plan_id, insurance_plan_name=coverage.plan_name,
         member_id=member, group_number=coverage.group_number, plan_type="PPO",
@@ -135,7 +135,7 @@ def demo_sources(seed: int = 43):
         placer_order_number=encounter.placer_order_number,
         filler_order_number=encounter.filler_order_number,
         observation_text="Synthetic test only", observation_sub_id="1",
-        result_status="F", completed_time="2026-10-15 10:15:00",
+        result_status="F", completed_time="2026-10-03 10:15:00",
         performing_provider_id="PR1", performing_provider_name="SMITH, ALEX",
     )
     payer_member, payer_enrollment, _plan = materialize_payer_from_clinical(patient, coverage)
