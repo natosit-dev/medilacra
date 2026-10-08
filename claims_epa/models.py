@@ -6,7 +6,7 @@ representations of a real payer contract, utilization policy or fee schedule.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from payer.models import EnrollmentStatus
@@ -183,6 +183,10 @@ def build_case(
         raise ValueError("observation/encounter mismatch")
 
     date = _source_date(encounter.admit_datetime)
+    # Claims represent the existing encounter service. ePA is a DISTINCT
+    # future proposed service, not retroactive authorization for that charge.
+    pa_date = (max(datetime.fromisoformat(date).date(), run_at.date())
+               + timedelta(days=14)).isoformat()
     bill = cents(transaction.transaction_amount)
     quantity = int(transaction.transaction_quantity)
     if quantity < 1:
@@ -215,25 +219,27 @@ def build_case(
         birth_date=claim.birth_date, sex=claim.sex, member_id=claim.member_id,
         payer_id=claim.payer_id, payer_name=claim.payer_name,
         provider_npi=claim.provider_npi, provider_name=claim.provider_name,
-        service_date=date, procedure_code=claim.line.procedure_code,
+        service_date=pa_date, procedure_code=claim.line.procedure_code,
         diagnosis_code=claim.line.diagnosis_code, quantity=claim.line.units,
     )
 
-    payer_active = (
+    payer_identity_matches = (
         str(payer_member.member_id) == claim.member_id
         and str(payer_member.payer_id) == claim.payer_id
         and str(payer_enrollment.payer_id) == claim.payer_id
         and str(payer_enrollment.member_record_id) == str(payer_member.member_record_id)
         and payer_enrollment.status == EnrollmentStatus.ACTIVE
-        and _source_date(payer_enrollment.effective_start) <= date
-        <= _source_date(payer_enrollment.effective_end)
     )
+    active_start = _source_date(payer_enrollment.effective_start)
+    active_end = _source_date(payer_enrollment.effective_end)
+    payer_active_claim = payer_identity_matches and active_start <= date <= active_end
+    payer_active_pa = payer_identity_matches and active_start <= pa_date <= active_end
     if claim_status not in ("paid", "denied"):
         raise ValueError("unsupported synthetic claim status")
     if authorization_status not in ("approved", "pended", "denied"):
         raise ValueError("unsupported synthetic authorization status")
 
-    paid = payer_active and claim_status == "paid"
+    paid = payer_active_claim and claim_status == "paid"
     # Explicit deterministic test schedule: 80% allowed, all allowed paid.
     allowed = bill * 80 // 100 if paid else 0
     claim_decision = ClaimDecision(
@@ -242,7 +248,7 @@ def build_case(
         allowed_cents=allowed, paid_cents=allowed, patient_cents=0,
         adjusted_cents=bill - allowed,
     )
-    final_auth = authorization_status if payer_active else "denied"
+    final_auth = authorization_status if payer_active_pa else "denied"
     authorization_decision = AuthorizationDecision(
         exchange_id=authorization.exchange_id, request_id=auth_id,
         status=final_auth,
