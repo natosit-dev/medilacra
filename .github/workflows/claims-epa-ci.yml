@@ -1,0 +1,31 @@
+name: Claims ePA Dual Projection CI
+
+on:
+  push:
+    branches:
+      - experiment/claims-epa
+  workflow_dispatch:
+
+jobs:
+  pytest-cli:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+      - name: Run focused Claims/ePA pytest CLI
+        run: python -m pytest -q tests/test_claims_epa_mvp.py
+      - name: Run full regression pytest CLI
+        run: python -m pytest -q
+      - name: Generate dual-format test artifacts from CLI
+        run: |
+          python -m claims_epa --seed 43 --count 5 --at 2026-10-07T23:00:00 --out /tmp/claims-epa-ci
+          test -f /tmp/claims-epa-ci/CLAIMS_EPA_20261007_230000_00001/837P.x12
+          test -f /tmp/claims-epa-ci/CLAIMS_EPA_20261007_230000_00001/epa_response.fhir.json
