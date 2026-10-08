@@ -66,3 +66,16 @@ Find the new `835.x12` under the newest `output/CLAIMS_EPA_*/` folder. Import it
 ## Next interpretation rule
 
 Record IRIS schema errors one by one, with transaction type, loop, segment, severity and a before/after example. Avoid retrofitting a global schema model from one failure. Update the corresponding regression test each time and keep the semantic models responsible for source facts.
+
+## Automated regression result (2026-10-08)
+
+GitHub Actions [run 37787168534](https://github.com/natosit-dev/medilacra/actions/runs/37787168534) validated the corrected code and new 1000A tests:
+
+```text
+python -m pytest -q tests/test_claims_epa_mvp.py  -> 17 passed
+python -m pytest -q                           -> 132 passed, 2 warnings
+CLI smoke: 5 synthetic cases, 10 artifacts per case
+GitHub Actions job result: success
+```
+
+**Evidence boundary:** GitHub tests verify message construction and local structural assertions; the corrected 835 **has not yet been reimported into IRIS** as of this entry. The manual test remains open.
