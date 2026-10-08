@@ -37,7 +37,18 @@ def _ctrl(exchange_id: str, variant: int) -> str:
 
 
 def _segment(*items: object) -> str:
-    return "*".join(_safe(x) if x is not None else "" for x in items) + "~"
+    # Composite fields (e.g. HC:CPT, 11:B:1) contain ':' legitimately.
+    # Keep field separators and segment terminators out of source values.
+    values = list(items)
+    while values and values[-1] is None:
+        values.pop()
+    fields = []
+    for value in values:
+        part = "" if value is None else str(value).strip().upper()
+        if any(char in part for char in "*~|\\r\\n"):
+            raise ValueError(f"unsafe X12 field: {part!r}")
+        fields.append(part)
+    return "*".join(fields) + "~"
 
 
 def _transaction(segments: list[str], control: str) -> str:
