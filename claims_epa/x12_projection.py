@@ -9,7 +9,7 @@ import hashlib
 from datetime import datetime
 
 from x12.envelope import EnvelopeConfig, wrap_interchange
-from .models import ClaimSubmission, ClaimDecision, AuthorizationRequest, AuthorizationDecision, PayerSubject, usd
+from .models import ClaimSubmission, ClaimDecision, AuthorizationRequest, AuthorizationDecision, PayerSubject, PayerContact, usd
 
 
 def _safe(value: object) -> str:
@@ -118,12 +118,14 @@ def build_837p(claim: ClaimSubmission, run_at: datetime) -> str:
 
 
 def build_835(claim: ClaimSubmission, decision: ClaimDecision, run_at: datetime,
-              payer_subject: PayerSubject) -> str:
+              payer_subject: PayerSubject, payer_contact: PayerContact) -> str:
     if claim.claim_id != decision.claim_id or claim.exchange_id != decision.exchange_id:
         raise ValueError("claim response exchange mismatch")
     control = _ctrl(claim.exchange_id, 2)
     if payer_subject.member_id != claim.member_id or payer_subject.payer_id != claim.payer_id:
         raise ValueError("payer identity does not match claim routing identifiers")
+    if payer_contact.payer_id != claim.payer_id:
+        raise ValueError("payer contact does not match claim payer")
     last, first = _safe(payer_subject.last_name), _safe(payer_subject.first_name)
     d = run_at.strftime("%Y%m%d")
     s = [
@@ -133,6 +135,11 @@ def build_835(claim: ClaimSubmission, decision: ClaimDecision, run_at: datetime,
         _segment("TRN", "1", f"PAY{control}", "999999999"),
         _segment("DTM", "405", d),
         _segment("N1", "PR", claim.payer_name),
+        # IRIS HIPAA_5010:835 requires payer 1000A address/contact segments
+        # before the 1000B payee N1 loop begins.
+        _segment("N3", payer_contact.address_line1),
+        _segment("N4", payer_contact.city, payer_contact.state, payer_contact.postal_code),
+        _segment("PER", "CX", payer_contact.contact_name, "TE", payer_contact.contact_phone),
         _segment("N1", "PE", claim.provider_name, "XX", claim.provider_npi),
         _segment("LX", "1"),
         _segment("CLP", claim.claim_id, "1" if decision.status == "paid" else "4",
