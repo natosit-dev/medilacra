@@ -51,6 +51,8 @@ def test_semantic_case_uses_existing_clinical_and_payer_primitives():
     assert case.claim.line.charge_cents == cents(txn.transaction_amount)
     assert case.claim.line.procedure_code == obs.cpt_code
     assert case.claim.line.diagnosis_code == obs.icd_code
+    assert case.authorization.service_date > case.claim.service_date
+    assert case.authorization.service_date > RUN_AT.date().isoformat()
     assert member.member_record_id == enrollment.member_record_id
     assert case.claim_decision.paid_cents == 34000
     assert case.claim_decision.adjusted_cents == 8500
