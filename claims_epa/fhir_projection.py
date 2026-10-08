@@ -10,7 +10,7 @@ from typing import Any
 
 from .models import (
     SemanticCase, ClaimSubmission, ClaimDecision,
-    AuthorizationRequest, AuthorizationDecision, usd,
+    AuthorizationRequest, AuthorizationDecision, PayerSubject, usd,
 )
 
 FHIR_VERSION = "4.0.1"
@@ -88,7 +88,7 @@ def _bundle(kind: str, exchange_id: str, resources: list[dict[str, Any]]) -> dic
 def _shared_context(
     *, member_id: str, patient_id: str, name: str, dob: str, sex: str,
     payer_id: str, payer_name: str, provider_npi: str, provider_name: str,
-    exchange_id: str,
+    exchange_id: str, payer_subject: PayerSubject,
 ) -> dict[str, dict[str, Any]]:
     payer = _organization("payer", payer_id, payer_name)
     provider = _organization("provider-npi", provider_npi, provider_name)
@@ -96,9 +96,13 @@ def _shared_context(
         source="clinical", id_value=patient_id, name=name,
         dob=dob, sex=sex, member_id=member_id,
     )
+    if payer_subject.payer_id != payer_id or payer_subject.member_id != member_id:
+        raise ValueError("payer-local identity mismatches request routing keys")
     payer_patient = _patient(
-        source="payer", id_value=f"{payer_id}:{member_id}", name=name,
-        dob=dob, sex=sex, member_id=member_id,
+        source="payer", id_value=payer_subject.member_record_id,
+        name=f"{payer_subject.last_name}, {payer_subject.first_name}",
+        dob=payer_subject.birth_date, sex=payer_subject.sex,
+        member_id=payer_subject.member_id,
     )
     clinical_coverage = _coverage(clinical_patient, payer, member_id, exchange_id, "clinical")
     payer_coverage = _coverage(payer_patient, payer, member_id, exchange_id, "payer")
@@ -177,6 +181,7 @@ def _project(
 
 def build_claim_fhir(
     request: ClaimSubmission, decision: ClaimDecision, run_at: datetime,
+    payer_subject: PayerSubject,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     if request.claim_id != decision.claim_id or request.exchange_id != decision.exchange_id:
         raise ValueError("claim/decision correlation mismatch")
@@ -185,7 +190,7 @@ def build_claim_fhir(
         name=request.patient_name, dob=request.birth_date, sex=request.sex,
         payer_id=request.payer_id, payer_name=request.payer_name,
         provider_npi=request.provider_npi, provider_name=request.provider_name,
-        exchange_id=request.exchange_id,
+        exchange_id=request.exchange_id, payer_subject=payer_subject,
     )
     claim = _base_claim(
         exchange_id=request.exchange_id, request_id=request.claim_id,
@@ -216,6 +221,7 @@ def build_claim_fhir(
 
 def build_authorization_fhir(
     request: AuthorizationRequest, decision: AuthorizationDecision, run_at: datetime,
+    payer_subject: PayerSubject,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     if request.request_id != decision.request_id or request.exchange_id != decision.exchange_id:
         raise ValueError("authorization request/decision correlation mismatch")
@@ -224,7 +230,7 @@ def build_authorization_fhir(
         name=request.patient_name, dob=request.birth_date, sex=request.sex,
         payer_id=request.payer_id, payer_name=request.payer_name,
         provider_npi=request.provider_npi, provider_name=request.provider_name,
-        exchange_id=request.exchange_id,
+        exchange_id=request.exchange_id, payer_subject=payer_subject,
     )
     claim = _base_claim(
         exchange_id=request.exchange_id, request_id=request.request_id,
