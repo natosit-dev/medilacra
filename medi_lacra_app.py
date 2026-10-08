@@ -245,6 +245,8 @@ if run_btn:
         + glob.glob(os.path.join(out_dir, "*.x12"))
         + glob.glob(os.path.join(out_dir, "*.json"))
         + glob.glob(os.path.join(out_dir, "*.ndjson"))
+        + glob.glob(os.path.join(out_dir, "CLAIMS_EPA_*", "*.x12"))
+        + glob.glob(os.path.join(out_dir, "CLAIMS_EPA_*", "*.json"))
     )
     for path in message_paths:
         try:
