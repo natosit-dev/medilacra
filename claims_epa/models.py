@@ -146,12 +146,40 @@ class PayerSubject:
 
 
 @dataclass(frozen=True)
+class PayerContact:
+    """Payer remittance contact data; synthetic fixture unless supplied explicitly."""
+    payer_id: str
+    address_line1: str
+    city: str
+    state: str
+    postal_code: str
+    contact_name: str
+    contact_phone: str
+
+    def __post_init__(self):
+        if not all((self.payer_id, self.address_line1, self.city, self.state,
+                    self.postal_code, self.contact_name, self.contact_phone)):
+            raise ValueError("payer remittance contact fields must be supplied")
+
+
+def synthetic_payer_contact(payer_id: str) -> PayerContact:
+    """Explicit test fixture, NOT a factual address for the named payer."""
+    return PayerContact(
+        payer_id=payer_id,
+        address_line1="100 SYNTHETIC PAYER WAY",
+        city="LOWELL", state="MA", postal_code="01852",
+        contact_name="SYNTHETIC EDI SUPPORT", contact_phone="5550100000",
+    )
+
+
+@dataclass(frozen=True)
 class SemanticCase:
     claim: ClaimSubmission
     claim_decision: ClaimDecision
     authorization: AuthorizationRequest
     authorization_decision: AuthorizationDecision
     payer_subject: PayerSubject
+    payer_contact: PayerContact
 
 
 def _source_date(raw: object) -> str:
@@ -165,6 +193,7 @@ def build_case(
     payer_member, payer_enrollment,
     authorization_status: str = "approved",
     claim_status: str = "paid",
+    payer_contact: PayerContact | None = None,
 ) -> SemanticCase:
     """Build sibling exchanges from existing MediLacra entities and payer-local state.
 
@@ -266,5 +295,8 @@ def build_case(
         birth_date=_source_date(payer_member.date_of_birth),
         sex=str(payer_member.administrative_sex),
     )
+    payer_contact = payer_contact or synthetic_payer_contact(claim.payer_id)
+    if payer_contact.payer_id != claim.payer_id:
+        raise ValueError("payer contact identity does not match claim payer")
     return SemanticCase(claim, claim_decision, authorization,
-                        authorization_decision, payer_subject)
+                        authorization_decision, payer_subject, payer_contact)
