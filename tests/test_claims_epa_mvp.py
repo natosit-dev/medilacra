@@ -275,3 +275,40 @@ def test_claim_paid_but_future_authorization_denied_after_coverage_expires():
     artifacts = generate(case, RUN_AT)
     assert "HCR*A3" in artifacts.x278_response
     assert _find(artifacts.authorization_response, "ClaimResponse")["disposition"] == "denied"
+
+
+def test_835_iris_payer_loop_1000a_has_required_address_and_contact():
+    """IRIS HIPAA_5010:835 first external failure (2026-10-08).
+
+    Previously, the payer N1 was followed immediately by the payee N1.
+    IRIS required loop1000A N3, N4, PER. These must precede the payee.
+    """
+    from x12.parser import tokenize_x12
+    output = generate(demo_case(run_at=RUN_AT), RUN_AT)
+    segments = tokenize_x12(output.x835)
+    st = next(i for i, seg in enumerate(segments) if seg.tag == "ST")
+    se = next(i for i, seg in enumerate(segments) if seg.tag == "SE")
+    body = segments[st:se+1]
+    payer_pos = next(i for i, seg in enumerate(body) if seg.tag == "N1" and seg.element(1) == "PR")
+    payee_pos = next(i for i, seg in enumerate(body) if seg.tag == "N1" and seg.element(1) == "PE")
+    payer_loop = body[payer_pos:payee_pos]
+    assert [seg.tag for seg in payer_loop] == ["N1", "N3", "N4", "PER"]
+    assert payer_loop[1].element(1) == "100 SYNTHETIC PAYER WAY"
+    assert payer_loop[2].element(1) == "LOWELL"
+    assert payer_loop[2].element(2) == "MA"
+    assert payer_loop[2].element(3) == "01852"
+    assert payer_loop[3].element(1) == "CX"
+    assert payer_loop[3].element(2) == "SYNTHETIC EDI SUPPORT"
+    assert payer_loop[3].element(3) == "TE"
+    assert payer_loop[3].element(4) == "5550100000"
+    assert all(seg.tag != "N1" for seg in payer_loop[1:])
+    validate_envelope(output.x835, "835")
+
+
+def test_835_rejects_mismatched_payer_remittance_contact():
+    case = demo_case(run_at=RUN_AT)
+    mismatch = replace(
+        case, payer_contact=replace(case.payer_contact, payer_id="OTHER-PAYER"),
+    )
+    with pytest.raises(ValueError, match="payer contact"):
+        generate(mismatch, RUN_AT)
