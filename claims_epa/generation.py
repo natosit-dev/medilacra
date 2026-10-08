@@ -34,17 +34,20 @@ class DualArtifacts:
 def generate(case: SemanticCase, run_at: datetime) -> DualArtifacts:
     """Project one already-materialized semantic case. No decisions made here."""
     claim_request, claim_response = build_claim_fhir(
-        case.claim, case.claim_decision, run_at,
+        case.claim, case.claim_decision, run_at, case.payer_subject,
     )
     auth_request, auth_response = build_authorization_fhir(
         case.authorization, case.authorization_decision, run_at,
+        case.payer_subject,
     )
     output = DualArtifacts(
         semantic=case,
         x837p=build_837p(case.claim, run_at),
-        x835=build_835(case.claim, case.claim_decision, run_at),
+        x835=build_835(case.claim, case.claim_decision, run_at,
+                       case.payer_subject),
         x278_request=build_278(case.authorization, run_at),
-        x278_response=build_278(case.authorization, run_at, case.authorization_decision),
+        x278_response=build_278(case.authorization, run_at,
+                                 case.authorization_decision, case.payer_subject),
         claim_request=claim_request, claim_response=claim_response,
         authorization_request=auth_request, authorization_response=auth_response,
     )
