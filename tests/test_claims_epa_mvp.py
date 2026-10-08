@@ -53,6 +53,7 @@ def test_semantic_case_uses_existing_clinical_and_payer_primitives():
     assert case.claim.line.diagnosis_code == obs.icd_code
     assert case.authorization.service_date > case.claim.service_date
     assert case.authorization.service_date > RUN_AT.date().isoformat()
+    assert case.claim.service_date < RUN_AT.date().isoformat()
     assert member.member_record_id == enrollment.member_record_id
     assert case.claim_decision.paid_cents == 34000
     assert case.claim_decision.adjusted_cents == 8500
@@ -255,3 +256,22 @@ def test_tampered_payer_routing_identity_fails_closed():
     )
     with pytest.raises(ValueError, match="payer"):
         generate(modified, RUN_AT)
+
+
+def test_claim_paid_but_future_authorization_denied_after_coverage_expires():
+    p, cov, enc, txn, obs, member, enrollment = demo_sources()
+    # Existing service occurred before termination; proposed repeat service
+    # occurs after termination. These are two different institutional decisions.
+    enrollment = replace(enrollment, effective_end="2026-10-15")
+    case = build_case(
+        patient=p, coverage=cov, encounter=enc,
+        transaction=txn, observation=obs, run_at=RUN_AT,
+        payer_member=member, payer_enrollment=enrollment,
+    )
+    assert case.claim.service_date == "2026-10-03"
+    assert case.authorization.service_date == "2026-10-21"
+    assert case.claim_decision.status == "paid"
+    assert case.authorization_decision.status == "denied"
+    artifacts = generate(case, RUN_AT)
+    assert "HCR*A3" in artifacts.x278_response
+    assert _find(artifacts.authorization_response, "ClaimResponse")["disposition"] == "denied"
