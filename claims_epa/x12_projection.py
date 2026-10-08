@@ -9,7 +9,7 @@ import hashlib
 from datetime import datetime
 
 from x12.envelope import EnvelopeConfig, wrap_interchange
-from .models import ClaimSubmission, ClaimDecision, AuthorizationRequest, AuthorizationDecision, usd
+from .models import ClaimSubmission, ClaimDecision, AuthorizationRequest, AuthorizationDecision, PayerSubject, usd
 
 
 def _safe(value: object) -> str:
@@ -117,11 +117,14 @@ def build_837p(claim: ClaimSubmission, run_at: datetime) -> str:
                  control=control, functional="HC", version="005010X222A1", run_at=run_at)
 
 
-def build_835(claim: ClaimSubmission, decision: ClaimDecision, run_at: datetime) -> str:
+def build_835(claim: ClaimSubmission, decision: ClaimDecision, run_at: datetime,
+              payer_subject: PayerSubject) -> str:
     if claim.claim_id != decision.claim_id or claim.exchange_id != decision.exchange_id:
         raise ValueError("claim response exchange mismatch")
     control = _ctrl(claim.exchange_id, 2)
-    last, first = _name(claim.patient_name)
+    if payer_subject.member_id != claim.member_id or payer_subject.payer_id != claim.payer_id:
+        raise ValueError("payer identity does not match claim routing identifiers")
+    last, first = _safe(payer_subject.last_name), _safe(payer_subject.first_name)
     d = run_at.strftime("%Y%m%d")
     s = [
         _segment("ST", "835", control, "005010X221A1"),
@@ -135,7 +138,7 @@ def build_835(claim: ClaimSubmission, decision: ClaimDecision, run_at: datetime)
         _segment("CLP", claim.claim_id, "1" if decision.status == "paid" else "4",
                  usd(decision.charged_cents), usd(decision.paid_cents),
                  usd(decision.patient_cents), "CI", claim.claim_id),
-        _segment("NM1", "QC", "1", last, first, "", "", "", "MI", claim.member_id),
+        _segment("NM1", "QC", "1", last, first, "", "", "", "MI", payer_subject.member_id),
         _segment("SVC", f"HC:{_safe(claim.line.procedure_code)}",
                  usd(claim.charge_cents), usd(decision.paid_cents)),
         _segment("DTM", "472", claim.service_date.replace("-", "")),
@@ -152,13 +155,22 @@ def build_835(claim: ClaimSubmission, decision: ClaimDecision, run_at: datetime)
 def build_278(
     request: AuthorizationRequest, run_at: datetime,
     decision: AuthorizationDecision | None = None,
+    payer_subject: PayerSubject | None = None,
 ) -> str:
     if decision and (request.request_id != decision.request_id or
                      request.exchange_id != decision.exchange_id):
         raise ValueError("authorization response exchange mismatch")
     is_response = decision is not None
+    if is_response and payer_subject is None:
+        raise ValueError("payer response requires payer-local identity")
+    if is_response and (payer_subject.member_id != request.member_id or
+                        payer_subject.payer_id != request.payer_id):
+        raise ValueError("payer identity does not match authorization routing identifiers")
     control = _ctrl(request.exchange_id, 4 if is_response else 3)
-    last, first = _name(request.patient_name)
+    last, first = (
+        (_safe(payer_subject.last_name), _safe(payer_subject.first_name))
+        if is_response else _name(request.patient_name)
+    )
     p_last, p_first = _name(request.provider_name)
     d = run_at.strftime("%Y%m%d")
     t = run_at.strftime("%H%M")
@@ -173,7 +185,8 @@ def build_278(
         _segment("HL", "2", "1", "21", "1"),
         _segment("NM1", "1P", "1", p_last, p_first, "", "", "", "XX", request.provider_npi),
         _segment("HL", "3", "2", "22", "1"),
-        _segment("NM1", "IL", "1", last, first, "", "", "", "MI", request.member_id),
+        _segment("NM1", "IL", "1", last, first, "", "", "", "MI",
+                 payer_subject.member_id if is_response else request.member_id),
         _segment("DMG", "D8", request.birth_date.replace("-", ""), request.sex),
         _segment("HL", "4", "3", "EV", "0"),
         _segment("TRN", "2" if is_response else "1", request.request_id, "999999999"),
