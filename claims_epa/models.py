@@ -134,11 +134,24 @@ class AuthorizationDecision:
 
 
 @dataclass(frozen=True)
+class PayerSubject:
+    """Payer-local member identity, never reconstructed from a clinical request."""
+    member_record_id: str
+    member_id: str
+    payer_id: str
+    first_name: str
+    last_name: str
+    birth_date: str
+    sex: str
+
+
+@dataclass(frozen=True)
 class SemanticCase:
     claim: ClaimSubmission
     claim_decision: ClaimDecision
     authorization: AuthorizationRequest
     authorization_decision: AuthorizationDecision
+    payer_subject: PayerSubject
 
 
 def _source_date(raw: object) -> str:
@@ -238,4 +251,14 @@ def build_case(
             "review-pending" if final_auth == "pended" else "not-authorized"
         ),
     )
-    return SemanticCase(claim, claim_decision, authorization, authorization_decision)
+    payer_subject = PayerSubject(
+        member_record_id=str(payer_member.member_record_id),
+        member_id=str(payer_member.member_id),
+        payer_id=str(payer_member.payer_id),
+        first_name=str(payer_member.first_name),
+        last_name=str(payer_member.last_name),
+        birth_date=_source_date(payer_member.date_of_birth),
+        sex=str(payer_member.administrative_sex),
+    )
+    return SemanticCase(claim, claim_decision, authorization,
+                        authorization_decision, payer_subject)
