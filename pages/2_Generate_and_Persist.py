@@ -54,6 +54,12 @@ with st.sidebar:
             "pair per encounter directly from synthetic reality."
         ),
     )
+    include_claims_epa = st.checkbox(
+        "Include Claims + ePA (X12 and FHIR R4)",
+        value=False,
+        key="gp_claims_epa",
+        help="Synthetic 837P/835 and 278 request/response plus sibling FHIR Claim/ClaimResponse bundles. Test-only.",
+    )
     add_places_obesity_obx = st.checkbox(
         "Add Places/Obesity OBX to ADT",
         value=False,
@@ -86,6 +92,7 @@ if go:
         include_sdoh=bool(include_sdoh),
         include_x12=bool(include_x12),
         include_fhir_eligibility=bool(include_fhir_eligibility),
+        include_claims_epa=bool(include_claims_epa),
         persist="duckdb",
         duckdb_path=db_path,
     )
@@ -107,6 +114,8 @@ if go:
             "FHIR responses: "
             f"{counts.get('FHIR_ELIGIBILITY_RESPONSE',0)}"
         )
+    if include_claims_epa:
+        summary += f", Claims/ePA: {counts.get('X12_837P', 0)} exchanges, 8 artifacts each"
     st.success(summary)
 
     # Show recent message files
@@ -115,13 +124,15 @@ if go:
         + glob.glob(os.path.join(out_dir, "*.x12"))
         + glob.glob(os.path.join(out_dir, "*.json"))
         + glob.glob(os.path.join(out_dir, "*.ndjson"))
+        + glob.glob(os.path.join(out_dir, "CLAIMS_EPA_*", "*.x12"))
+        + glob.glob(os.path.join(out_dir, "CLAIMS_EPA_*", "*.json"))
     )
     files = sorted(recent_paths, key=os.path.getmtime, reverse=True)[:25]
     st.subheader("Recent message files")
     for f in files:
         st.code(os.path.basename(f))
 
-st.caption("Persists clinical entities/messages plus coverage; payer members, enrollments, and plans are persisted when X12 or FHIR eligibility is enabled. Raw X12/FHIR artifacts remain filesystem-only.")
+st.caption("Persists clinical entities/messages plus coverage; payer members, enrollments, and plans are persisted when X12 or FHIR eligibility is enabled. Raw X12/FHIR artifacts (including Claims/ePA) remain filesystem-only.")
 
 # -------------------------
 # Preview entities section
