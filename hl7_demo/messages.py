@@ -352,12 +352,10 @@ def build_adt(
                 gi_text=gi_text,
                 gi_system=gi_system,
                 effective_dt=now,
-                method=(
-                    "ptReport",
-                    "Patient-reported",
-                    "HL7",
-                ),
-                performing_org="MEDILACRAHS",
+                # The synthetic assertion has no evidenced reporting method
+                # or performing organization; omit these optional claims.
+                method=None,
+                performing_org=None,
             )
         )
 
@@ -398,11 +396,7 @@ def build_adt(
                 spcu_text=spcu_text,
                 spcu_system=spcu_system,
                 effective_dt=now,
-                method=(
-                    "endo",
-                    "Endocrinology assessment",
-                    "HL7",
-                ),
+                method=None,  # no simulated endocrinology assessment exists
             )
         )
 
