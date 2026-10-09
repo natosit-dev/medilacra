@@ -74,3 +74,42 @@ For this first cohort, the primary success criteria are:
 4. every row returns the `LumbarSpinalFusion` questionnaire.
 
 A divergent row should be investigated by correlation id before rerunning or changing the generator.
+
+
+## First live bulk run — seeds 100–109
+
+The first 10-patient cohort completed successfully.
+
+**Aggregate result**
+
+- 10/10 requests returned HTTP 200.
+- 10/10 returned the same Patient, Coverage and ServiceRequest identities sent by MediLacra.
+- 10/10 had `identity_match=true`.
+- 10/10 returned `covered=conditional`.
+- 10/10 returned `pa-needed=auth-needed`.
+- 10/10 returned `doc-needed=clinical`.
+- 10/10 returned `info-needed=OTH`.
+- 10/10 returned `http://example.org/fhir/Questionnaire/LumbarSpinalFusion`.
+
+No cohort member diverged.
+
+| Seed | Correlation ID | SHN leg ID | HTTP | Identity |
+|---:|---|---|---:|---|
+| 100 | `medilacra-bulk-crd-100-20261009T171505Z` | `10f902f9625eed0833bc5b5886d4d442` | 200 | match |
+| 101 | `medilacra-bulk-crd-101-20261009T171506Z` | `5d8a73d4783f62c2b744f88d28ac274a` | 200 | match |
+| 102 | `medilacra-bulk-crd-102-20261009T171506Z` | `89bb10725eabf1110fbd6ec0b45f87e7` | 200 | match |
+| 103 | `medilacra-bulk-crd-103-20261009T171507Z` | `29ee76d93b5edab0cd990bb532db5ac2` | 200 | match |
+| 104 | `medilacra-bulk-crd-104-20261009T171507Z` | `ce0828de8aa08d5302e0545716814f00` | 200 | match |
+| 105 | `medilacra-bulk-crd-105-20261009T171508Z` | `4551fe655d180d8ecf584198514ddb12` | 200 | match |
+| 106 | `medilacra-bulk-crd-106-20261009T171508Z` | `9cfd8fb9de332f9e334ff9a73a30245a` | 200 | match |
+| 107 | `medilacra-bulk-crd-107-20261009T171508Z` | `cdff191a8ad813eb19f084e8c0ad54b2` | 200 | match |
+| 108 | `medilacra-bulk-crd-108-20261009T171509Z` | `7e54083b4bbd227ed6632e0094b77faf` | 200 | match |
+| 109 | `medilacra-bulk-crd-109-20261009T171509Z` | `2052d5cf8942df766a8a2c06bcc35a31` | 200 | match |
+
+### Interpretation
+
+Within this cohort, patient identity was not a source of variability in the CRD result. Ten independently generated MediLacra patients traversed the same provider-test route, preserved their Patient/Coverage/ServiceRequest relationships, and selected the same payer rule.
+
+This does **not** establish arbitrary-scale reliability or broader clinical-rule coverage. It establishes repeatability for this controlled 10-patient identity cohort.
+
+The next useful bulk dimension is to vary **clinical service/rule behavior** rather than simply add more patients to the same rule.

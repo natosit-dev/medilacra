@@ -491,3 +491,10 @@ CPT 22633 for every case
 The live runner records response semantics and checks that SHN returns the same Patient / Coverage / ServiceRequest identity for each case.
 
 See `docs/SHN_MVP0_BULK_CRD_2026-10-09.md`.
+
+
+### Bulk CRD cohort succeeded
+
+The first seeds-100–109 cohort completed 10/10 with HTTP 200, 10/10 identity preservation, and 10/10 identical lumbar-fusion payer semantics/questionnaire selection.
+
+This moves the useful next bulk axis from patient identity to clinical-rule diversity: different services and expected payer behaviors, while continuing to preserve case identity end to end.
