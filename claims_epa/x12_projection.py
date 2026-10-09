@@ -195,7 +195,8 @@ def build_278(
         _segment("NM1", "IL", "1", last, first, "", "", "", "MI",
                  payer_subject.member_id if is_response else request.member_id),
         _segment("DMG", "D8", request.birth_date.replace("-", ""), request.sex),
-        _segment("HL", "4", "3", "EV", "0"),
+        # 2000E has a service-level child; HL04 must advertise it.
+        _segment("HL", "4", "3", "EV", "1"),
         _segment("TRN", "2" if is_response else "1", request.request_id, "999999999"),
         _segment("UM", "SC", "I", "3", "11:B", "", "", "", "", "Y"),
     ]
@@ -209,6 +210,12 @@ def build_278(
         _segment("HI", f"BF:{_diag(request.diagnosis_code)}:D8:{request.service_date.replace('-', '')}"),
         _segment("HSD", "VS", request.quantity),
         _segment("NM1", "SJ", "1", p_last, p_first, "", "", "", "XX", request.provider_npi),
+        # 2000F service-level loop. X12 published examples 005010X217
+        # show HL*5*4*SS*0, DTP*472*D8, then SV1*HC:CPT**UN*units.
+        # Previously this generator silently dropped the requested procedure.
+        _segment("HL", "5", "4", "SS", "0"),
+        _segment("DTP", "472", "D8", request.service_date.replace("-", "")),
+        _segment("SV1", f"HC:{_safe(request.procedure_code)}", "", "UN", request.quantity),
     ])
     return _wrap(
         _transaction(s, control),
