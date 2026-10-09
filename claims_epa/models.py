@@ -102,6 +102,15 @@ def synthetic_claim_routing(patient, encounter, provider_npi: str) -> ClaimRouti
 
 
 @dataclass(frozen=True)
+class CoveragePeriods:
+    clinical_start: str
+    clinical_end: str
+    payer_start: str
+    payer_end: str
+    payer_status: str
+
+
+@dataclass(frozen=True)
 class ClaimSubmission:
     exchange_id: str
     claim_id: str
@@ -118,6 +127,7 @@ class ClaimSubmission:
     service_date: str
     line: ServiceLine
     routing: ClaimRouting
+    coverage_periods: CoveragePeriods
 
     @property
     def charge_cents(self) -> int:
@@ -180,6 +190,7 @@ class AuthorizationRequest:
     procedure_code: str
     diagnosis_code: str
     quantity: int
+    coverage_periods: CoveragePeriods
 
     def __post_init__(self):
         if self.quantity < 1 or not self.procedure_code or not self.diagnosis_code:
@@ -303,6 +314,13 @@ def build_case(
     auth_id = f"PA-{base}"
     claim_routing = claim_routing or synthetic_claim_routing(
         patient, encounter, str(transaction.billing_provider_npi))
+    periods = CoveragePeriods(
+        clinical_start=_source_date(coverage.effective_start),
+        clinical_end=_source_date(coverage.effective_end),
+        payer_start=_source_date(payer_enrollment.effective_start),
+        payer_end=_source_date(payer_enrollment.effective_end),
+        payer_status=str(payer_enrollment.status.value),
+    )
     claim = ClaimSubmission(
         exchange_id=f"CLAIM-{base}", claim_id=claim_id,
         patient_id=str(patient.patient_id),
@@ -319,6 +337,7 @@ def build_case(
             units=quantity, charge_cents=bill,
         ),
         routing=claim_routing,
+        coverage_periods=periods,
     )
     authorization = AuthorizationRequest(
         exchange_id=f"AUTH-{base}", request_id=auth_id,
@@ -328,6 +347,7 @@ def build_case(
         provider_npi=claim.provider_npi, provider_name=claim.provider_name,
         service_date=pa_date, procedure_code=claim.line.procedure_code,
         diagnosis_code=claim.line.diagnosis_code, quantity=claim.line.units,
+        coverage_periods=periods,
     )
 
     payer_identity_matches = (
