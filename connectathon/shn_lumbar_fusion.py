@@ -26,6 +26,9 @@ from connectathon.shn_mvp0 import (
 LUMBAR_FUSION_CPT = "22633"
 LUMBAR_FUSION_DISPLAY = "Lumbar spinal fusion"
 LUMBAR_FUSION_QUESTIONNAIRE = "http://example.org/fhir/Questionnaire/LumbarSpinalFusion"
+ICD10_CM_SYSTEM = "http://hl7.org/fhir/sid/icd-10-cm"
+LUMBAR_SPONDYLOLISTHESIS_ICD10 = "M43.16"
+LUMBAR_SPONDYLOLISTHESIS_DISPLAY = "Spondylolisthesis, lumbar region"
 SPINE_TAXONOMY = "207XS0117X"
 SPINE_SPECIALTY = "Orthopaedic Surgery of the Spine"
 
@@ -102,6 +105,10 @@ def build_lumbar_fusion_reality(seed: int = 43) -> SHNMVP0Reality:
         therapy_weeks=max(base.therapy_weeks, 12),
         neuro_deficit=False,
         prior_imaging=True,
+        imaging_confirms_instability_or_spondylolisthesis=True,
+        diagnosis_system=ICD10_CM_SYSTEM,
+        diagnosis_code=LUMBAR_SPONDYLOLISTHESIS_ICD10,
+        diagnosis_display=LUMBAR_SPONDYLOLISTHESIS_DISPLAY,
         service_code=LUMBAR_FUSION_CPT,
         service_display=LUMBAR_FUSION_DISPLAY,
     )
@@ -141,6 +148,14 @@ def build_lumbar_fusion_case(
         "conservative_therapy_weeks": reality.therapy_weeks,
         "neuro_deficit": reality.neuro_deficit,
         "prior_imaging": reality.prior_imaging,
+        "imaging_confirms_instability_or_spondylolisthesis": (
+            reality.imaging_confirms_instability_or_spondylolisthesis
+        ),
+        "diagnosis": {
+            "system": reality.diagnosis_system,
+            "code": reality.diagnosis_code,
+            "display": reality.diagnosis_display,
+        },
     }
     return {
         "reality": reality_manifest(reality),
