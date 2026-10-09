@@ -231,3 +231,7 @@ __marimo__/
 # SHN live baseline local credentials and run artifacts
 connectathon/shn_live_baseline_00301/client.json
 connectathon/shn_live_baseline_00301/out/
+
+
+# SHN bulk-test generated cases and live response artifacts
+connectathon/results/shn_bulk_crd/

@@ -471,3 +471,23 @@ The seed-43 lumbar-fusion CRD reached route `00301` at 16:59 UTC and returned th
 At 17:06 UTC the DTR request derived from the live lumbar-fusion CRD returned HTTP 200 with the payer's `LumbarSpinalFusion` Questionnaire and an in-progress QuestionnaireResponse bound to the MediLacra Patient and Coverage.
 
 This exposed the next semantic requirement: the payer asks whether imaging confirms instability or spondylolisthesis. MediLacra's existing `prior_imaging` fact only says imaging exists and must not be promoted into that stronger clinical assertion.
+
+
+## 2026-10-09 — bulk CRD identity cohort
+
+A batch generator and live runner now support repeated CRD testing across multiple independently generated MediLacra patients while holding the lumbar-fusion scenario and route 00301 constant.
+
+Default cohort:
+
+```text
+seeds 100–109
+10 distinct Patients
+10 distinct Coverages
+10 distinct encounters
+10 distinct ServiceRequests
+CPT 22633 for every case
+```
+
+The live runner records response semantics and checks that SHN returns the same Patient / Coverage / ServiceRequest identity for each case.
+
+See `docs/SHN_MVP0_BULK_CRD_2026-10-09.md`.
