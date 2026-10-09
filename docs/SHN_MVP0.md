@@ -569,3 +569,16 @@ The 34 live DTR packages were materialized locally with no semantic failures:
 The returned Patient/Coverage linkage and payer Questionnaire canonical were preserved. Item 1.1 was populated from conservative therapy weeks; item 1.2 was populated only from the explicit imaging-confirmation fact. The materializer did not use `prior_imaging` as a substitute.
 
 This makes PAS the next test boundary.
+
+
+## 2026-10-09 — documented PAS handoff
+
+The next boundary sends one completed MediLacra DTR QuestionnaireResponse back to the route-00301 payer inside a PAS Claim/$submit request.
+
+Seed 300 is built first. The PAS bundle preserves the same Patient, Coverage and ServiceRequest identity, CPT 22633, ICD-10-CM M43.16, and attaches the completed QuestionnaireResponse through Claim.supportingInfo AdditionalInformation.
+
+The request is intentionally self-contained and uses the current Da Vinci PAS request shape rather than copying the frozen Home Health fixture's service semantics.
+
+The documented reference-payer target is HTTP 200, ClaimResponse outcome `complete`, review action `A1` "Certified in total", no CommunicationRequest, and an authorization number.
+
+See `docs/SHN_MVP0_PAS_2026-10-09.md`.
