@@ -12,6 +12,7 @@ from enum import Enum
 import hashlib
 import json
 from typing import Any
+from types import SimpleNamespace
 
 from utils.db import reader, writer
 
@@ -21,6 +22,8 @@ SCHEMA_VERSION = 1
 def _json_value(value: Any) -> Any:
     if is_dataclass(value) and not isinstance(value, type):
         return _json_value(asdict(value))
+    if isinstance(value, SimpleNamespace):
+        return _json_value(vars(value))
     if isinstance(value, Enum):
         return _json_value(value.value)
     if isinstance(value, (datetime, date)):
