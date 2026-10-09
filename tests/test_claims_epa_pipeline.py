@@ -69,6 +69,28 @@ def test_pipeline_generates_claims_epa_without_eligibility_representations(tmp_p
     with db.reader(db_path=str(db_path)) as connection:
         logged = connection.execute("SELECT DISTINCT message_type FROM messages").fetchall()
         assert {row[0] for row in logged} == {"ADT", "ORU", "DFT"}
+        case_row = connection.execute(
+            "SELECT case_id, status FROM simulation_cases"
+        ).fetchone()
+        assert case_row and case_row[1] == "completed"
+        record_owners = dict(connection.execute(
+            "SELECT record_name, record_owner FROM semantic_records "
+            "WHERE case_id = ?", [case_row[0]]
+        ).fetchall())
+        assert record_owners["claim_decision"] == "payer"
+        assert record_owners["authorization_request"] == "clinical"
+        assert connection.execute(
+            "SELECT COUNT(*) FROM artifact_index WHERE case_id = ?", [case_row[0]]
+        ).fetchone()[0] == 10
+
+    # Replay from storage only: no Faker, original CSV, payer model or source objects.
+    from reality.replay import replay_claims_case
+    replayed = replay_claims_case(str(db_path), case_row[0])
+    assert replayed.x837p == (folders[0] / "837P.x12").read_text()
+    assert replayed.x835 == (folders[0] / "835.x12").read_text()
+    assert replayed.x278_request == (folders[0] / "278_request.x12").read_text()
+    assert replayed.authorization_request == fhir_pa
+
 
 
 def test_main_ui_and_pipeline_cli_expose_the_option():
