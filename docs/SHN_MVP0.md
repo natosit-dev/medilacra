@@ -582,3 +582,22 @@ The request is intentionally self-contained and uses the current Da Vinci PAS re
 The documented reference-payer target is HTTP 200, ClaimResponse outcome `complete`, review action `A1` "Certified in total", no CommunicationRequest, and an authorization number.
 
 See `docs/SHN_MVP0_PAS_2026-10-09.md`.
+
+
+### First documented PAS succeeded
+
+Seed 300 completed the full loop live:
+
+```text
+HTTP 200
+ClaimResponse outcome = complete
+review action = A1 "Certified in total"
+CommunicationRequests = 0
+authorization = AUTH-0001
+behavior match = true
+```
+
+Correlation: `medilacra-pas-300-20261009T194314Z`  
+SHN leg: `038936f424bc62246005a013060c9086`
+
+The completed DTR QuestionnaireResponse was therefore accepted as satisfying the payer's questionnaire-documentation requirement for the lumbar-fusion rule. The remaining 33 DTR-eligible patients can now be exercised through the same PAS boundary.
