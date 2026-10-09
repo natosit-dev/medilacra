@@ -68,3 +68,10 @@ package_match=true
 ```
 
 A demographic prepopulation warning is expected for independent synthetic members and does not count as failure.
+
+
+## Live bulk result
+
+The 34-case DTR cohort completed 34/34 HTTP 200, 34/34 Patient/Coverage identity matches, and 34/34 returned-questionnaire matches, all on the first attempt. Each case carried the expected single demographic-prepopulation warning.
+
+The next stage consumes those saved live DTR packages locally and materializes completed QuestionnaireResponses from MediLacra reality; it does not need another network call.
