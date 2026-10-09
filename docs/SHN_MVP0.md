@@ -520,3 +520,12 @@ See `docs/SHN_MVP0_RULE_MATRIX_2026-10-09.md`.
 ### Mixed-rule matrix succeeded
 
 The first 9-case mixed CRD matrix completed 9/9 HTTP 200, 9/9 identity preservation and 9/9 expected-behavior matches across CPT 22633, 42999 and 72148. This is the first bulk result showing both referential preservation and semantic discrimination across independently generated MediLacra realities.
+
+
+### 100-patient CRD cohort completed
+
+The seeds-300–399 mixed-rule cohort produced 100/100 successful semantic CRD evaluations when admitted: 100/100 identity preservation and 100/100 expected payer behavior. The first uninterrupted run reached HTTP 429 after 60 rapid requests; after the throttle window cleared, the remaining 40 cases completed 40/40.
+
+The throttle is logged as an operational characteristic, not a semantic failure.
+
+The next stage advances only the 34 CPT 22633 cases whose live CRD answers selected the LumbarSpinalFusion questionnaire into DTR.
