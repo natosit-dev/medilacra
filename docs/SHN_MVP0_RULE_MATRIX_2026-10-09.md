@@ -65,3 +65,20 @@ A useful success condition is therefore:
 ```
 
 If any row diverges, use that row's correlation id and SHN leg id before changing the generator.
+
+
+## First live mixed-rule run — seeds 200–208
+
+The first 9-case matrix completed successfully:
+
+- 9/9 HTTP 200
+- 9/9 identity matches
+- 9/9 behavior matches
+
+Observed behavior repeated three times each:
+
+- CPT 22633 -> conditional, auth-needed, clinical docs, OTH, LumbarSpinalFusion questionnaire
+- CPT 42999 -> not-covered, no pa-needed
+- CPT 72148 -> conditional, detail-code, no pa-needed, no questionnaire
+
+This demonstrates both referential preservation and semantic discrimination within this bounded reference-payer matrix.
