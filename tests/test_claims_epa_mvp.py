@@ -438,3 +438,30 @@ def test_prospective_requested_service_is_independent_of_completed_procedure():
             observation=obs, payer_member=member, payer_enrollment=enrollment,
             run_at=RUN_AT, requested_service=replace(altered_service, patient_id="WRONG"),
         )
+
+
+def test_versioned_synthetic_payer_policy_controls_payment_in_both_formats():
+    p, cov, enc, txn, obs, member, enrollment = demo_sources(43)
+    default = demo_case(run_at=RUN_AT).payer_policy
+    policy = replace(default, policy_id="example-payer-70-20-v2",
+                     allowed_percent=70, patient_share_percent=20,
+                     paid_adjustment_reason="97")
+    case = build_case(
+        patient=p, coverage=cov, encounter=enc, transaction=txn,
+        observation=obs, payer_member=member, payer_enrollment=enrollment,
+        run_at=RUN_AT, adjudication_policy=policy,
+    )
+    d = case.claim_decision
+    assert case.payer_policy.policy_id == "example-payer-70-20-v2"
+    assert d.charged_cents == 42500
+    assert d.allowed_cents == 29750
+    assert d.patient_cents == 5950
+    assert d.paid_cents == 23800
+    assert d.adjusted_cents == 12750
+    result = generate(case, RUN_AT)
+    assert "CAS*CO*97*127.50~" in result.x835
+    assert "BPR*I*238.00*C*CHK" in result.x835
+    response = [item["resource"] for item in result.claim_response["entry"]
+                if item["resource"]["resourceType"] == "ClaimResponse"][0]
+    assert response["payment"]["amount"]["value"] == 238.0
+    assert response["item"][0]["adjudication"][1]["amount"]["value"] == 297.5
