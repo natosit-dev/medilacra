@@ -538,3 +538,19 @@ The 100-patient CRD cohort now branches according to the payer's live answer. On
 `connectathon/shn_bulk_dtr.py` builds those DTR requests from the saved live CRD responses, including the retry matrix for seeds 360–399. `connectathon/shn_bulk_dtr_send.sh` validates returned questionnaire identity and QuestionnaireResponse Patient/Coverage linkage, and backs off/retries on HTTP 429.
 
 See `docs/SHN_MVP0_BULK_DTR_2026-10-09.md`.
+
+
+## 2026-10-09 — QuestionnaireResponse materialization
+
+The lumbar-fusion reality now carries ICD-10-CM `M43.16` (Spondylolisthesis, lumbar region) plus an explicit imaging finding distinct from the older `prior_imaging` flag.
+
+The returned payer Questionnaire can now be materialized into a completed QuestionnaireResponse directly from MediLacra reality. The current mapping is intentionally exact and fail-closed:
+
+```text
+1.1 -> conservative_therapy_weeks
+1.2 -> imaging_confirms_instability_or_spondylolisthesis
+```
+
+`prior_imaging=true` cannot satisfy item 1.2. Unknown required payer questions, changed question text/type, or Patient/Coverage identity drift stop materialization instead of inventing an answer.
+
+See `docs/SHN_MVP0_DTR_QUESTIONNAIRE_RESPONSE_2026-10-09.md`.
