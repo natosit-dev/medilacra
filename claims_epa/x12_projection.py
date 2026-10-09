@@ -85,27 +85,32 @@ def build_837p(claim: ClaimSubmission, run_at: datetime) -> str:
     control = _ctrl(claim.exchange_id, 1)
     last, first = _name(claim.patient_name)
     p_last, p_first = _name(claim.provider_name)
+    routing = claim.routing
     d = run_at.strftime("%Y%m%d")
     t = run_at.strftime("%H%M")
     s = [
         _segment("ST", "837", control, "005010X222A1"),
         _segment("BHT", "0019", "00", claim.exchange_id, d, t, "CH"),
-        _segment("NM1", "41", "2", "MEDILACRA TEST", "", "", "", "", "46", "MEDILACRA01"),
-        _segment("PER", "IC", "TEST CONTACT", "TE", "5550100000"),
+        _segment("NM1", "41", "2", routing.submitter_name, "", "", "", "", "46", routing.submitter_id),
+        _segment("PER", "IC", routing.submitter_contact, "TE", routing.submitter_phone),
         _segment("NM1", "40", "2", claim.payer_name, "", "", "", "", "46", claim.payer_id),
         _segment("HL", "1", "", "20", "1"),
         _segment("NM1", "85", "1", p_last, p_first, "", "", "", "XX", claim.provider_npi),
-        _segment("N3", "1 SYNTHETIC STREET"),
-        _segment("N4", "LOWELL", "MA", "01852"),
-        _segment("REF", "EI", "999999999"),
+        _segment("N3", routing.billing_address.street),
+        _segment("N4", routing.billing_address.city, routing.billing_address.state,
+                 routing.billing_address.postal_code),
+        _segment("REF", "EI", routing.billing_tax_id),
         _segment("HL", "2", "1", "22", "0"),
-        _segment("SBR", "P", "18", "", "", "", "", "", "", "CI"),
+        _segment("SBR", "P", routing.subscriber_relationship_code,
+                 "", "", "", "", "", "", routing.filing_indicator),
         _segment("NM1", "IL", "1", last, first, "", "", "", "MI", claim.member_id),
-        _segment("N3", "100 SYNTHETIC WAY"),
-        _segment("N4", "LOWELL", "MA", "01852"),
+        _segment("N3", routing.patient_address.street),
+        _segment("N4", routing.patient_address.city, routing.patient_address.state,
+                 routing.patient_address.postal_code),
         _segment("DMG", "D8", claim.birth_date.replace("-", ""), claim.sex),
         _segment("NM1", "PR", "2", claim.payer_name, "", "", "", "", "PI", claim.payer_id),
-        _segment("CLM", claim.claim_id, usd(claim.charge_cents), "", "", "11:B:1", "Y", "A", "Y", "Y"),
+        _segment("CLM", claim.claim_id, usd(claim.charge_cents), "", "",
+                 f"{routing.place_of_service_code}:B:1", *routing.claim_flags),
         _segment("HI", f"ABK:{_diag(claim.line.diagnosis_code)}"),
         _segment("NM1", "82", "1", p_last, p_first, "", "", "", "XX", claim.provider_npi),
         _segment("LX", claim.line.sequence),
@@ -113,7 +118,7 @@ def build_837p(claim: ClaimSubmission, run_at: datetime) -> str:
                  usd(claim.charge_cents), "UN", claim.line.units, "", "", "1"),
         _segment("DTP", "472", "D8", claim.service_date.replace("-", "")),
     ]
-    return _wrap(_transaction(s, control), source="MEDILACRA", target=claim.payer_id,
+    return _wrap(_transaction(s, control), source=routing.sender_id, target=claim.payer_id,
                  control=control, functional="HC", version="005010X222A1", run_at=run_at)
 
 
