@@ -86,3 +86,34 @@ connectathon/results/shn_bulk_dtr/shn_bulk_dtr_0300_0399/materialized/
 ```
 
 The batch manifest records Patient/Coverage/ServiceRequest identity, diagnosis, questionnaire, completion status and answer count for every case.
+
+
+## First 34-case materialization result
+
+Local validation completed successfully:
+
+```text
+26 passed
+```
+
+The saved 34-case live DTR cohort was then materialized from the payer-returned Questionnaire packages.
+
+Batch result:
+
+```text
+count:       34
+completed:   34
+two_answers: 34
+diagnosis:   ICD-10-CM M43.16 — Spondylolisthesis, lumbar region
+```
+
+A spot-check of seed 300 confirmed that the completed QuestionnaireResponse preserved the payer-returned DTR profile, questionnaire canonical, Patient reference and qr-coverage reference, while materializing:
+
+```text
+1.1 = 12
+1.2 = true
+```
+
+Both answers carry DTR information-origin metadata with `source=auto`.
+
+This closes the QuestionnaireResponse materialization boundary for the current lumbar-fusion cohort. The next experiment is PAS construction from the same MediLacra reality plus the completed DTR response.
