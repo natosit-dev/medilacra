@@ -13,7 +13,7 @@ from claims_epa.models import (
     AuthorizationDecision, AuthorizationRequest, ClaimDecision, ClaimRouting,
     CoveragePeriods,
     ClaimSubmission, PostalAddress, PayerContact, PayerSubject,
-    RemittanceInstructions, SemanticCase, ServiceLine,
+    RemittanceInstructions, SemanticCase, ServiceLine, RequestedService,
 )
 from reality.persistence import load_case
 from utils.db import reader
@@ -47,6 +47,7 @@ def reconstruct_claims_case(payload: dict) -> SemanticCase:
         authorization_decision=AuthorizationDecision(**payload["authorization_decision"]),
         payer_subject=PayerSubject(**payload["payer_subject"]),
         payer_contact=PayerContact(**payload["payer_contact"]),
+        requested_service=RequestedService(**payload["requested_service"]),
     )
 
 
