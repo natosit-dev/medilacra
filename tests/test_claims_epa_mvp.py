@@ -407,3 +407,34 @@ def test_fhir_claims_preserve_distinct_clinical_and_payer_coverage_periods():
                  and r["resource"]["id"] != clinical["id"]][0]
         assert clinical["period"] == {"start": "2026-01-01", "end": "2026-12-31"}
         assert payer["period"] == {"start": "2026-02-01", "end": "2026-11-30"}
+
+
+def test_prospective_requested_service_is_independent_of_completed_procedure():
+    case = demo_case(run_at=RUN_AT)
+    assert case.claim.line.procedure_code == "72148"
+    assert case.requested_service.procedure_code == "99213"
+    assert case.authorization.procedure_code == "99213"
+    assert case.requested_service.service_date == case.authorization.service_date
+    assert case.requested_service.source == "synthetic-followup-v1"
+
+    patient, coverage, enc, txn, obs, member, enrollment = demo_sources(43)
+    altered_service = replace(
+        case.requested_service,
+        procedure_code="97110", service_date="2026-12-02", quantity=4,
+    )
+    new_case = build_case(
+        patient=patient, coverage=coverage, encounter=enc, transaction=txn,
+        observation=obs, payer_member=member, payer_enrollment=enrollment,
+        run_at=RUN_AT, requested_service=altered_service,
+    )
+    assert new_case.claim.line.procedure_code == "72148"
+    assert new_case.authorization.procedure_code == "97110"
+    x = generate(new_case, RUN_AT).x278_request
+    assert "SV1*HC:97110**UN*4~" in x
+    assert "DTP*472*D8*20261202~" in x
+    with pytest.raises(ValueError, match="patient mismatch"):
+        build_case(
+            patient=patient, coverage=coverage, encounter=enc, transaction=txn,
+            observation=obs, payer_member=member, payer_enrollment=enrollment,
+            run_at=RUN_AT, requested_service=replace(altered_service, patient_id="WRONG"),
+        )
