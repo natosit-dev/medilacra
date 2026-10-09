@@ -81,7 +81,7 @@ def test_pipeline_generates_claims_epa_without_eligibility_representations(tmp_p
         assert record_owners["authorization_request"] == "clinical"
         assert connection.execute(
             "SELECT COUNT(*) FROM artifact_index WHERE case_id = ?", [case_row[0]]
-        ).fetchone()[0] == 10
+        ).fetchone()[0] == 13  # 10 Claims/ePA outputs + 3 HL7 v2 messages
 
     # Replay from storage only: no Faker, original CSV, payer model or source objects.
     from reality.replay import replay_claims_case
