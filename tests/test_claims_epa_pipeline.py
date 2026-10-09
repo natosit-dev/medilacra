@@ -91,8 +91,8 @@ def test_pipeline_generates_claims_epa_without_eligibility_representations(tmp_p
     assert gender_assertions["source"] == "synthetic-person-demographic-v1"
     assert gender_assertions["effective_at"]
     assert set(gender_assertions["values"]) == {"gi", "pro", "spcu"}
-    assert snapshot["requested_service"]["procedure_code"] != \\
-        snapshot["claim_submission"]["line"]["procedure_code"]
+    assert (snapshot["requested_service"]["procedure_code"] !=
+            snapshot["claim_submission"]["line"]["procedure_code"])
     assert snapshot["payer_policy"]["policy_id"] == "example-payer-flat80-v1"
 
     replayed = replay_claims_case(str(db_path), case_row[0])
