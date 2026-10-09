@@ -37,3 +37,28 @@ CommunicationRequests = 0
 authorization present
 behavior_match = true
 ```
+
+
+## Live batch result — remaining 33 patients
+
+The documented PAS batch completed successfully:
+
+```text
+HTTP 2xx:       33/33
+A1 certified:   33/33
+no comm req:    33/33
+authorization:  33/33
+behavior match: 33/33
+```
+
+Combined with the separately tested seed 300, the entire 34-case DTR-eligible cohort completed the documented PAS boundary successfully:
+
+```text
+34/34 HTTP 200
+34/34 A1 "Certified in total"
+34/34 no CommunicationRequest
+34/34 authorization present
+34/34 expected behavior
+```
+
+This establishes repeatability across all 34 independently generated lumbar-fusion patients that CRD routed into DTR.
