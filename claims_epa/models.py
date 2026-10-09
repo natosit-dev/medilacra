@@ -174,6 +174,46 @@ class ClaimDecision:
 
 
 @dataclass(frozen=True)
+class RequestedService:
+    """A separately authored, prospective clinical intent (not an old result)."""
+    service_request_id: str
+    patient_id: str
+    requesting_provider_npi: str
+    service_date: str
+    procedure_code: str
+    diagnosis_code: str
+    quantity: int
+    status: str
+    source: str
+
+    def __post_init__(self):
+        if not all((self.service_request_id, self.patient_id, self.service_date,
+                    self.procedure_code, self.diagnosis_code, self.source)):
+            raise ValueError("RequestedService requires explicit source facts")
+        if self.quantity < 1 or self.status != "planned":
+            raise ValueError("Only positive-unit planned services are supported")
+
+
+def synthetic_followup_service(*, patient_id: str, provider_npi: str,
+                               diagnosis_code: str, run_at: datetime,
+                               encounter_date: str, ordinal: int) -> RequestedService:
+    """Explicit named scenario policy: prospective outpatient consultation.
+
+    This source generator is NOT a serializer. It does not copy a performed
+    procedure code from a completed Observation; it creates a distinct intent.
+    """
+    date = (max(datetime.fromisoformat(encounter_date).date(), run_at.date())
+            + timedelta(days=14)).isoformat()
+    stamp = run_at.strftime("%Y%m%d%H%M%S")
+    return RequestedService(
+        service_request_id=f"RS-{stamp}-{ordinal:05d}",
+        patient_id=patient_id, requesting_provider_npi=provider_npi,
+        service_date=date, procedure_code="99213", diagnosis_code=diagnosis_code,
+        quantity=1, status="planned", source="synthetic-followup-v1",
+    )
+
+
+@dataclass(frozen=True)
 class AuthorizationRequest:
     exchange_id: str
     request_id: str
@@ -265,6 +305,7 @@ class SemanticCase:
     authorization_decision: AuthorizationDecision
     payer_subject: PayerSubject
     payer_contact: PayerContact
+    requested_service: RequestedService
 
 
 def _source_date(raw: object) -> str:
@@ -280,6 +321,7 @@ def build_case(
     claim_status: str = "paid",
     payer_contact: PayerContact | None = None,
     claim_routing: ClaimRouting | None = None,
+    requested_service: RequestedService | None = None,
 ) -> SemanticCase:
     """Build sibling exchanges from existing MediLacra entities and payer-local state.
 
@@ -298,10 +340,17 @@ def build_case(
         raise ValueError("observation/encounter mismatch")
 
     date = _source_date(encounter.admit_datetime)
-    # Claims represent the existing encounter service. ePA is a DISTINCT
-    # future proposed service, not retroactive authorization for that charge.
-    pa_date = (max(datetime.fromisoformat(date).date(), run_at.date())
-               + timedelta(days=14)).isoformat()
+    # Claims represent completed work. Prior auth represents a separate
+    # prospective service request; the default is a named synthetic scenario.
+    requested_service = requested_service or synthetic_followup_service(
+        patient_id=str(patient.patient_id),
+        provider_npi=str(transaction.billing_provider_npi),
+        diagnosis_code=str(observation.icd_code), run_at=run_at,
+        encounter_date=date, ordinal=ordinal,
+    )
+    if requested_service.patient_id != str(patient.patient_id):
+        raise ValueError("RequestedService patient mismatch")
+    pa_date = requested_service.service_date
     bill = cents(transaction.transaction_amount)
     quantity = int(transaction.transaction_quantity)
     if quantity < 1:
@@ -345,8 +394,9 @@ def build_case(
         birth_date=claim.birth_date, sex=claim.sex, member_id=claim.member_id,
         payer_id=claim.payer_id, payer_name=claim.payer_name,
         provider_npi=claim.provider_npi, provider_name=claim.provider_name,
-        service_date=pa_date, procedure_code=claim.line.procedure_code,
-        diagnosis_code=claim.line.diagnosis_code, quantity=claim.line.units,
+        service_date=pa_date, procedure_code=requested_service.procedure_code,
+        diagnosis_code=requested_service.diagnosis_code,
+        quantity=requested_service.quantity,
         coverage_periods=periods,
     )
 
@@ -405,4 +455,5 @@ def build_case(
     if payer_contact.payer_id != claim.payer_id:
         raise ValueError("payer contact identity does not match claim payer")
     return SemanticCase(claim, claim_decision, authorization,
-                        authorization_decision, payer_subject, payer_contact)
+                        authorization_decision, payer_subject, payer_contact,
+                        requested_service)
