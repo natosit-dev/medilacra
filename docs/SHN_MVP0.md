@@ -601,3 +601,10 @@ Correlation: `medilacra-pas-300-20261009T194314Z`
 SHN leg: `038936f424bc62246005a013060c9086`
 
 The completed DTR QuestionnaireResponse was therefore accepted as satisfying the payer's questionnaire-documentation requirement for the lumbar-fusion rule. The remaining 33 DTR-eligible patients can now be exercised through the same PAS boundary.
+
+
+## 2026-10-09 — bulk documented PAS
+
+With seed 300 certified A1 using MediLacra's completed DTR QuestionnaireResponse, the remaining 33 DTR-eligible patients can now be generated and submitted as a cohort. Seed 300 is explicitly skipped so the single-case proof remains distinct from the batch run.
+
+See `docs/SHN_MVP0_BULK_PAS_2026-10-09.md`.
