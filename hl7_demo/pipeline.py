@@ -43,6 +43,7 @@ except ModuleNotFoundError:
         raise
 
 from claims_epa.models import build_case as build_claims_epa_case
+from reality.persistence import persist_case, register_artifact, finish_case
 from claims_epa.generation import (
     generate as generate_claims_epa,
     write_artifacts as write_claims_epa_artifacts,
@@ -99,7 +100,8 @@ def _first_msh_and_control_id(raw_msg: str) -> Tuple[str, str]:
             ctrl = parts[9]
     return first, ctrl or ""
 
-def _collect_msg_row(run_id: str, message_type: str, path: str, msg: str) -> dict:
+def _collect_msg_row(run_id: str, message_type: str, path: str, msg: str,
+                     *, encounter_id: str | None = None, ingest_ts: datetime | None = None) -> dict:
     """Collect a row payload describing the written HL7 message for DB logging."""
     first, ctrl = _first_msh_and_control_id(msg)
     name = os.path.basename(path)
@@ -109,9 +111,10 @@ def _collect_msg_row(run_id: str, message_type: str, path: str, msg: str) -> dic
         "run_id": run_id,
         "message_type": message_type,
         "control_id": ctrl or name,
-        "encounter_id": enc,
+        "encounter_id": encounter_id or enc,
         "raw_hl7": msg,
         "written_path": os.path.abspath(path),
+        "ingest_ts": ingest_ts or datetime.now(),
     }
 
 def _facility_from_pv1_3(pv1_3: str) -> str:
@@ -301,6 +304,8 @@ def run_pipeline(
             x12_artifacts = None
             fhir_eligibility_artifacts = None
             claims_epa_artifacts = None
+            claims_epa_semantic = None
+            case_id = f"{run_id}:{idx+1:05d}"
 
             if include_eligibility:
                 payer_member, payer_enrollment, payer_plan = (
@@ -383,9 +388,6 @@ def run_pipeline(
                         payer_enrollment=payer_enrollment,
                         run_at=run_at, ordinal=idx + 1,
                     )
-                    claims_epa_artifacts = generate_claims_epa(
-                        claims_epa_semantic, run_at,
-                    )
 
             logger.info("Entities generated", extra={"extra": {
                 "i": idx + 1,
@@ -423,9 +425,72 @@ def run_pipeline(
                             payload(payer_plan),
                             db_path=db_path,
                         )
+
+                    # One case snapshot retains *all* fields omitted by flat tables
+                    # and the independent clinical/payer/financial semantic records.
+                    records = {
+                        "clinical_patient": p, "clinical_encounter": e,
+                        "clinical_observation": o, "clinical_transaction": t,
+                        "clinical_coverage": coverage,
+                    }
+                    owners = {
+                        "clinical_patient": "clinical",
+                        "clinical_encounter": "clinical",
+                        "clinical_observation": "clinical",
+                        "clinical_transaction": "clinical",
+                        "clinical_coverage": "clinical",
+                    }
+                    if include_eligibility:
+                        records.update({
+                            "payer_member": payer_member,
+                            "payer_enrollment": payer_enrollment,
+                            "payer_plan": payer_plan,
+                            "eligibility_inquiry": eligibility_inquiry,
+                            "eligibility_response": eligibility_response,
+                        })
+                        owners.update({
+                            "payer_member": "payer",
+                            "payer_enrollment": "payer",
+                            "payer_plan": "payer",
+                            "eligibility_inquiry": "clinical",
+                            "eligibility_response": "payer",
+                        })
+                    if claims_epa_semantic is not None:
+                        records.update({
+                            "claim_submission": claims_epa_semantic.claim,
+                            "claim_decision": claims_epa_semantic.claim_decision,
+                            "authorization_request": claims_epa_semantic.authorization,
+                            "authorization_decision": claims_epa_semantic.authorization_decision,
+                            "payer_subject": claims_epa_semantic.payer_subject,
+                            "payer_contact": claims_epa_semantic.payer_contact,
+                        })
+                        owners.update({
+                            "claim_submission": "clinical",
+                            "claim_decision": "payer",
+                            "authorization_request": "clinical",
+                            "authorization_decision": "payer",
+                            "payer_subject": "payer",
+                            "payer_contact": "payer",
+                        })
+                    persist_case(
+                        db_path=db_path, run_id=run_id, case_id=case_id,
+                        source_records=records, owner_by_record=owners,
+                        seed=seed, started_at=run_at,
+                        source_revision=os.getenv("MEDILACRA_SOURCE_REVISION", "unrecorded"),
+                        options={"include_x12": include_x12,
+                                 "include_fhir_eligibility": include_fhir_eligibility,
+                                 "include_claims_epa": include_claims_epa,
+                                 "include_labs": include_labs},
+                    )
                 except Exception as pe:
                     logger.error("DuckDB entity upsert failed", extra={"extra": {"error": str(pe)}})
                     raise
+
+            # Generators above materialized the semantic claim/PA facts.
+            # Render their representations only after the persistence checkpoint.
+            if include_claims_epa:
+                assert claims_epa_semantic is not None
+                claims_epa_artifacts = generate_claims_epa(claims_epa_semantic, run_at)
 
             # ---- Build HL7 messages for this encounter
             adt = build_adt(
@@ -500,7 +565,8 @@ def run_pipeline(
                     # Append a bronze-style message log row to DuckDB if requested
                     if persist == "duckdb":
                         try:
-                            row = _collect_msg_row(run_id, name, path, msg)
+                            row = _collect_msg_row(run_id, name, path, msg,
+                                                   encounter_id=e.encounter_id, ingest_ts=run_at)
                             duck_append_message(row, db_path=db_path)
                         except Exception as le:
                             logger.error("DuckDB message log append failed", extra={"extra": {"type": name, "path": path, "error": str(le)}})
@@ -522,7 +588,8 @@ def run_pipeline(
 
                     if persist == "duckdb":
                         try:
-                            row = _collect_msg_row(run_id, name, path, msg)
+                            row = _collect_msg_row(run_id, name, path, msg,
+                                                   encounter_id=e.encounter_id, ingest_ts=run_at)
                             duck_append_message(row, db_path=db_path)
                         except Exception as le:
                             logger.error("DuckDB message log append failed", extra={"extra": {"type": name, "path": path, "error": str(le)}})
@@ -612,10 +679,20 @@ def run_pipeline(
                             "FHIR_CLAIM_RESPONSE", "FHIR_EPA_REQUEST",
                             "FHIR_EPA_RESPONSE"):
                     counts[key] += 1
+                if persist == "duckdb":
+                    from pathlib import Path
+                    for kind, artifact_path in paths.items():
+                        artifact_file = Path(artifact_path)
+                        if artifact_file.is_file():
+                            register_artifact(db_path, case_id, kind, str(artifact_file),
+                                              artifact_file.read_text(encoding="utf-8"))
                 logger.info("Wrote Claims/ePA dual-format synthetic artifacts",
                             extra={"extra": {"encounter_id": e.encounter_id,
                                              "path": folder,
                                              "artifact_count": len(paths)}})
+
+            if persist == "duckdb":
+                finish_case(db_path, case_id)
 
         except Exception as e:
             # A single encounter failure is bubbled up (unchanged behavior),
