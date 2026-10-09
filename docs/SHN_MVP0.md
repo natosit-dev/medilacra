@@ -435,3 +435,10 @@ synthetic MediLacra Patient, Coverage and ServiceRequest, then adds route `00301
 SHN network-adapter boundary.
 
 See `docs/SHN_MVP0_MEDILACRA_CRD_2026-10-09.md` for the model, invariants and run command.
+
+
+### First generated CRD reached SHN
+
+On 2026-10-09 at 16:49 UTC, the seed-43 MediLacra CRD for CPT `72148` was sent live through route `00301` and returned HTTP 200. SHN preserved the MediLacra Patient, Coverage and ServiceRequest references. The payer returned its no-rule/default CRD shape (`covered=conditional`, `info-needed=detail-code`) and did not return a questionnaire, so this case correctly stops before DTR.
+
+See `docs/SHN_MVP0_MEDILACRA_CRD_2026-10-09.md` for the trace and semantic evidence.

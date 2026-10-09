@@ -108,3 +108,56 @@ The first live run should therefore be evaluated for routing, acceptance, return
 The first generated artifact exposed an important semantic issue before any live request was sent: the adapter initially kept the synthetic payer's display name while assigning the contained Organization the SHN `00301` identifier. That would have made one Organization simultaneously claim to be the synthetic payer and the SHN reference payer.
 
 The adapter was corrected so source payer identity and network test-payer identity are separate. Tests now assert this distinction.
+
+
+## First live MediLacra-generated CRD send — 2026-10-09 16:49 UTC
+
+The first request generated from MediLacra reality was sent through the same authenticated SHN provider-test path used by the frozen control.
+
+**Request identity**
+
+- Case: `shn_mvp0_0043`
+- Patient: `Patient/ML-c89f42c8921c52e7`
+- Coverage: `Coverage/COV-cf3716e963a45256`
+- ServiceRequest: `ServiceRequest/SR-0c01d7a890005f67`
+- Service: CPT `72148` — MRI lumbar spine without contrast
+- Network test payer substitution: `urn:oid:2.16.840.1.113883.6.300|00301`
+
+**Network evidence**
+
+- HTTP: `200`
+- X-Correlation-Id: `medilacra-generated-crd-20261009T164903Z`
+- X-SHN-Leg-Id: `aed36514db53ec3c5de3a1cc5a47026d`
+- Trace: `https://admin.shn-preview.org/connectathon/trace/medilacra-generated-crd-20261009T164903Z`
+
+**Returned semantics**
+
+The payer returned no cards and one `systemActions` update on the **same MediLacra ServiceRequest**. The returned resource preserved:
+
+- ServiceRequest id `SR-0c01d7a890005f67`
+- Patient reference `Patient/ML-c89f42c8921c52e7`
+- Coverage reference `Coverage/COV-cf3716e963a45256`
+- CPT `72148`
+- status `draft`
+- intent `order`
+
+The coverage-information extension returned:
+
+- `covered = conditional`
+- `info-needed = detail-code`
+- no `pa-needed`
+- no `doc-needed`
+- no questionnaire canonical
+- `coverage-assertion-id = default-1791564543908`
+
+This matches the 00301 reference payer's documented **no-rule default** shape: `covered=conditional` with `info-needed=detail-code`.
+
+### Interpretation
+
+This is a successful live MediLacra → SHN semantic round trip for CRD.
+
+The generated patient, coverage and order were accepted, routed, and returned with their identity relationships intact. The service itself did not hit one of route 00301's explicit prior-authorization rules, so the CRD path ended in the payer's default coverage response rather than a DTR handoff.
+
+That means DTR should **not** be fabricated from this response. There is no questionnaire canonical to follow.
+
+The next controlled experiment should keep MediLacra-generated identity and transport unchanged while generating a clinically coherent MediLacra scenario whose service code is known to hit an explicit 00301 rule. That isolates payer-rule selection as the next changed variable.
