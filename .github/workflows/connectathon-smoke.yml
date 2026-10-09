@@ -42,6 +42,7 @@ jobs:
             connectathon/scenarios.py \
             connectathon/shn_mvp0.py \
             connectathon/shn_medilacra_crd.py \
+            connectathon/shn_lumbar_fusion.py \
             connectathon/run.py \
             experiments/disco_inferno/fhir_corruptions.py \
             hl7_demo/labs.py \
@@ -58,4 +59,5 @@ jobs:
             tests/test_connectathon_scenarios.py \
             tests/test_connectathon_piqitt_integration.py \
             tests/test_shn_mvp0.py \
-            tests/test_shn_medilacra_crd.py
+            tests/test_shn_medilacra_crd.py \
+            tests/test_shn_lumbar_fusion.py

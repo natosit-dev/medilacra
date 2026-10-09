@@ -442,3 +442,18 @@ See `docs/SHN_MVP0_MEDILACRA_CRD_2026-10-09.md` for the model, invariants and ru
 On 2026-10-09 at 16:49 UTC, the seed-43 MediLacra CRD for CPT `72148` was sent live through route `00301` and returned HTTP 200. SHN preserved the MediLacra Patient, Coverage and ServiceRequest references. The payer returned its no-rule/default CRD shape (`covered=conditional`, `info-needed=detail-code`) and did not return a questionnaire, so this case correctly stops before DTR.
 
 See `docs/SHN_MVP0_MEDILACRA_CRD_2026-10-09.md` for the trace and semantic evidence.
+
+
+## 2026-10-09 — coherent lumbar-fusion reality
+
+A second generated clinical scenario now exercises a service with a documented route-00301 rule: CPT `22633`, lumbar spinal fusion.
+
+For a given seed, the scenario preserves the same MediLacra patient and coverage as the first generated CRD experiment, but creates a new spine-clinic encounter and new ServiceRequest. This avoids changing the meaning of the earlier MRI order while isolating payer-rule selection as the changed variable.
+
+Generate it with:
+
+```bash
+python -m connectathon.shn_lumbar_fusion --seed 43
+```
+
+See `docs/SHN_MVP0_LUMBAR_FUSION_2026-10-09.md`.

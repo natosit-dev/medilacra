@@ -44,6 +44,8 @@ class SHNMVP0Reality:
     therapy_weeks: int
     neuro_deficit: bool
     prior_imaging: bool
+    service_code: str = "72148"
+    service_display: str = "MRI lumbar spine without contrast"
 
 
 def _stable_id(seed: int, label: str) -> str:
@@ -182,6 +184,8 @@ def build_reality(seed: int = 43) -> SHNMVP0Reality:
         therapy_weeks=6 + (seed % 4),
         neuro_deficit=False,
         prior_imaging=True,
+        service_code="72148",
+        service_display="MRI lumbar spine without contrast",
     )
 
 
@@ -210,6 +214,11 @@ def reality_manifest(reality: SHNMVP0Reality) -> dict[str, Any]:
             "conservative_therapy_weeks": reality.therapy_weeks,
             "neuro_deficit": reality.neuro_deficit,
             "prior_imaging": reality.prior_imaging,
+            "ordered_service": {
+                "system": "http://www.ama-assn.org/go/cpt",
+                "code": reality.service_code,
+                "display": reality.service_display,
+            },
         },
     }
 
@@ -272,8 +281,8 @@ def supporting_fhir(reality: SHNMVP0Reality) -> dict[str, dict[str, Any]]:
             "coding": [
                 {
                     "system": "http://www.ama-assn.org/go/cpt",
-                    "code": "72148",
-                    "display": "MRI lumbar spine without contrast",
+                    "code": reality.service_code,
+                    "display": reality.service_display,
                 }
             ]
         },
