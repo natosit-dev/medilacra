@@ -221,10 +221,14 @@ class PayerContact:
 
 def synthetic_payer_contact(payer_id: str) -> PayerContact:
     """Explicit test fixture, NOT a factual address for the named payer."""
+    from faker import Faker
+    seed = int(hashlib.sha256(str(payer_id).encode()).hexdigest()[:12], 16)
+    fake = Faker("en_US")
+    fake.seed_instance(seed)
     return PayerContact(
         payer_id=payer_id,
-        address_line1="100 SYNTHETIC PAYER WAY",
-        city="LOWELL", state="MA", postal_code="01852",
+        address_line1=fake.street_address(),
+        city=fake.city(), state=fake.state_abbr(), postal_code=fake.postcode(),
         contact_name="SYNTHETIC EDI SUPPORT", contact_phone="5550100000",
     )
 
