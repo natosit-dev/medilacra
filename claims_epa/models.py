@@ -125,6 +125,18 @@ class ClaimSubmission:
 
 
 @dataclass(frozen=True)
+class RemittanceInstructions:
+    """Explicit simulated payer payment and adjustment policy facts."""
+    payment_method: str
+    originating_company_id: str
+    trace_id: str
+    payee_name: str
+    payee_npi: str
+    adjustment_group: str
+    adjustment_reason: str
+
+
+@dataclass(frozen=True)
 class ClaimDecision:
     exchange_id: str
     claim_id: str
@@ -134,6 +146,7 @@ class ClaimDecision:
     paid_cents: int
     patient_cents: int
     adjusted_cents: int
+    remittance: RemittanceInstructions | None = None
 
     def __post_init__(self):
         if self.status not in ("paid", "denied"):
@@ -341,6 +354,14 @@ def build_case(
         status="paid" if paid else "denied", charged_cents=bill,
         allowed_cents=allowed, paid_cents=allowed, patient_cents=0,
         adjusted_cents=bill - allowed,
+        remittance=RemittanceInstructions(
+            payment_method="CHK",  # explicitly selected synthetic payer policy
+            originating_company_id=claim.payer_id,
+            trace_id=f"PAY-{base}",
+            payee_name=claim.provider_name, payee_npi=claim.provider_npi,
+            adjustment_group="CO",
+            adjustment_reason="45" if paid else "96",
+        ),
     )
     final_auth = authorization_status if payer_active_pa else "denied"
     authorization_decision = AuthorizationDecision(
