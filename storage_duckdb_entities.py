@@ -249,6 +249,9 @@ def init_db(db_path: str | None = None) -> str:
     """Initialize schema; returns the resolved DB path."""
     resolved_path = _resolve_db_path(db_path)
     _exec_ddl(resolved_path)
+    # The provenance store is additive; existing entity tables stay intact.
+    from reality.persistence import init_reality_store
+    init_reality_store(resolved_path)
     return resolved_path
 
 # -------------------------
