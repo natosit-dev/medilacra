@@ -464,6 +464,7 @@ def run_pipeline(
                             "payer_subject": claims_epa_semantic.payer_subject,
                             "payer_contact": claims_epa_semantic.payer_contact,
                             "requested_service": claims_epa_semantic.requested_service,
+                            "payer_policy": claims_epa_semantic.payer_policy,
                         })
                         owners.update({
                             "claim_submission": "clinical",
@@ -473,6 +474,7 @@ def run_pipeline(
                             "payer_subject": "payer",
                             "payer_contact": "payer",
                             "requested_service": "clinical",
+                            "payer_policy": "payer",
                         })
                     persist_case(
                         db_path=db_path, run_id=run_id, case_id=case_id,
