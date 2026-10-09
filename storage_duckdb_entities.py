@@ -250,6 +250,9 @@ def _exec_ddl(db_path: str | None = None):
 def init_db(db_path: str | None = None) -> str:
     """Initialize schema; returns the resolved DB path."""
     resolved_path = _resolve_db_path(db_path)
+    # Never apply a new schema to an unbacked-up existing DuckDB file.
+    from reality.migration import preserve_pre_migration_db
+    preserve_pre_migration_db(resolved_path)
     _exec_ddl(resolved_path)
     # The provenance store is additive; existing entity tables stay intact.
     from reality.persistence import init_reality_store
