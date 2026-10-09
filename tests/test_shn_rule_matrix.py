@@ -103,6 +103,35 @@ def test_rule_matrix_rejects_zero_repeats():
         build_rule_matrix(start_seed=200, repeats=0)
 
 
+
+def test_rule_matrix_can_generate_exact_100_case_cohort():
+    matrix = build_rule_matrix(start_seed=300, count=100)
+    cases = matrix["cases"]
+
+    assert matrix["count"] == 100
+    assert matrix["requested_count"] == 100
+    assert matrix["start_seed"] == 300
+    assert matrix["end_seed"] == 399
+
+    counts = {
+        scenario: sum(case["scenario"] == scenario for case in cases)
+        for scenario in SCENARIOS
+    }
+    assert counts == {
+        "lumbar-fusion-auth": 34,
+        "explicit-not-covered": 33,
+        "no-rule-default": 33,
+    }
+
+    assert len({case["patient_id"] for case in cases}) == 100
+    assert len({case["coverage_id"] for case in cases}) == 100
+    assert len({case["service_request_id"] for case in cases}) == 100
+
+
+def test_rule_matrix_rejects_zero_exact_count():
+    with pytest.raises(ValueError, match="count must be at least 1"):
+        build_rule_matrix(start_seed=300, count=0)
+
 def test_unknown_rule_scenario_is_rejected():
     with pytest.raises(ValueError, match="unknown scenario"):
         build_rule_case("invented-rule", seed=200)
