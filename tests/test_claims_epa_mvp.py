@@ -336,3 +336,28 @@ def test_278_service_loop_preserves_requested_procedure_quantity_and_date():
     assert fhir_pa["item"][0]["productOrService"]["coding"][0]["code"] == "99212"
     assert fhir_pa["item"][0]["quantity"]["value"] == 3
     assert fhir_pa["item"][0]["servicedDate"] == "2026-11-19"
+
+
+def test_837p_contacts_are_traced_to_source_parties_not_fixed_in_renderer():
+    from claims_epa.models import PostalAddress
+    case = demo_case(run_at=RUN_AT)
+    routing = case.claim.routing
+    changed_routing = replace(
+        routing,
+        patient_address=PostalAddress("10 PATIENT LANE", "BOSTON", "MA", "02108"),
+        billing_address=PostalAddress("22 PROVIDER ROAD", "WORCESTER", "MA", "01604"),
+        submitter_name="PROVENANCE TEST SUBMITTER",
+        submitter_id="SENDERTEST1",
+        billing_tax_id="876543210",
+        place_of_service_code="22",
+    )
+    altered = replace(case, claim=replace(case.claim, routing=changed_routing))
+    x = generate(altered, RUN_AT).x837p
+    assert "N3*10 PATIENT LANE~N4*BOSTON*MA*02108~" in x
+    assert "N3*22 PROVIDER ROAD~N4*WORCESTER*MA*01604~" in x
+    assert "NM1*41*2*PROVENANCE TEST SUBMITTER" in x
+    assert "REF*EI*876543210~" in x
+    assert "CLM*" in x and "*22:B:1*" in x
+    assert "1 SYNTHETIC STREET" not in x
+    assert "LOWELL" not in x
+    validate_envelope(x, "837")
