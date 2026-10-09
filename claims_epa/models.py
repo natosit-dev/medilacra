@@ -135,6 +135,35 @@ class ClaimSubmission:
 
 
 @dataclass(frozen=True)
+class SyntheticAdjudicationPolicy:
+    """Versioned synthetic rules, not representations of any real payer contract."""
+    policy_id: str
+    allowed_percent: int
+    patient_share_percent: int
+    payment_method: str
+    paid_adjustment_group: str
+    paid_adjustment_reason: str
+    denied_adjustment_group: str
+    denied_adjustment_reason: str
+
+    def __post_init__(self):
+        if not (0 <= self.allowed_percent <= 100 and
+                0 <= self.patient_share_percent <= 100):
+            raise ValueError("Synthetic adjudication percentages must be 0..100")
+        if not self.policy_id:
+            raise ValueError("Synthetic payer policy requires policy_id")
+
+
+def synthetic_adjudication_policy() -> SyntheticAdjudicationPolicy:
+    return SyntheticAdjudicationPolicy(
+        policy_id="example-payer-flat80-v1", allowed_percent=80,
+        patient_share_percent=0, payment_method="CHK",
+        paid_adjustment_group="CO", paid_adjustment_reason="45",
+        denied_adjustment_group="CO", denied_adjustment_reason="96",
+    )
+
+
+@dataclass(frozen=True)
 class RemittanceInstructions:
     """Explicit simulated payer payment and adjustment policy facts."""
     payment_method: str
@@ -306,6 +335,7 @@ class SemanticCase:
     payer_subject: PayerSubject
     payer_contact: PayerContact
     requested_service: RequestedService
+    payer_policy: SyntheticAdjudicationPolicy
 
 
 def _source_date(raw: object) -> str:
@@ -322,6 +352,7 @@ def build_case(
     payer_contact: PayerContact | None = None,
     claim_routing: ClaimRouting | None = None,
     requested_service: RequestedService | None = None,
+    adjudication_policy: SyntheticAdjudicationPolicy | None = None,
 ) -> SemanticCase:
     """Build sibling exchanges from existing MediLacra entities and payer-local state.
 
@@ -417,20 +448,24 @@ def build_case(
         raise ValueError("unsupported synthetic authorization status")
 
     paid = payer_active_claim and claim_status == "paid"
-    # Explicit deterministic test schedule: 80% allowed, all allowed paid.
-    allowed = bill * 80 // 100 if paid else 0
+    adjudication_policy = adjudication_policy or synthetic_adjudication_policy()
+    allowed = bill * adjudication_policy.allowed_percent // 100 if paid else 0
+    patient_share = allowed * adjudication_policy.patient_share_percent // 100
+    payer_paid = allowed - patient_share
     claim_decision = ClaimDecision(
         exchange_id=claim.exchange_id, claim_id=claim_id,
         status="paid" if paid else "denied", charged_cents=bill,
-        allowed_cents=allowed, paid_cents=allowed, patient_cents=0,
-        adjusted_cents=bill - allowed,
+        allowed_cents=allowed, paid_cents=payer_paid,
+        patient_cents=patient_share, adjusted_cents=bill - allowed,
         remittance=RemittanceInstructions(
-            payment_method="CHK",  # explicitly selected synthetic payer policy
+            payment_method=adjudication_policy.payment_method,
             originating_company_id=claim.payer_id,
             trace_id=f"PAY-{base}",
             payee_name=claim.provider_name, payee_npi=claim.provider_npi,
-            adjustment_group="CO",
-            adjustment_reason="45" if paid else "96",
+            adjustment_group=(adjudication_policy.paid_adjustment_group if paid
+                              else adjudication_policy.denied_adjustment_group),
+            adjustment_reason=(adjudication_policy.paid_adjustment_reason if paid
+                               else adjudication_policy.denied_adjustment_reason),
         ),
     )
     final_auth = authorization_status if payer_active_pa else "denied"
@@ -456,4 +491,4 @@ def build_case(
         raise ValueError("payer contact identity does not match claim payer")
     return SemanticCase(claim, claim_decision, authorization,
                         authorization_decision, payer_subject, payer_contact,
-                        requested_service)
+                        requested_service, adjudication_policy)
