@@ -48,6 +48,7 @@ jobs:
             connectathon/shn_rule_matrix.py \
             connectathon/shn_bulk_dtr.py \
             connectathon/shn_dtr_questionnaire_response.py \
+            connectathon/shn_lumbar_fusion_pas.py \
             connectathon/run.py \
             experiments/disco_inferno/fhir_corruptions.py \
             hl7_demo/labs.py \
@@ -59,6 +60,7 @@ jobs:
           bash -n connectathon/shn_bulk_crd_send.sh
           bash -n connectathon/shn_rule_matrix_send.sh
           bash -n connectathon/shn_bulk_dtr_send.sh
+          bash -n connectathon/shn_lumbar_fusion_pas_send.sh
 
       - name: Run Connectathon tests
         env:
@@ -76,4 +78,5 @@ jobs:
             tests/test_shn_bulk_crd.py \
             tests/test_shn_rule_matrix.py \
             tests/test_shn_bulk_dtr.py \
-            tests/test_shn_dtr_questionnaire_response.py
+            tests/test_shn_dtr_questionnaire_response.py \
+            tests/test_shn_lumbar_fusion_pas.py
