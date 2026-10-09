@@ -165,7 +165,8 @@ def build_patient_from_pid(pid_fields: List[str]) -> Dict[str, Any]:
         patient.pop("address", None)
     return patient
 
-def build_encounter_from_pv1(pv1_fields: List[str], patient_ref: str) -> Dict[str, Any]:
+def build_encounter_from_pv1(pv1_fields: List[str], patient_ref: str,
+                             event_type: str | None = None) -> Dict[str, Any]:
     cls = get_field(pv1_fields, 2)
     loc = get_field(pv1_fields, 3)
     pof = comp(loc, 1)
@@ -175,7 +176,10 @@ def build_encounter_from_pv1(pv1_fields: List[str], patient_ref: str) -> Dict[st
     encounter = {
         "resourceType": "Encounter",
         "id": new_id("enc"),
-        "status": "finished",
+        # An admission is not a completed encounter. No source event means
+        # encounter lifecycle is unknown, not silently "finished".
+        "status": {"ADT^A01": "in-progress", "ADT^A03": "finished"}.get(
+            event_type or "", "unknown"),
         "class": {"code": cls or "UNK"},
         "subject": {"reference": patient_ref},
     }
@@ -507,6 +511,13 @@ def build_coverage_resources(
     return resources
 
 
+def _fhir_result_status(source: str) -> str:
+    """HL7 v2 result-status mapping; missing/unmapped is never asserted final."""
+    return {"F": "final", "C": "corrected", "P": "preliminary",
+            "X": "cancelled", "O": "registered"}.get(
+                (source or "").strip().upper(), "unknown")
+
+
 def build_observation_from_obx(obx_fields: List[str], patient_ref: str, encounter_ref: Optional[str]) -> Dict[str, Any]:
     vtype = get_field(obx_fields, 2).upper()
     id_ce = get_field(obx_fields, 3)
@@ -516,7 +527,7 @@ def build_observation_from_obx(obx_fields: List[str], patient_ref: str, encounte
     obs = {
         "resourceType": "Observation",
         "id": new_id("obs"),
-        "status": "final",
+        "status": _fhir_result_status(get_field(obx_fields, 11)),
         "code": codeable_concept_from_ce(id_ce) or {"text": "Observation"},
         "subject": {"reference": patient_ref},
     }
@@ -557,7 +568,7 @@ def build_diagnostic_report_from_obr(obr_fields: List[str], patient_ref: str, en
     dr = {
         "resourceType": "DiagnosticReport",
         "id": new_id("dr"),
-        "status": "final",
+        "status": _fhir_result_status(get_field(obr_fields, 25)),
         "code": code or {"text": "Diagnostic Report"},
         "subject": {"reference": patient_ref},
         "result": [{"reference": r} for r in observations_refs]
@@ -616,13 +627,13 @@ def convert_oru(parsed: Dict[str, Any]) -> Dict[str, Any]:
     if parsed.get("OBR"):
         dr = build_diagnostic_report_from_obr(parsed["OBR"][0]["_fields"], patient_ref, encounter_ref, obs_refs)
     else:
-        dr = {"resourceType":"DiagnosticReport","id":new_id("dr"),"status":"final","code":{"text":"Diagnostic Report"},"subject":{"reference":patient_ref},"result":[{"reference":r} for r in obs_refs]}
-        if encounter_ref:
-            dr["encounter"] = {"reference": encounter_ref}
+        # No OBR, therefore no source DiagnosticReport assertion to render.
+        dr = None
     entries = [{"resource": msg_header}]
     if patient: entries.append({"resource": patient})
     if encounter: entries.append({"resource": encounter})
-    entries.append({"resource": dr})
+    if dr is not None:
+        entries.append({"resource": dr})
     for o in observations:
         entries.append({"resource": o})
     return {"resourceType":"Bundle","type":"message","id":new_id("bundle"),"entry":entries}
@@ -642,6 +653,7 @@ def convert_adt(parsed: Dict[str, Any]) -> Dict[str, Any]:
         enc = build_encounter_from_pv1(
             pv1,
             patient_ref,
+            event_type=detect_message_type(parsed),
         )
         entries.append({"resource": enc})
 
