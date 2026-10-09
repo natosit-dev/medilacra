@@ -123,13 +123,12 @@ if [[ "$status" =~ ^2 ]]; then
 
   authorization=$(jq -r '
     [
-      .entry[]?.resource
-      | select(.resourceType == "ClaimResponse")
-      | (
-          .preAuthRef //
-          .item[]?.preAuthRef //
-          empty
-        )
+      ..
+      | objects
+      | select((.url? // "") | endswith("extension-reviewAction"))
+      | .extension[]?
+      | select(.url == "number")
+      | .valueString
     ][0] // ""
   ' "$BODY")
 
@@ -137,11 +136,18 @@ if [[ "$status" =~ ^2 ]]; then
   expected_code=$(jq -r '.expected_live_response.review_action_code' "$EXPECTED")
   expected_display=$(jq -r '.expected_live_response.review_action_display' "$EXPECTED")
   expected_comm=$(jq -r '.expected_live_response.communication_request_count' "$EXPECTED")
+  expected_auth=$(jq -r '.expected_live_response.authorization_expected' "$EXPECTED")
+
+  authorization_match=false
+  if [[ "$expected_auth" == "false" || -n "$authorization" ]]; then
+    authorization_match=true
+  fi
 
   if [[ "$outcome" == "$expected_outcome" \
      && "$review_code" == "$expected_code" \
      && "$review_display" == "$expected_display" \
-     && "$comm_count" == "$expected_comm" ]]; then
+     && "$comm_count" == "$expected_comm" \
+     && "$authorization_match" == "true" ]]; then
     behavior_match=true
   fi
 fi
@@ -164,6 +170,7 @@ jq -n \
     review_action_display: $review_action_display,
     communication_request_count: $communication_request_count,
     authorization: ($authorization | if length == 0 then null else . end),
+    authorization_match: ($authorization | length > 0),
     behavior_match: $behavior_match,
     x_correlation_id: $x_correlation_id,
     x_shn_leg_id: $x_shn_leg_id,
