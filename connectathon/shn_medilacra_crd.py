@@ -46,9 +46,7 @@ def build_crd_order_sign_request(
     service_request["insurance"] = [{"reference": coverage_ref}]
 
     # Route selection belongs to the SHN adapter, not to MediLacra's source
-    # reality. Preserve the payer name from reality while materializing the
-    # identifier that the provider test endpoint routes on.
-    source_payer = fhir["payer"]
+    # reality. Materialize the test-network payer identity only at this boundary.
     coverage["beneficiary"] = {"reference": patient_ref}
     coverage["payor"] = [{"reference": "#shn-payer"}]
     coverage["contained"] = [

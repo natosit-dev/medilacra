@@ -71,6 +71,7 @@ def test_crd_case_is_deterministic_for_seed():
 
 
 def test_crd_invariants_match_request():
+    reality = build_reality(seed=43)
     case = build_crd_case(seed=43)
     request = case["crd_request"]
     invariants = case["expected_invariants"]
