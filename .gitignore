@@ -247,3 +247,7 @@ connectathon/results/shn_bulk_dtr/
 
 # SHN documented PAS generated requests and live response artifacts
 connectathon/results/shn_lumbar_fusion_pas/
+
+
+# SHN bulk documented PAS generated/live artifacts
+connectathon/results/shn_bulk_pas/
