@@ -382,3 +382,28 @@ def test_835_payee_and_adjustment_come_from_payer_decision():
     validate_envelope(x, "835")
     with pytest.raises(ValueError, match="remittance"):
         generate(replace(case, claim_decision=replace(case.claim_decision, remittance=None)), RUN_AT)
+
+
+def test_fhir_claims_preserve_distinct_clinical_and_payer_coverage_periods():
+    case = demo_case(run_at=RUN_AT)
+    from claims_epa.models import CoveragePeriods
+    periods = CoveragePeriods(
+        clinical_start="2026-01-01", clinical_end="2026-12-31",
+        payer_start="2026-02-01", payer_end="2026-11-30",
+        payer_status="ACTIVE",
+    )
+    claim = replace(case.claim, coverage_periods=periods)
+    authorization = replace(case.authorization, coverage_periods=periods)
+    changed = replace(case, claim=claim, authorization=authorization)
+    result = generate(changed, RUN_AT)
+    for req_bundle, resp_bundle in (
+        (result.claim_request, result.claim_response),
+        (result.authorization_request, result.authorization_response),
+    ):
+        clinical = [r["resource"] for r in req_bundle["entry"]
+                    if r["resource"]["resourceType"] == "Coverage"][0]
+        payer = [r["resource"] for r in resp_bundle["entry"]
+                 if r["resource"]["resourceType"] == "Coverage"
+                 and r["resource"]["id"] != clinical["id"]][0]
+        assert clinical["period"] == {"start": "2026-01-01", "end": "2026-12-31"}
+        assert payer["period"] == {"start": "2026-02-01", "end": "2026-11-30"}
