@@ -1,0 +1,25 @@
+{
+  "resourceType": "Parameters",
+  "meta": {"profile": ["http://hl7.org/fhir/us/davinci-dtr/StructureDefinition/dtr-qpackage-input-parameters"]},
+  "parameter": [
+    {
+      "name": "coverage",
+      "resource": {
+        "resourceType": "Coverage",
+        "id": "coverage-1",
+        "status": "active",
+        "beneficiary": {"reference": "Patient/MBR-COVERED"},
+        "payor": [{"reference": "#payor-org"}],
+        "contained": [{"resourceType": "Organization", "id": "payor-org", "active": true, "name": "Centers for Medicare and Medicaid Services", "identifier": [{"system": "urn:oid:2.16.840.1.113883.6.300", "value": "00301"}]}]
+      }
+    },
+    {
+      "name": "referenced",
+      "resource": {"resourceType": "Patient", "id": "MBR-COVERED", "name": [{"family": "Johansson", "given": ["Linda"]}], "birthDate": "1975-04-02"}
+    },
+    {
+      "name": "questionnaire",
+      "valueCanonical": "http://example.org/fhir/Questionnaire/HomeHealthAssessment"
+    }
+  ]
+}

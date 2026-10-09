@@ -226,3 +226,8 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+
+# SHN live baseline local credentials and run artifacts
+connectathon/shn_live_baseline_00301/client.json
+connectathon/shn_live_baseline_00301/out/

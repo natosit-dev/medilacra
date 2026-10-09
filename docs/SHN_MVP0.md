@@ -392,3 +392,33 @@ For the first test, the question is very simple:
 > MediLacra created a relationship. SHN changed how that relationship was represented. Can PIQITT still recognize the relationship after the transformation?
 
 Everything else can grow from there.
+
+
+---
+
+# 2026-10-09 update — live provider-network baseline
+
+The original MVP-0 above targeted a demo DTR transformation boundary. On 2026-10-09, MediLacra completed a real authenticated provider-side workflow through the SHN provider test endpoint on route `00301`:
+
+```text
+CRD order-sign
+  -> DTR $questionnaire-package
+  -> PAS Claim/$submit
+  -> PAS Claim/$inquire
+```
+
+All four calls returned HTTP 200, the PAS submit pended as expected, and the subsequent inquiry found the submitted authorization trace. A second complete run also succeeded and the inquiry matched both retained submissions.
+
+The exact known-good reference fixtures and run harness are frozen at:
+
+```text
+connectathon/shn_live_baseline_00301/
+```
+
+Detailed live evidence is recorded in:
+
+```text
+docs/SHN_MVP0_LIVE_BASELINE_2026-10-09.md
+```
+
+This changes the next experiment boundary. We no longer need to prove that MediLacra can authenticate and move reference traffic across SHN. The next step is to project **MediLacra-generated reality** into CRD, DTR and PAS requests while keeping this transport baseline unchanged.

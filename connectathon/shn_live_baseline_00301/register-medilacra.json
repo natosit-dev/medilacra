@@ -1,0 +1,9 @@
+{
+  "client_name": "MediLacra test client",
+  "auth_method": "client_secret",
+  "organization": "MediLacra",
+  "contact_name": "<YOUR NAME>",
+  "contact_email": "<you@example.org>",
+  "system_under_test": "<MediLacra system and version>",
+  "participant_type": "provider_organization"
+}

@@ -1,0 +1,43 @@
+{
+  "hook": "order-sign",
+  "hookInstance": "quickstart-00301-order-sign",
+  "fhirServer": "https://provider.example/fhir",
+  "context": {
+    "userId": "Practitioner/p1",
+    "patientId": "MBR-COVERED",
+    "selections": [],
+    "draftOrders": {
+      "resourceType": "Bundle",
+      "type": "collection",
+      "entry": [
+        {
+          "fullUrl": "urn:uuid:sr1",
+          "resource": {
+            "resourceType": "ServiceRequest",
+            "id": "sr1",
+            "status": "draft",
+            "intent": "order",
+            "subject": {"reference": "Patient/MBR-COVERED"},
+            "insurance": [{"reference": "Coverage/c1"}],
+            "code": {"coding": [{"system": "http://www.cms.gov/Medicare/Coding/HCPCSReleaseCodeSets", "code": "G0151", "display": "Services performed by a qualified physical therapist in the home health setting"}]}
+          }
+        }
+      ]
+    }
+  },
+  "prefetch": {
+    "patient": {"resourceType": "Patient", "id": "MBR-COVERED"},
+    "coverage": {
+      "resourceType": "Coverage",
+      "id": "c1",
+      "status": "active",
+      "beneficiary": {"reference": "Patient/MBR-COVERED"},
+      "payor": [{"reference": "#cms-payer"}],
+      "contained": [{"resourceType": "Organization", "id": "cms-payer", "name": "Centers for Medicare and Medicaid Services", "identifier": [{"system": "urn:oid:2.16.840.1.113883.6.300", "value": "00301"}]}]
+    },
+    "serviceHistory": {"resourceType": "Bundle", "type": "searchset", "total": 0},
+    "deviceHistory": {"resourceType": "Bundle", "type": "searchset", "total": 0},
+    "medicationHistory": {"resourceType": "Bundle", "type": "searchset", "total": 0},
+    "questionnaireResponses": {"resourceType": "Bundle", "type": "searchset", "total": 0}
+  }
+}
