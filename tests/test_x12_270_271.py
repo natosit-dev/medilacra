@@ -223,7 +223,7 @@ def test_scenario_1_clean_active_270_to_271():
     assert parsed_271.coverage_end == "2026-12-31"
     assert parsed_271.plan_name == "Standard PPO"
     assert parsed_271.group_number == "GRP-CVS-398915"
-    assert parsed_271.active_service_types == GENERIC_ACTIVE_SERVICE_TYPES
+    assert parsed_271.active_service_types == ()  # no payer service facts established
 
 
 def test_scenario_2_clinical_and_payer_names_diverge_but_member_matches():
@@ -305,18 +305,17 @@ def test_271_generic_active_response_has_plan_and_required_status_service_types(
 
     parsed_271 = parse_271(x271)
     assert parsed_271.plan_name == "Standard PPO"
-    assert parsed_271.active_service_types == (
-        "1",
-        "33",
-        "35",
-        "47",
-        "86",
-        "88",
-        "98",
-        "AL",
-        "MH",
-        "UC",
+    assert parsed_271.active_service_types == ()
+
+    # Service benefit claims are available only when supplied by the payer.
+    explicit_plan = replace(plan, active_service_types=("1", "33", "MH"))
+    x271_with_benefits = build_271_transaction(
+        response, member=member, plan=explicit_plan, payer=_payer_party(),
+        request=parsed, response_control_number="0003",
+        transaction_date="20261006", transaction_time="0911",
     )
+    assert parse_271(x271_with_benefits).active_service_types == ("1", "33", "MH")
+    assert "EB*1**1>33>MH~" in x271_with_benefits
 
 
 def test_first_271_builder_refuses_non_active_outcomes_for_now():
