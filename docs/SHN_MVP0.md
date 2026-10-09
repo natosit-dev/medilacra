@@ -608,3 +608,31 @@ The completed DTR QuestionnaireResponse was therefore accepted as satisfying the
 With seed 300 certified A1 using MediLacra's completed DTR QuestionnaireResponse, the remaining 33 DTR-eligible patients can now be generated and submitted as a cohort. Seed 300 is explicitly skipped so the single-case proof remains distinct from the batch run.
 
 See `docs/SHN_MVP0_BULK_PAS_2026-10-09.md`.
+
+
+### Full 34-case PAS cohort succeeded
+
+The remaining 33 documented lumbar-fusion PAS submissions all matched the expected route-00301 behavior:
+
+```text
+33/33 HTTP 200
+33/33 A1 Certified in total
+33/33 no CommunicationRequest
+33/33 authorization present
+33/33 behavior match
+```
+
+Together with seed 300, the full DTR-eligible cohort is now 34/34 through PAS.
+
+The complete MVP-0 path is therefore:
+
+```text
+100 synthetic realities
+  -> 100 successful CRD decisions when admitted
+  -> 34 correctly routed into DTR
+  -> 34/34 DTR packages matched
+  -> 34/34 QuestionnaireResponses materialized from reality
+  -> 34/34 PAS submissions certified A1 with authorization
+```
+
+The other 66 cases correctly stopped at CRD because their payer decisions did not require this DTR/PAS path.
