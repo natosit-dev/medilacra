@@ -1,0 +1,101 @@
+# SHN MVP-0 — MediLacra-generated CRD
+
+**Date:** 2026-10-09  
+**Phase:** first substitution after the live 00301 control baseline
+
+## Purpose
+
+The live baseline proves that MediLacra's authenticated client can send the SHN reference CRD, DTR and PAS fixtures through the provider test endpoint.
+
+This phase changes exactly one thing:
+
+> Generate the CRD request from MediLacra's synthetic reality instead of sending SHN's reference CRD fixture.
+
+The frozen reference control under `connectathon/shn_live_baseline_00301/` is not modified.
+
+## Ontology
+
+The source of truth remains `SHNMVP0Reality`:
+
+```text
+MediLacra reality
+  Patient
+  Encounter
+  Transaction
+  Coverage identity
+  ServiceRequest identity
+       |
+       v
+supporting FHIR projection
+       |
+       v
+SHN CRD adapter
+       |
+       +-- Patient prefetch
+       +-- Coverage prefetch
+       +-- draft ServiceRequest
+       +-- empty history searchsets
+       |
+       v
+CRD order-sign request
+```
+
+The SHN payer route is deliberately **not** written back into the MediLacra source reality.
+
+MediLacra currently represents the synthetic payer with its own identifier. At the network boundary, the CRD adapter materializes:
+
+```text
+urn:oid:2.16.840.1.113883.6.300 | 00301
+```
+
+inside a contained payor Organization on Coverage so the SHN provider test endpoint can route the request.
+
+That is transport/routing metadata, not a claim that MediLacra's synthetic insurance plan is intrinsically the SHN reference payer.
+
+## What is generated
+
+Run:
+
+```bash
+python -m connectathon.shn_medilacra_crd --seed 43
+```
+
+Output:
+
+```text
+connectathon/results/shn_medilacra_crd/shn_mvp0_0043/
+  reality.json
+  crd_request.json
+  expected_invariants.json
+```
+
+For seed 43, the CRD request uses the actual MediLacra-generated patient id, coverage id and service-request id. It does **not** use the reference fixture's `MBR-COVERED` patient.
+
+The ServiceRequest is the one already projected by MediLacra's MVP-0 supporting FHIR: CPT `72148`, MRI lumbar spine without contrast. The CRD adapter changes its status to `draft` because it is being sent in CDS Hooks `draftOrders`.
+
+## Expected invariants
+
+Before sending anything to SHN, local tests assert:
+
+- CRD `context.patientId` is the MediLacra patient.
+- Patient prefetch is that same patient.
+- Coverage beneficiary is that same patient.
+- The draft order is the same MediLacra ServiceRequest.
+- The draft order still references the same Coverage.
+- The service code is unchanged from MediLacra's supporting FHIR projection.
+- The source MediLacra Coverage retains its own payer identity.
+- Only the network projection receives the SHN route identifier.
+- `MBR-COVERED` does not appear in the generated request.
+- generation remains deterministic by seed.
+
+## Decision point after generation
+
+This request will almost certainly not produce the same payer decision as the frozen G0151 reference case. That is expected.
+
+The control asks whether the network path works.
+
+This request asks a different question:
+
+> What does route 00301 do when an independently generated MediLacra patient and order are carried through the same proven CRD path?
+
+The first live run should therefore be evaluated for routing, acceptance, returned semantics and trace behavior — not for equality with the reference fixture's HomeHealthAssessment response.

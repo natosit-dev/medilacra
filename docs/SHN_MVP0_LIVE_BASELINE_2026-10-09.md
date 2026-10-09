@@ -104,3 +104,31 @@ When MediLacra begins producing the requests, build a separate projection/adapte
 > Is the problem authentication/transport/routing, or did the meaning/representation of the generated healthcare data change?
 
 That separation is the point of freezing the baseline.
+
+
+## Baseline revalidation — 2026-10-09 16:31 UTC
+
+The committed control was pulled into the MediLacra checkout and rerun from
+`connectathon/shn_live_baseline_00301/`.
+
+First, each operation was run individually:
+
+| Step | HTTP | Correlation ID | SHN leg ID |
+|---|---:|---|---|
+| CRD | 200 | `medilacra-crd-20261009T163116Z` | `b3cdca1fc4cae3fec6a5abe5ff9a5fcc` |
+| DTR | 200 | `medilacra-dtr-20261009T163116Z` | `ed3701815888c8db298a3ed740a9042b` |
+| PAS submit | 200 | `medilacra-submit-20261009T163117Z` | `370d8799d313ecb398e755e3b680f1c3` |
+| PAS inquire | 200 | `medilacra-inquire-20261009T163118Z` | `beea024d22e49c5cf3a9bb710ce338af` |
+
+Immediately afterward, the single-command `./run-00301.sh all` path was run:
+
+| Step | HTTP | Correlation ID | SHN leg ID |
+|---|---:|---|---|
+| CRD | 200 | `medilacra-crd-20261009T163125Z` | `0d7b5176ce8688ada3522f42fe8c655e` |
+| DTR | 200 | `medilacra-dtr-20261009T163126Z` | `150aee34ef64088fe026a058b5512e98` |
+| PAS submit | 200 | `medilacra-submit-20261009T163126Z` | `c60f35f2d18ca59460edc522f89f5f57` |
+| PAS inquire | 200 | `medilacra-inquire-20261009T163127Z` | `a95665116ca91e37fb544a3f25490e47` |
+
+Every provider-network operation returned HTTP 200 in both sequences. This is the
+revalidated known-good transport baseline immediately before introducing a
+MediLacra-generated CRD payload.

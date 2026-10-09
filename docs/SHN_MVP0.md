@@ -422,3 +422,16 @@ docs/SHN_MVP0_LIVE_BASELINE_2026-10-09.md
 ```
 
 This changes the next experiment boundary. We no longer need to prove that MediLacra can authenticate and move reference traffic across SHN. The next step is to project **MediLacra-generated reality** into CRD, DTR and PAS requests while keeping this transport baseline unchanged.
+
+
+## 2026-10-09 — first MediLacra-generated CRD projection
+
+After revalidating the frozen 00301 reference baseline, the next phase was added in
+`connectathon/shn_medilacra_crd.py`.
+
+This projection reuses `SHNMVP0Reality` and MediLacra's existing supporting FHIR rather than
+copying the SHN reference fixture. It generates a CRD `order-sign` request containing the
+synthetic MediLacra Patient, Coverage and ServiceRequest, then adds route `00301` only at the
+SHN network-adapter boundary.
+
+See `docs/SHN_MVP0_MEDILACRA_CRD_2026-10-09.md` for the model, invariants and run command.
