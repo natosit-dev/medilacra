@@ -11,6 +11,7 @@ from datetime import datetime
 from claims_epa.generation import generate, write_artifacts
 from claims_epa.models import (
     AuthorizationDecision, AuthorizationRequest, ClaimDecision, ClaimRouting,
+    CoveragePeriods,
     ClaimSubmission, PostalAddress, PayerContact, PayerSubject,
     RemittanceInstructions, SemanticCase, ServiceLine,
 )
@@ -31,13 +32,18 @@ def reconstruct_claims_case(payload: dict) -> SemanticCase:
     routing["claim_flags"] = tuple(routing["claim_flags"])
     claim_data["routing"] = ClaimRouting(**routing)
     claim_data["line"] = ServiceLine(**claim_data["line"])
+    claim_data["coverage_periods"] = CoveragePeriods(**claim_data["coverage_periods"])
     decision_data = dict(payload["claim_decision"])
     if decision_data.get("remittance") is not None:
         decision_data["remittance"] = RemittanceInstructions(**decision_data["remittance"])
     return SemanticCase(
         claim=ClaimSubmission(**claim_data),
         claim_decision=ClaimDecision(**decision_data),
-        authorization=AuthorizationRequest(**payload["authorization_request"]),
+        authorization=AuthorizationRequest(**{
+            **payload["authorization_request"],
+            "coverage_periods": CoveragePeriods(
+                **payload["authorization_request"]["coverage_periods"])
+        }),
         authorization_decision=AuthorizationDecision(**payload["authorization_decision"]),
         payer_subject=PayerSubject(**payload["payer_subject"]),
         payer_contact=PayerContact(**payload["payer_contact"]),
