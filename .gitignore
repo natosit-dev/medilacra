@@ -235,3 +235,7 @@ connectathon/shn_live_baseline_00301/out/
 
 # SHN bulk-test generated cases and live response artifacts
 connectathon/results/shn_bulk_crd/
+
+
+# SHN mixed-rule generated cases and live response artifacts
+connectathon/results/shn_rule_matrix/

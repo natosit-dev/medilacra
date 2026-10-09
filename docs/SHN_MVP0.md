@@ -498,3 +498,20 @@ See `docs/SHN_MVP0_BULK_CRD_2026-10-09.md`.
 The first seeds-100–109 cohort completed 10/10 with HTTP 200, 10/10 identity preservation, and 10/10 identical lumbar-fusion payer semantics/questionnaire selection.
 
 This moves the useful next bulk axis from patient identity to clinical-rule diversity: different services and expected payer behaviors, while continuing to preserve case identity end to end.
+
+
+## 2026-10-09 — mixed clinical-rule CRD matrix
+
+After the 10/10 patient-identity cohort, the next batch varies clinical service and expected payer behavior instead of simply adding more patients to the same rule.
+
+The default 9-case matrix repeats three evidence-backed behaviors three times each:
+
+```text
+22633  -> explicit lumbar-fusion prior-auth rule
+42999  -> explicit not-covered rule
+72148  -> no-rule/default response
+```
+
+The runner checks both identity preservation and partial semantic agreement with the documented expected CRD behavior.
+
+See `docs/SHN_MVP0_RULE_MATRIX_2026-10-09.md`.

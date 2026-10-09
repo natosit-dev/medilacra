@@ -45,6 +45,7 @@ jobs:
             connectathon/shn_lumbar_fusion.py \
             connectathon/shn_lumbar_fusion_dtr.py \
             connectathon/shn_bulk_crd.py \
+            connectathon/shn_rule_matrix.py \
             connectathon/run.py \
             experiments/disco_inferno/fhir_corruptions.py \
             hl7_demo/labs.py \
@@ -52,7 +53,9 @@ jobs:
             pages/10_SHN_MVP0.py
 
       - name: Check SHN batch runner syntax
-        run: bash -n connectathon/shn_bulk_crd_send.sh
+        run: |
+          bash -n connectathon/shn_bulk_crd_send.sh
+          bash -n connectathon/shn_rule_matrix_send.sh
 
       - name: Run Connectathon tests
         env:
@@ -67,4 +70,5 @@ jobs:
             tests/test_shn_medilacra_crd.py \
             tests/test_shn_lumbar_fusion.py \
             tests/test_shn_lumbar_fusion_dtr.py \
-            tests/test_shn_bulk_crd.py
+            tests/test_shn_bulk_crd.py \
+            tests/test_shn_rule_matrix.py
