@@ -148,3 +148,50 @@ generated DTR package request
 ```
 
 The DTR generator refuses to proceed if the CRD response has no questionnaire or has more than one distinct questionnaire canonical. It does not hardcode a fallback questionnaire.
+
+
+## First live MediLacra-derived DTR — 2026-10-09 17:06 UTC
+
+The DTR package request generated from the live CRD response was sent through the same authenticated SHN provider-test path.
+
+**Network evidence**
+
+- HTTP: `200`
+- X-Correlation-Id: `medilacra-lumbar-fusion-dtr-20261009T170631Z`
+- X-SHN-Leg-Id: `16d3c96cb741b84eacf4cde5a21dfb55`
+- Trace: `https://admin.shn-preview.org/connectathon/trace/medilacra-lumbar-fusion-dtr-20261009T170631Z`
+
+**Returned package**
+
+The payer returned a DTR `Parameters` response with:
+
+- one `Questionnaire`, id `LumbarSpinalFusion`
+- one `QuestionnaireResponse`, id `LumbarSpinalFusion-__unresolved-member`
+- questionnaire canonical `http://example.org/fhir/Questionnaire/LumbarSpinalFusion`
+- Questionnaire title `Lumbar Spinal Fusion Documentation`
+- QuestionnaireResponse subject `Patient/ML-c89f42c8921c52e7`
+- qr-coverage reference `Coverage/COV-cf3716e963a45256`
+
+The Questionnaire asks two required questions:
+
+1. `1.1` — Weeks of conservative therapy completed (integer)
+2. `1.2` — Imaging confirms instability or spondylolisthesis (boolean)
+
+The returned QuestionnaireResponse is `in-progress` with both items unfilled.
+
+The payer also returned an informational warning that demographic pre-population was skipped because no payer-held member matched the sender-supplied MediLacra patient/member identifiers. This is expected for the independent synthetic member and did not prevent the questionnaire package from being returned.
+
+### Important semantic boundary exposed by DTR
+
+MediLacra already has:
+
+- `conservative_therapy_weeks = 12`
+- `prior_imaging = true`
+
+Question `1.1` can be answered directly from the existing reality.
+
+Question `1.2` **cannot** be answered from `prior_imaging = true`. Having prior imaging is not equivalent to imaging confirming instability or spondylolisthesis.
+
+Do not map that existing boolean into the payer questionnaire.
+
+The next reality change must add an explicit clinical fact for the finding the payer asks about (for example, `imaging_confirms_instability_or_spondylolisthesis`) and only then project that fact into QuestionnaireResponse item `1.2`.

@@ -464,3 +464,10 @@ See `docs/SHN_MVP0_LUMBAR_FUSION_2026-10-09.md`.
 The seed-43 lumbar-fusion CRD reached route `00301` at 16:59 UTC and returned the expected prior-authorization/documentation rule plus `http://example.org/fhir/Questionnaire/LumbarSpinalFusion`.
 
 `connectathon/shn_lumbar_fusion_dtr.py` now builds the DTR package request from that **returned CRD canonical** and the same MediLacra patient/coverage reality. It refuses to generate DTR if CRD did not select exactly one questionnaire.
+
+
+### First live MediLacra-derived DTR succeeded
+
+At 17:06 UTC the DTR request derived from the live lumbar-fusion CRD returned HTTP 200 with the payer's `LumbarSpinalFusion` Questionnaire and an in-progress QuestionnaireResponse bound to the MediLacra Patient and Coverage.
+
+This exposed the next semantic requirement: the payer asks whether imaging confirms instability or spondylolisthesis. MediLacra's existing `prior_imaging` fact only says imaging exists and must not be promoted into that stronger clinical assertion.
