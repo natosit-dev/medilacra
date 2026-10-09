@@ -48,6 +48,8 @@ def test_crd_adds_shn_route_only_at_network_boundary():
 
     # The CRD network projection materializes the SHN route separately.
     assert coverage["payor"] == [{"reference": "#shn-payer"}]
+    assert coverage["contained"][0]["name"] == "SHN reference payer route 00301"
+    assert coverage["contained"][0]["name"] != source["payer"]["name"]
     route_identifier = coverage["contained"][0]["identifier"][0]
     assert route_identifier == {
         "system": SHN_PAYER_IDENTIFIER_SYSTEM,
@@ -78,3 +80,5 @@ def test_crd_invariants_match_request():
     assert order["insurance"][0]["reference"] == invariants["coverage_reference"]
     assert order["code"] == invariants["service_code"]
     assert request["prefetch"]["coverage"]["contained"][0]["identifier"][0] == invariants["payer_route"]
+    assert invariants["source_payer"]["name"] == reality.transaction.insurance_plan_name
+    assert invariants["network_payer_substitution"]["identifier"] == invariants["payer_route"]

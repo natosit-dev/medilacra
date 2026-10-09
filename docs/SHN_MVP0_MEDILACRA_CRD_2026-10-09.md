@@ -50,7 +50,9 @@ urn:oid:2.16.840.1.113883.6.300 | 00301
 
 inside a contained payor Organization on Coverage so the SHN provider test endpoint can route the request.
 
-That is transport/routing metadata, not a claim that MediLacra's synthetic insurance plan is intrinsically the SHN reference payer.
+The contained network Organization is named `SHN reference payer route 00301`. The source synthetic payer (for seed 43, `Blue Cross PPO`) remains recorded in the reality/invariant artifacts but is not mislabeled with the SHN route identifier.
+
+This is an explicit **test-network payer substitution**. It is not a claim that MediLacra's synthetic insurance plan is intrinsically the SHN reference payer.
 
 ## What is generated
 
@@ -99,3 +101,10 @@ This request asks a different question:
 > What does route 00301 do when an independently generated MediLacra patient and order are carried through the same proven CRD path?
 
 The first live run should therefore be evaluated for routing, acceptance, returned semantics and trace behavior — not for equality with the reference fixture's HomeHealthAssessment response.
+
+
+## Pre-send correction
+
+The first generated artifact exposed an important semantic issue before any live request was sent: the adapter initially kept the synthetic payer's display name while assigning the contained Organization the SHN `00301` identifier. That would have made one Organization simultaneously claim to be the synthetic payer and the SHN reference payer.
+
+The adapter was corrected so source payer identity and network test-payer identity are separate. Tests now assert this distinction.

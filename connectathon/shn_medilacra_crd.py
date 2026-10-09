@@ -48,14 +48,14 @@ def build_crd_order_sign_request(
     # Route selection belongs to the SHN adapter, not to MediLacra's source
     # reality. Preserve the payer name from reality while materializing the
     # identifier that the provider test endpoint routes on.
-    payer = fhir["payer"]
+    source_payer = fhir["payer"]
     coverage["beneficiary"] = {"reference": patient_ref}
     coverage["payor"] = [{"reference": "#shn-payer"}]
     coverage["contained"] = [
         {
             "resourceType": "Organization",
             "id": "shn-payer",
-            "name": payer.get("name"),
+            "name": f"SHN reference payer route {payer_route}",
             "identifier": [
                 {
                     "system": SHN_PAYER_IDENTIFIER_SYSTEM,
@@ -109,6 +109,17 @@ def crd_expected_invariants(
         "coverage_reference": f"Coverage/{reality.coverage_id}",
         "service_request_reference": f"ServiceRequest/{reality.service_request_id}",
         "service_code": copy.deepcopy(fhir["service_request"]["code"]),
+        "source_payer": {
+            "reference": f"Organization/{reality.payer_id}",
+            "name": reality.transaction.insurance_plan_name,
+        },
+        "network_payer_substitution": {
+            "name": f"SHN reference payer route {payer_route}",
+            "identifier": {
+                "system": SHN_PAYER_IDENTIFIER_SYSTEM,
+                "value": payer_route,
+            },
+        },
         "payer_route": {
             "system": SHN_PAYER_IDENTIFIER_SYSTEM,
             "value": payer_route,
@@ -117,7 +128,8 @@ def crd_expected_invariants(
             "CRD is about the same synthetic patient",
             "the draft order is the same MediLacra service request",
             "the order remains insured by the same MediLacra coverage",
-            "SHN route selection is added only at the network projection boundary",
+            "the synthetic payer is preserved as source reality",
+            "the SHN reference payer is an explicit test-network substitution at the adapter boundary",
         ],
     }
 
