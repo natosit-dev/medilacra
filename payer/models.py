@@ -46,6 +46,8 @@ class BenefitPlan:
     payer_id: str
     plan_name: str
     plan_type: str
+    # Payer-owned service-specific benefit assertions; empty means NOT ESTABLISHED.
+    active_service_types: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
