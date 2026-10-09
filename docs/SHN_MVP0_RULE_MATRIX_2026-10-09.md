@@ -82,3 +82,42 @@ Observed behavior repeated three times each:
 - CPT 72148 -> conditional, detail-code, no pa-needed, no questionnaire
 
 This demonstrates both referential preservation and semantic discrimination within this bounded reference-payer matrix.
+
+
+## 100-patient mixed-rule run — seeds 300–399
+
+A larger cohort generated exactly 100 distinct synthetic patients:
+
+- 34 lumbar-fusion prior-authorization cases (CPT 22633)
+- 33 explicit not-covered cases (CPT 42999)
+- 33 no-rule/default cases (CPT 72148)
+
+### First uninterrupted run
+
+Requests 300–359 completed successfully: 60/60 returned HTTP 200 with both identity and behavior matches.
+
+Beginning with seed 360, the provider-test endpoint returned HTTP 429 for the remaining 40 requests. The transition occurred across all three scenario types, so these were treated as transport throttling rather than semantic failures.
+
+The original run artifacts are retained unchanged.
+
+### Retry after throttle window
+
+After waiting several minutes, only seeds 360–399 were resent. All 40 completed:
+
+- 40/40 HTTP 200
+- 40/40 identity matches
+- 40/40 behavior matches
+
+### Combined semantic result
+
+Across the two admitted tranches:
+
+```text
+CRDs evaluated successfully: 100/100
+identity preserved:          100/100
+expected payer behavior:     100/100
+```
+
+Operationally, the uninterrupted run also exposed an admission/throttling boundary after 60 rapid CRD requests. That is recorded separately from the semantic result.
+
+CRD is therefore considered sufficiently exercised for this MVP. The next batch stage is DTR, and only the 34 cases whose live CRD response selected a questionnaire should continue into that stage.
