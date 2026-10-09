@@ -74,10 +74,10 @@ Immediately afterward, `./run-00301.sh all` completed the full sequence again:
 
 | Step | HTTP | Correlation ID | SHN leg ID |
 |---|---:|---|---|
-| CRD | 200 | `medilacra-crd-20261009T162309Z` | `a8872b98945f6f0ecdef8c0e88ac0aa5` |
-| DTR | 200 | `medilacra-dtr-20261009T162309Z` | `283e89aa5eb90c3b1b2fc37f4be19b4d` |
-| PAS submit | 200 | `medilacra-submit-20261009T162310Z` | `3b33f6846e912704e9a760bff7748dfd` |
-| PAS inquire | 200 | `medilacra-inquire-20261009T162310Z` | `257e0bcd997733e60c2d368bc72e9153` |
+| CRD | 200 | not captured in this record | `a8872b98945f6f0ecdef8c0e88ac0aa5` |
+| DTR | 200 | not captured in this record | `283e89aa5eb90c3b1b2fc37f4be19b4d` |
+| PAS submit | 200 | not captured in this record | `3b33f6846e912704e9a760bff7748dfd` |
+| PAS inquire | 200 | not captured in this record | `257e0bcd997733e60c2d368bc72e9153` |
 
 The second submit returned `AUTH-TRN0002`. The following inquiry returned two ClaimResponses and confirmed that `AUTH-TRN0002` was present.
 
@@ -88,7 +88,7 @@ That is useful evidence that the path is not merely stateless request/response p
 The following are expected in this baseline and should not be "fixed" while it remains the control:
 
 - CRD returns an empty `cards` array and a `systemActions` update.
-- DTR package omits `FHIRHelpers`.
+- Historical SHN reference documentation notes that route 00301 may omit `FHIRHelpers`; the first live baseline response returned three Library resources, but their identities were not inspected in this record, so this baseline does not claim whether `FHIRHelpers` was present.
 - DTR may report demographic prepopulation skipped.
 - PAS submit returns A4 Pending with a CommunicationRequest.
 - PAS responses may use the payer's own Patient identity.
