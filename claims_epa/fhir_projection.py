@@ -10,7 +10,7 @@ from typing import Any
 
 from .models import (
     SemanticCase, ClaimSubmission, ClaimDecision,
-    AuthorizationRequest, AuthorizationDecision, PayerSubject, usd,
+    AuthorizationRequest, AuthorizationDecision, PayerSubject, CoveragePeriods, usd,
 )
 
 FHIR_VERSION = "4.0.1"
@@ -57,12 +57,13 @@ def _organization(kind: str, identifier: str, name: str) -> dict[str, Any]:
 
 
 def _coverage(person: dict[str, Any], payer: dict[str, Any], member_id: str,
-              exchange_id: str, source: str) -> dict[str, Any]:
+              exchange_id: str, source: str, start: str, end: str) -> dict[str, Any]:
     return {
         "resourceType": "Coverage",
         "id": _id("cov", source, exchange_id),
         "status": "active",
         "subscriberId": member_id,
+        "period": {"start": start, "end": end},
         "beneficiary": _ref(person),
         "payor": [_ref(payer)],
     }
@@ -89,6 +90,7 @@ def _shared_context(
     *, member_id: str, patient_id: str, name: str, dob: str, sex: str,
     payer_id: str, payer_name: str, provider_npi: str, provider_name: str,
     exchange_id: str, payer_subject: PayerSubject,
+    coverage_periods: CoveragePeriods,
 ) -> dict[str, dict[str, Any]]:
     payer = _organization("payer", payer_id, payer_name)
     provider = _organization("provider-npi", provider_npi, provider_name)
@@ -104,8 +106,12 @@ def _shared_context(
         dob=payer_subject.birth_date, sex=payer_subject.sex,
         member_id=payer_subject.member_id,
     )
-    clinical_coverage = _coverage(clinical_patient, payer, member_id, exchange_id, "clinical")
-    payer_coverage = _coverage(payer_patient, payer, member_id, exchange_id, "payer")
+    clinical_coverage = _coverage(
+        clinical_patient, payer, member_id, exchange_id, "clinical",
+        coverage_periods.clinical_start, coverage_periods.clinical_end)
+    payer_coverage = _coverage(
+        payer_patient, payer, member_id, exchange_id, "payer",
+        coverage_periods.payer_start, coverage_periods.payer_end)
     return locals()
 
 
@@ -191,6 +197,7 @@ def build_claim_fhir(
         payer_id=request.payer_id, payer_name=request.payer_name,
         provider_npi=request.provider_npi, provider_name=request.provider_name,
         exchange_id=request.exchange_id, payer_subject=payer_subject,
+        coverage_periods=request.coverage_periods,
     )
     claim = _base_claim(
         exchange_id=request.exchange_id, request_id=request.claim_id,
@@ -231,6 +238,7 @@ def build_authorization_fhir(
         payer_id=request.payer_id, payer_name=request.payer_name,
         provider_npi=request.provider_npi, provider_name=request.provider_name,
         exchange_id=request.exchange_id, payer_subject=payer_subject,
+        coverage_periods=request.coverage_periods,
     )
     claim = _base_claim(
         exchange_id=request.exchange_id, request_id=request.request_id,
