@@ -284,7 +284,8 @@ def test_835_iris_payer_loop_1000a_has_required_address_and_contact():
     IRIS required loop1000A N3, N4, PER. These must precede the payee.
     """
     from x12.parser import tokenize_x12
-    output = generate(demo_case(run_at=RUN_AT), RUN_AT)
+    case = demo_case(run_at=RUN_AT)
+    output = generate(case, RUN_AT)
     segments = tokenize_x12(output.x835)
     st = next(i for i, seg in enumerate(segments) if seg.tag == "ST")
     se = next(i for i, seg in enumerate(segments) if seg.tag == "SE")
@@ -293,10 +294,10 @@ def test_835_iris_payer_loop_1000a_has_required_address_and_contact():
     payee_pos = next(i for i, seg in enumerate(body) if seg.tag == "N1" and seg.element(1) == "PE")
     payer_loop = body[payer_pos:payee_pos]
     assert [seg.tag for seg in payer_loop] == ["N1", "N3", "N4", "PER"]
-    assert payer_loop[1].element(1) == "100 SYNTHETIC PAYER WAY"
-    assert payer_loop[2].element(1) == "LOWELL"
-    assert payer_loop[2].element(2) == "MA"
-    assert payer_loop[2].element(3) == "01852"
+    assert payer_loop[1].element(1) == case.payer_contact.address_line1.upper()
+    assert payer_loop[2].element(1) == case.payer_contact.city.upper()
+    assert payer_loop[2].element(2) == case.payer_contact.state.upper()
+    assert payer_loop[2].element(3) == case.payer_contact.postal_code.upper()
     assert payer_loop[3].element(1) == "CX"
     assert payer_loop[3].element(2) == "SYNTHETIC EDI SUPPORT"
     assert payer_loop[3].element(3) == "TE"
