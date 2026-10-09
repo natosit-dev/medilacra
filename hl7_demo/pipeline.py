@@ -44,6 +44,7 @@ except ModuleNotFoundError:
 
 from claims_epa.models import build_case as build_claims_epa_case
 from reality.persistence import persist_case, register_artifact, finish_case
+from hl7_demo.generators import choose_gender_harmony_values
 from claims_epa.generation import (
     generate as generate_claims_epa,
     write_artifacts as write_claims_epa_artifacts,
@@ -293,6 +294,11 @@ def run_pipeline(
             )
             report_row = reports.sample(n=1).iloc[0]
             o = gen_observation(e, report_row)
+            # One synthetic Gender Harmony assertion set per case, before DB
+            # persistence and before all projections (not sampled in ADT).
+            gender_values = choose_gender_harmony_values(
+                getattr(p, "sex", ""), match_bias=0.95)
+            gender_effective_at = run_at.strftime("%Y-%m-%d %H:%M:%S")
 
             payer_member = None
             payer_enrollment = None
@@ -432,6 +438,11 @@ def run_pipeline(
                         "clinical_patient": p, "clinical_encounter": e,
                         "clinical_observation": o, "clinical_transaction": t,
                         "clinical_coverage": coverage,
+                        "clinical_gender_assertions": {
+                            "values": gender_values,
+                            "effective_at": gender_effective_at,
+                            "source": "synthetic-person-demographic-v1",
+                        },
                     }
                     owners = {
                         "clinical_patient": "clinical",
@@ -439,6 +450,7 @@ def run_pipeline(
                         "clinical_observation": "clinical",
                         "clinical_transaction": "clinical",
                         "clinical_coverage": "clinical",
+                        "clinical_gender_assertions": "clinical",
                     }
                     if include_eligibility:
                         records.update({
@@ -503,6 +515,8 @@ def run_pipeline(
                 tx=t,
                 miles=miles,
                 obs=o,
+                gender_values=gender_values,
+                gender_effective_at=gender_effective_at,
                 include_sdoh=include_sdoh,
                 add_air_obx=include_sdoh,
                 add_poverty_obx=include_sdoh,
