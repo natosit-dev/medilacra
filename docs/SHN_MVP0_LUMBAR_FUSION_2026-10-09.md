@@ -195,3 +195,22 @@ Question `1.2` **cannot** be answered from `prior_imaging = true`. Having prior 
 Do not map that existing boolean into the payer questionnaire.
 
 The next reality change must add an explicit clinical fact for the finding the payer asks about (for example, `imaging_confirms_instability_or_spondylolisthesis`) and only then project that fact into QuestionnaireResponse item `1.2`.
+
+
+## Reality strengthened for QuestionnaireResponse materialization
+
+The lumbar-fusion scenario now carries a base diagnosis:
+
+```text
+ICD-10-CM M43.16 — Spondylolisthesis, lumbar region
+```
+
+and a distinct clinical finding:
+
+```text
+imaging_confirms_instability_or_spondylolisthesis = true
+```
+
+This is intentionally separate from `prior_imaging = true`. The first states what the imaging shows; the second only states that imaging exists.
+
+The diagnosis is projected into the ServiceRequest as `reasonCode` for future PAS work. It is not inserted into the DTR QuestionnaireResponse unless a payer Questionnaire explicitly asks for it.
