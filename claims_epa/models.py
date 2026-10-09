@@ -6,6 +6,7 @@ representations of a real payer contract, utilization policy or fee schedule.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
@@ -46,6 +47,61 @@ class ServiceLine:
 
 
 @dataclass(frozen=True)
+class PostalAddress:
+    street: str
+    city: str
+    state: str
+    postal_code: str
+
+    def __post_init__(self):
+        if not all((self.street, self.city, self.state, self.postal_code)):
+            raise ValueError("Incomplete source-owned postal address")
+
+
+@dataclass(frozen=True)
+class ClaimRouting:
+    """Scenario-owned institutional facts, never invented by the X12 renderer."""
+    patient_address: PostalAddress
+    billing_address: PostalAddress
+    submitter_name: str
+    submitter_id: str
+    submitter_contact: str
+    submitter_phone: str
+    billing_tax_id: str
+    sender_id: str
+    filing_indicator: str
+    subscriber_relationship_code: str
+    place_of_service_code: str
+    claim_flags: tuple[str, str, str, str]
+
+
+def synthetic_claim_routing(patient, encounter, provider_npi: str) -> ClaimRouting:
+    """Explicit, seeded demonstration-site fixture; NOT provider-directory facts."""
+    from faker import Faker
+    seed = int(hashlib.sha256(str(provider_npi).encode()).hexdigest()[:12], 16)
+    fake = Faker("en_US")
+    fake.seed_instance(seed)
+    patient_address = PostalAddress(
+        street=str(patient.address), city=str(patient.city),
+        state=str(patient.state), postal_code=str(patient.zip_code))
+    provider_address = PostalAddress(
+        street=fake.street_address(), city=fake.city(),
+        state=fake.state_abbr(), postal_code=fake.postcode())
+    pos = str(getattr(encounter, "place_of_service_code", "")).strip()
+    if not pos:
+        raise ValueError("Claim scenario must establish place_of_service_code")
+    return ClaimRouting(
+        patient_address=patient_address, billing_address=provider_address,
+        submitter_name="MEDILACRA SYNTHETIC SUBMITTER",
+        submitter_id="MEDILACRA01", submitter_contact="SYNTHETIC EDI",
+        submitter_phone="5550100000", billing_tax_id=f"{100000000 + seed % 800000000:09d}",
+        sender_id="MEDILACRA", filing_indicator="CI",
+        subscriber_relationship_code="18", place_of_service_code=pos,
+        claim_flags=("Y", "A", "Y", "Y"),
+    )
+
+
+@dataclass(frozen=True)
 class ClaimSubmission:
     exchange_id: str
     claim_id: str
@@ -61,6 +117,7 @@ class ClaimSubmission:
     encounter_id: str
     service_date: str
     line: ServiceLine
+    routing: ClaimRouting
 
     @property
     def charge_cents(self) -> int:
@@ -194,6 +251,7 @@ def build_case(
     authorization_status: str = "approved",
     claim_status: str = "paid",
     payer_contact: PayerContact | None = None,
+    claim_routing: ClaimRouting | None = None,
 ) -> SemanticCase:
     """Build sibling exchanges from existing MediLacra entities and payer-local state.
 
@@ -226,6 +284,8 @@ def build_case(
     base = f"{stamp}-{ordinal:05d}"
     claim_id = f"CLM-{base}"
     auth_id = f"PA-{base}"
+    claim_routing = claim_routing or synthetic_claim_routing(
+        patient, encounter, str(transaction.billing_provider_npi))
     claim = ClaimSubmission(
         exchange_id=f"CLAIM-{base}", claim_id=claim_id,
         patient_id=str(patient.patient_id),
@@ -241,6 +301,7 @@ def build_case(
             diagnosis_code=str(observation.icd_code),
             units=quantity, charge_cents=bill,
         ),
+        routing=claim_routing,
     )
     authorization = AuthorizationRequest(
         exchange_id=f"AUTH-{base}", request_id=auth_id,
