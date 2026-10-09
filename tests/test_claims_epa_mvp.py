@@ -362,3 +362,23 @@ def test_837p_contacts_are_traced_to_source_parties_not_fixed_in_renderer():
     assert "1 SYNTHETIC STREET" not in x
     assert "LOWELL" not in x
     validate_envelope(x, "837")
+
+
+def test_835_payee_and_adjustment_come_from_payer_decision():
+    from claims_epa.models import RemittanceInstructions
+    case = demo_case(run_at=RUN_AT)
+    source = replace(
+        case.claim_decision.remittance,
+        payee_name="PAYEE, DIFFERENT", payee_npi="9876543210",
+        payment_method="CHK", originating_company_id="TRADINGPARTNER2",
+        trace_id="REMIT-1234", adjustment_group="PR", adjustment_reason="1",
+    )
+    change = replace(case, claim_decision=replace(case.claim_decision, remittance=source))
+    x = generate(change, RUN_AT).x835
+    assert "N1*PE*PAYEE, DIFFERENT*XX*9876543210~" in x
+    assert "TRN*1*REMIT-1234*TRADINGPARTNER2~" in x
+    assert "CAS*PR*1*" in x
+    assert "CAS*CO*45*" not in x
+    validate_envelope(x, "835")
+    with pytest.raises(ValueError, match="remittance"):
+        generate(replace(case, claim_decision=replace(case.claim_decision, remittance=None)), RUN_AT)
