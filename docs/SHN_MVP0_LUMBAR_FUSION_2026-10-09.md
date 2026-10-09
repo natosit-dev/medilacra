@@ -97,3 +97,54 @@ Before any live send, local tests assert that:
 - the expected questionnaire exists only in the expectation artifact, not the outbound request.
 
 The live send is the next experiment.
+
+
+## First live lumbar-fusion CRD — 2026-10-09 16:59 UTC
+
+The generated lumbar-fusion CRD was sent through the same authenticated provider-test path.
+
+**Network evidence**
+
+- HTTP: `200`
+- X-Correlation-Id: `medilacra-lumbar-fusion-crd-20261009T165957Z`
+- X-SHN-Leg-Id: `6c6fe2654f1dbc9e27f5ab7991425dda`
+- Trace: `https://admin.shn-preview.org/connectathon/trace/medilacra-lumbar-fusion-crd-20261009T165957Z`
+
+**Returned semantics**
+
+SHN returned the same MediLacra ServiceRequest `SR-8d46465f88045bdb`, still linked to:
+
+- Patient `ML-c89f42c8921c52e7`
+- Coverage `COV-cf3716e963a45256`
+- CPT `22633`
+
+The payer's coverage-information extension returned:
+
+- `covered = conditional`
+- `pa-needed = auth-needed`
+- `doc-needed = clinical`
+- `doc-purpose = withpa`
+- `info-needed = OTH`
+- `questionnaire = http://example.org/fhir/Questionnaire/LumbarSpinalFusion`
+- billing code `22633`
+- coverage assertion `lumbar-fusion-2026-10-09-COV-cf3716e963a45256`
+
+This matches the documented 00301 lumbar-fusion rule exactly.
+
+### DTR boundary
+
+The next request is now data-driven:
+
+```text
+MediLacra reality
+    ↓
+generated CRD
+    ↓
+SHN payer rule
+    ↓
+returned questionnaire canonical
+    ↓
+generated DTR package request
+```
+
+The DTR generator refuses to proceed if the CRD response has no questionnaire or has more than one distinct questionnaire canonical. It does not hardcode a fallback questionnaire.

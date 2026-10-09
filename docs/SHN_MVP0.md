@@ -457,3 +457,10 @@ python -m connectathon.shn_lumbar_fusion --seed 43
 ```
 
 See `docs/SHN_MVP0_LUMBAR_FUSION_2026-10-09.md`.
+
+
+### Live lumbar-fusion rule selection and DTR handoff
+
+The seed-43 lumbar-fusion CRD reached route `00301` at 16:59 UTC and returned the expected prior-authorization/documentation rule plus `http://example.org/fhir/Questionnaire/LumbarSpinalFusion`.
+
+`connectathon/shn_lumbar_fusion_dtr.py` now builds the DTR package request from that **returned CRD canonical** and the same MediLacra patient/coverage reality. It refuses to generate DTR if CRD did not select exactly one questionnaire.
