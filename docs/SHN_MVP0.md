@@ -515,3 +515,8 @@ The default 9-case matrix repeats three evidence-backed behaviors three times ea
 The runner checks both identity preservation and partial semantic agreement with the documented expected CRD behavior.
 
 See `docs/SHN_MVP0_RULE_MATRIX_2026-10-09.md`.
+
+
+### Mixed-rule matrix succeeded
+
+The first 9-case mixed CRD matrix completed 9/9 HTTP 200, 9/9 identity preservation and 9/9 expected-behavior matches across CPT 22633, 42999 and 72148. This is the first bulk result showing both referential preservation and semantic discrimination across independently generated MediLacra realities.
