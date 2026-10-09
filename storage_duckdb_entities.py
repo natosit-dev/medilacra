@@ -1,6 +1,7 @@
 # storage_duckdb_entities.py
 from typing import Dict, Any
 from datetime import datetime
+import json
 
 from utils.db import writer, reader, get_db_path
 from utils.log_utils import get_logger
@@ -231,6 +232,7 @@ ALTER TABLE transactions ADD COLUMN IF NOT EXISTS authorization_number TEXT;
 ALTER TABLE transactions ADD COLUMN IF NOT EXISTS billing_provider_npi TEXT;
 ALTER TABLE transactions ADD COLUMN IF NOT EXISTS guarantor_name TEXT;
 ALTER TABLE transactions ADD COLUMN IF NOT EXISTS guarantor_relationship TEXT;
+ALTER TABLE payer_plans ADD COLUMN IF NOT EXISTS active_service_types_json TEXT;
     """
 ]
 
@@ -555,6 +557,10 @@ def upsert_payer_plan(plan: Dict[str, Any], db_path: str | None = None):
                 plan.get("plan_type"),
                 plan.get("created_ts"),
             ],
+        )
+        con.execute(
+            "UPDATE payer_plans SET active_service_types_json = ? WHERE payer_id = ? AND plan_id = ?",
+            [json.dumps(list(plan.get("active_service_types") or [])), plan["payer_id"], plan["plan_id"]],
         )
         con.execute("COMMIT")
         logger.info("payer_plan.upsert", extra={"extra": {
