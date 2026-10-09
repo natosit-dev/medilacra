@@ -152,6 +152,8 @@ def build_adt(
     add_gi_obx: bool = True,
     add_pronouns_obx: bool = True,
     add_spcu_obx: bool = True,
+    gender_values: dict | None = None,
+    gender_effective_at: str | None = None,
 ) -> str:
     """
     Build an HL7 v2.5 ADT^A01 admission message.
@@ -326,20 +328,16 @@ def build_adt(
     # Gender Harmony / SPCU
     # ---------------------------------------------------------------------
 
-    now = datetime.now().strftime(
+    now = gender_effective_at or datetime.now().strftime(
         "%Y-%m-%d %H:%M:%S"
     )
 
-    # Most values intentionally align with administrative sex while a
-    # small percentage differ to create useful interface test cases.
-    gender_values = choose_gender_harmony_values(
-        getattr(
-            p,
-            "sex",
-            "",
-        ),
-        match_bias=0.95,
-    )
+    # Main pipeline supplies pre-materialized, persisted source assertions.
+    # Legacy direct callers retain the optional demo fallback.
+    if gender_values is None:
+        gender_values = choose_gender_harmony_values(
+            getattr(p, "sex", ""), match_bias=0.95,
+        )
 
 
     if add_gi_obx:
