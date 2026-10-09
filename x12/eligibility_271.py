@@ -135,9 +135,10 @@ def build_271_transaction(
         f"EB*1**30**{plan.plan_name}"
     )
 
-    segments.append(
-        "EB*1**" + ">".join(GENERIC_ACTIVE_SERVICE_TYPES)
-    )
+    # A plan-level ACTIVE response cannot establish individual covered services.
+    # Emit service-type EB assertions only when the payer plan explicitly owns them.
+    if plan.active_service_types:
+        segments.append("EB*1**" + ">".join(plan.active_service_types))
 
     if response.group_number:
         segments.append(
