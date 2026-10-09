@@ -199,6 +199,39 @@ CREATE INDEX IF NOT EXISTS ix_orders_enc ON orders(encounter_id);
       PRIMARY KEY (payer_id, plan_id)
     );
     """
+    """
+ALTER TABLE patients ADD COLUMN IF NOT EXISTS gender TEXT;
+ALTER TABLE patients ADD COLUMN IF NOT EXISTS ethnicity TEXT;
+ALTER TABLE patients ADD COLUMN IF NOT EXISTS marital_status TEXT;
+ALTER TABLE patients ADD COLUMN IF NOT EXISTS language TEXT;
+ALTER TABLE patients ADD COLUMN IF NOT EXISTS employer TEXT;
+ALTER TABLE patients ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE encounters ADD COLUMN IF NOT EXISTS admit_source TEXT;
+ALTER TABLE encounters ADD COLUMN IF NOT EXISTS discharge_disposition TEXT;
+ALTER TABLE encounters ADD COLUMN IF NOT EXISTS attending_provider_taxonomy TEXT;
+ALTER TABLE encounters ADD COLUMN IF NOT EXISTS attending_provider_specialty TEXT;
+ALTER TABLE encounters ADD COLUMN IF NOT EXISTS mid_level_provider_id TEXT;
+ALTER TABLE encounters ADD COLUMN IF NOT EXISTS mid_level_provider_name TEXT;
+ALTER TABLE encounters ADD COLUMN IF NOT EXISTS referring_provider_id TEXT;
+ALTER TABLE encounters ADD COLUMN IF NOT EXISTS referring_provider_name TEXT;
+ALTER TABLE encounters ADD COLUMN IF NOT EXISTS place_of_service_code TEXT;
+ALTER TABLE encounters ADD COLUMN IF NOT EXISTS place_of_service_description TEXT;
+ALTER TABLE observations ADD COLUMN IF NOT EXISTS cpt_description TEXT;
+ALTER TABLE observations ADD COLUMN IF NOT EXISTS icd_description TEXT;
+ALTER TABLE observations ADD COLUMN IF NOT EXISTS diagnosis_type TEXT;
+ALTER TABLE observations ADD COLUMN IF NOT EXISTS diagnosis_rank INTEGER;
+ALTER TABLE observations ADD COLUMN IF NOT EXISTS performing_provider_id TEXT;
+ALTER TABLE observations ADD COLUMN IF NOT EXISTS performing_provider_name TEXT;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS insurance_plan_name TEXT;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS member_id TEXT;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS group_number TEXT;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS plan_type TEXT;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS subscriber_relationship TEXT;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS authorization_number TEXT;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS billing_provider_npi TEXT;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS guarantor_name TEXT;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS guarantor_relationship TEXT;
+    """
 ]
 
 def _exec_ddl(db_path: str | None = None):
@@ -242,6 +275,10 @@ def upsert_patient(p: Dict[str, Any], db_path: str | None = None):
             ]
         )
         con.execute("COMMIT")
+        con.execute(
+            "UPDATE patients SET gender = ?, ethnicity = ?, marital_status = ?, language = ?, employer = ?, email = ? WHERE patient_id = ?",
+            [p.get("gender"), p.get("ethnicity"), p.get("marital_status"), p.get("language"), p.get("employer"), p.get("email"), *[p["patient_id"]]],
+        )
         logger.info("patient.upsert", extra={"extra": {"patient_id": p.get("patient_id")}})
 
 def upsert_encounter(e: Dict[str, Any], db_path: str | None = None):
@@ -272,6 +309,10 @@ def upsert_encounter(e: Dict[str, Any], db_path: str | None = None):
             ]
         )
         con.execute("COMMIT")
+        con.execute(
+            "UPDATE encounters SET admit_source = ?, discharge_disposition = ?, attending_provider_taxonomy = ?, attending_provider_specialty = ?, mid_level_provider_id = ?, mid_level_provider_name = ?, referring_provider_id = ?, referring_provider_name = ?, place_of_service_code = ?, place_of_service_description = ? WHERE encounter_id = ?",
+            [e.get("admit_source"), e.get("discharge_disposition"), e.get("attending_provider_taxonomy"), e.get("attending_provider_specialty"), e.get("mid_level_provider_id"), e.get("mid_level_provider_name"), e.get("referring_provider_id"), e.get("referring_provider_name"), e.get("place_of_service_code"), e.get("place_of_service_description"), *[e["encounter_id"]]],
+        )
         logger.info("encounter.upsert", extra={"extra": {"encounter_id": e.get("encounter_id")}})
 
 def upsert_observation(o: Dict[str, Any], db_path: str | None = None):
@@ -297,6 +338,10 @@ def upsert_observation(o: Dict[str, Any], db_path: str | None = None):
             ]
         )
         con.execute("COMMIT")
+        con.execute(
+            "UPDATE observations SET cpt_description = ?, icd_description = ?, diagnosis_type = ?, diagnosis_rank = ?, performing_provider_id = ?, performing_provider_name = ? WHERE encounter_id = ? AND observation_id = ?",
+            [o.get("cpt_description"), o.get("icd_description"), o.get("diagnosis_type"), o.get("diagnosis_rank"), o.get("performing_provider_id"), o.get("performing_provider_name"), *[o["encounter_id"], o["observation_id"]]],
+        )
         logger.info("observation.upsert", extra={"extra": {
             "encounter_id": o.get("encounter_id"),
             "observation_id": o.get("observation_id")
@@ -342,6 +387,10 @@ def upsert_transaction(t: Dict[str, Any], db_path: str | None = None):
             ]
         )
         con.execute("COMMIT")
+        con.execute(
+            "UPDATE transactions SET insurance_plan_name = ?, member_id = ?, group_number = ?, plan_type = ?, subscriber_relationship = ?, authorization_number = ?, billing_provider_npi = ?, guarantor_name = ?, guarantor_relationship = ? WHERE transaction_id = ?",
+            [t.get("insurance_plan_name"), t.get("member_id"), t.get("group_number"), t.get("plan_type"), t.get("subscriber_relationship"), t.get("authorization_number"), t.get("billing_provider_npi"), t.get("guarantor_name"), t.get("guarantor_relationship"), *[t["transaction_id"]]],
+        )
         logger.info("transaction.upsert", extra={"extra": {
             "transaction_id": t.get("transaction_id"), "encounter_id": t.get("encounter_id")
         }})
