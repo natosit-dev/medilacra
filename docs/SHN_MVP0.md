@@ -529,3 +529,12 @@ The seeds-300–399 mixed-rule cohort produced 100/100 successful semantic CRD e
 The throttle is logged as an operational characteristic, not a semantic failure.
 
 The next stage advances only the 34 CPT 22633 cases whose live CRD answers selected the LumbarSpinalFusion questionnaire into DTR.
+
+
+## 2026-10-09 — bulk DTR continuation
+
+The 100-patient CRD cohort now branches according to the payer's live answer. Only the 34 cases whose successful CRD response selected the LumbarSpinalFusion questionnaire continue into DTR; the 66 cases with not-covered or no-rule/default CRD outcomes stop at CRD.
+
+`connectathon/shn_bulk_dtr.py` builds those DTR requests from the saved live CRD responses, including the retry matrix for seeds 360–399. `connectathon/shn_bulk_dtr_send.sh` validates returned questionnaire identity and QuestionnaireResponse Patient/Coverage linkage, and backs off/retries on HTTP 429.
+
+See `docs/SHN_MVP0_BULK_DTR_2026-10-09.md`.
