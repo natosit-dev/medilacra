@@ -239,3 +239,7 @@ connectathon/results/shn_bulk_crd/
 
 # SHN mixed-rule generated cases and live response artifacts
 connectathon/results/shn_rule_matrix/
+
+
+# SHN bulk DTR generated requests and live response artifacts
+connectathon/results/shn_bulk_dtr/
