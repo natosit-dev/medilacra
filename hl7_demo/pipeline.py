@@ -568,6 +568,7 @@ def run_pipeline(
                             row = _collect_msg_row(run_id, name, path, msg,
                                                    encounter_id=e.encounter_id, ingest_ts=run_at)
                             duck_append_message(row, db_path=db_path)
+                            register_artifact(db_path, case_id, name, os.path.abspath(path), msg)
                         except Exception as le:
                             logger.error("DuckDB message log append failed", extra={"extra": {"type": name, "path": path, "error": str(le)}})
                             raise
@@ -591,6 +592,7 @@ def run_pipeline(
                             row = _collect_msg_row(run_id, name, path, msg,
                                                    encounter_id=e.encounter_id, ingest_ts=run_at)
                             duck_append_message(row, db_path=db_path)
+                            register_artifact(db_path, case_id, name, os.path.abspath(path), msg)
                         except Exception as le:
                             logger.error("DuckDB message log append failed", extra={"extra": {"type": name, "path": path, "error": str(le)}})
                             raise
@@ -608,6 +610,13 @@ def run_pipeline(
                     )
                     counts["X12_270"] += 1
                     counts["X12_271"] += 1
+                    if persist == "duckdb":
+                        for kind, payload_text in (
+                            ("X12_270", x12_artifacts.x270),
+                            ("X12_271", x12_artifacts.x271),
+                        ):
+                            register_artifact(db_path, case_id, kind,
+                                              os.path.abspath(x12_paths[kind]), payload_text)
                     logger.info(
                         "Wrote X12 eligibility pair",
                         extra={"extra": {
@@ -640,6 +649,15 @@ def run_pipeline(
                     )
                     counts["FHIR_ELIGIBILITY_REQUEST"] += 1
                     counts["FHIR_ELIGIBILITY_RESPONSE"] += 1
+                    if persist == "duckdb":
+                        import json
+                        for kind, bundle in (
+                            ("FHIR_ELIGIBILITY_REQUEST", fhir_eligibility_artifacts.request_bundle),
+                            ("FHIR_ELIGIBILITY_RESPONSE", fhir_eligibility_artifacts.response_bundle),
+                        ):
+                            register_artifact(db_path, case_id, kind,
+                                              os.path.abspath(fhir_paths[kind]),
+                                              json.dumps(bundle, sort_keys=True))
                     logger.info(
                         "Wrote FHIR R4 eligibility pair",
                         extra={"extra": {
