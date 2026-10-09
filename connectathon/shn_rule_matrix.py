@@ -201,7 +201,7 @@ def build_rule_matrix(
         )
         seed += 1
 
-    count = len(cases)
+    actual_count = len(cases)
     identity_fields = (
         "patient_id",
         "coverage_id",
@@ -210,7 +210,7 @@ def build_rule_matrix(
         "member_id",
     )
     for field in identity_fields:
-        if len({case[field] for case in cases}) != count:
+        if len({case[field] for case in cases}) != actual_count:
             raise ValueError(f"rule matrix contains duplicate {field}")
 
     return {
@@ -220,7 +220,7 @@ def build_rule_matrix(
         "end_seed": seed - 1,
         "repeats": repeats,
         "requested_count": count,
-        "count": len(cases),
+        "count": actual_count,
         "experimental_variable": "clinical service / payer-rule behavior",
         "scenarios": list(SCENARIOS),
         "cases": cases,
