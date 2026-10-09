@@ -312,3 +312,27 @@ def test_835_rejects_mismatched_payer_remittance_contact():
     )
     with pytest.raises(ValueError, match="payer contact"):
         generate(mismatch, RUN_AT)
+
+
+def test_278_service_loop_preserves_requested_procedure_quantity_and_date():
+    """The X12 event/service loops must not omit core ePA service facts.
+
+    External example: https://x12.org/examples/005010x217/example-6a-request-medical-services-reservation
+    """
+    case = demo_case(run_at=RUN_AT)
+    request = replace(case.authorization, procedure_code="99212",
+                      quantity=3, service_date="2026-11-19")
+    changed = replace(case, authorization=request)
+    out = generate(changed, RUN_AT)
+    for message in (out.x278_request, out.x278_response):
+        assert "HL*4*3*EV*1~" in message
+        assert "HL*5*4*SS*0~" in message
+        assert "DTP*472*D8*20261119~" in message
+        assert "SV1*HC:99212**UN*3~" in message
+        assert message.index("HL*5*4*SS*0~") < message.index("SV1*HC:99212")
+        validate_envelope(message, "278")
+    fhir_pa = next(r["resource"] for r in out.authorization_request["entry"]
+                   if r["resource"]["resourceType"] == "Claim")
+    assert fhir_pa["item"][0]["productOrService"]["coding"][0]["code"] == "99212"
+    assert fhir_pa["item"][0]["quantity"]["value"] == 3
+    assert fhir_pa["item"][0]["servicedDate"] == "2026-11-19"
