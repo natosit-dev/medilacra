@@ -554,3 +554,18 @@ The returned payer Questionnaire can now be materialized into a completed Questi
 `prior_imaging=true` cannot satisfy item 1.2. Unknown required payer questions, changed question text/type, or Patient/Coverage identity drift stop materialization instead of inventing an answer.
 
 See `docs/SHN_MVP0_DTR_QUESTIONNAIRE_RESPONSE_2026-10-09.md`.
+
+
+### QuestionnaireResponse cohort succeeded
+
+The 34 live DTR packages were materialized locally with no semantic failures:
+
+```text
+34/34 completed QuestionnaireResponses
+34/34 exactly two required answers
+34/34 ICD-10-CM M43.16 lumbar spondylolisthesis realities
+```
+
+The returned Patient/Coverage linkage and payer Questionnaire canonical were preserved. Item 1.1 was populated from conservative therapy weeks; item 1.2 was populated only from the explicit imaging-confirmation fact. The materializer did not use `prior_imaging` as a substitute.
+
+This makes PAS the next test boundary.
