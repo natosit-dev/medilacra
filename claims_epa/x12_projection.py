@@ -131,13 +131,16 @@ def build_835(claim: ClaimSubmission, decision: ClaimDecision, run_at: datetime,
         raise ValueError("payer identity does not match claim routing identifiers")
     if payer_contact.payer_id != claim.payer_id:
         raise ValueError("payer contact does not match claim payer")
+    remittance = decision.remittance
+    if remittance is None:
+        raise ValueError("835 requires source-owned remittance instructions")
     last, first = _safe(payer_subject.last_name), _safe(payer_subject.first_name)
     d = run_at.strftime("%Y%m%d")
     s = [
         _segment("ST", "835", control, "005010X221A1"),
-        _segment("BPR", "I", usd(decision.paid_cents), "C", "CHK",
+        _segment("BPR", "I", usd(decision.paid_cents), "C", remittance.payment_method,
                  "", "", "", "", "", "", "", "", "", "", "", d),
-        _segment("TRN", "1", f"PAY{control}", "999999999"),
+        _segment("TRN", "1", remittance.trace_id, remittance.originating_company_id),
         _segment("DTM", "405", d),
         _segment("N1", "PR", claim.payer_name),
         # IRIS HIPAA_5010:835 requires payer 1000A address/contact segments
@@ -145,7 +148,7 @@ def build_835(claim: ClaimSubmission, decision: ClaimDecision, run_at: datetime,
         _segment("N3", payer_contact.address_line1),
         _segment("N4", payer_contact.city, payer_contact.state, payer_contact.postal_code),
         _segment("PER", "CX", payer_contact.contact_name, "TE", payer_contact.contact_phone),
-        _segment("N1", "PE", claim.provider_name, "XX", claim.provider_npi),
+        _segment("N1", "PE", remittance.payee_name, "XX", remittance.payee_npi),
         _segment("LX", "1"),
         _segment("CLP", claim.claim_id, "1" if decision.status == "paid" else "4",
                  usd(decision.charged_cents), usd(decision.paid_cents),
@@ -156,8 +159,8 @@ def build_835(claim: ClaimSubmission, decision: ClaimDecision, run_at: datetime,
         _segment("DTM", "472", claim.service_date.replace("-", "")),
     ]
     if decision.adjusted_cents:
-        s.append(_segment("CAS", "CO", "45" if decision.status == "paid" else "96",
-                          usd(decision.adjusted_cents)))
+        s.append(_segment("CAS", remittance.adjustment_group,
+                          remittance.adjustment_reason, usd(decision.adjusted_cents)))
     if decision.allowed_cents:
         s.append(_segment("AMT", "B6", usd(decision.allowed_cents)))
     return _wrap(_transaction(s, control), source=claim.payer_id, target="MEDILACRA",
