@@ -46,6 +46,10 @@ class SHNMVP0Reality:
     prior_imaging: bool
     service_code: str = "72148"
     service_display: str = "MRI lumbar spine without contrast"
+    diagnosis_system: str | None = None
+    diagnosis_code: str | None = None
+    diagnosis_display: str | None = None
+    imaging_confirms_instability_or_spondylolisthesis: bool | None = None
 
 
 def _stable_id(seed: int, label: str) -> str:
@@ -214,6 +218,18 @@ def reality_manifest(reality: SHNMVP0Reality) -> dict[str, Any]:
             "conservative_therapy_weeks": reality.therapy_weeks,
             "neuro_deficit": reality.neuro_deficit,
             "prior_imaging": reality.prior_imaging,
+            "imaging_confirms_instability_or_spondylolisthesis": (
+                reality.imaging_confirms_instability_or_spondylolisthesis
+            ),
+            "diagnosis": (
+                {
+                    "system": reality.diagnosis_system,
+                    "code": reality.diagnosis_code,
+                    "display": reality.diagnosis_display,
+                }
+                if reality.diagnosis_code
+                else None
+            ),
             "ordered_service": {
                 "system": "http://www.ama-assn.org/go/cpt",
                 "code": reality.service_code,
@@ -287,6 +303,18 @@ def supporting_fhir(reality: SHNMVP0Reality) -> dict[str, dict[str, Any]]:
             ]
         },
     }
+    if reality.diagnosis_code:
+        service_request["reasonCode"] = [
+            {
+                "coding": [
+                    {
+                        "system": reality.diagnosis_system,
+                        "code": reality.diagnosis_code,
+                        "display": reality.diagnosis_display,
+                    }
+                ]
+            }
+        ]
 
     return {
         "patient": patient,
