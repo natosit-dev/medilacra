@@ -85,6 +85,16 @@ def test_pipeline_generates_claims_epa_without_eligibility_representations(tmp_p
 
     # Replay from storage only: no Faker, original CSV, payer model or source objects.
     from reality.replay import replay_claims_case
+    from reality.persistence import load_case
+    snapshot = load_case(str(db_path), case_row[0])
+    gender_assertions = snapshot["clinical_gender_assertions"]
+    assert gender_assertions["source"] == "synthetic-person-demographic-v1"
+    assert gender_assertions["effective_at"]
+    assert set(gender_assertions["values"]) == {"gi", "pro", "spcu"}
+    assert snapshot["requested_service"]["procedure_code"] != \\
+        snapshot["claim_submission"]["line"]["procedure_code"]
+    assert snapshot["payer_policy"]["policy_id"] == "example-payer-flat80-v1"
+
     replayed = replay_claims_case(str(db_path), case_row[0])
     assert replayed.x837p == (folders[0] / "837P.x12").read_text()
     assert replayed.x835 == (folders[0] / "835.x12").read_text()
