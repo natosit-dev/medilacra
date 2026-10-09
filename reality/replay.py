@@ -14,6 +14,7 @@ from claims_epa.models import (
     CoveragePeriods,
     ClaimSubmission, PostalAddress, PayerContact, PayerSubject,
     RemittanceInstructions, SemanticCase, ServiceLine, RequestedService,
+    SyntheticAdjudicationPolicy,
 )
 from reality.persistence import load_case
 from utils.db import reader
@@ -48,6 +49,7 @@ def reconstruct_claims_case(payload: dict) -> SemanticCase:
         payer_subject=PayerSubject(**payload["payer_subject"]),
         payer_contact=PayerContact(**payload["payer_contact"]),
         requested_service=RequestedService(**payload["requested_service"]),
+        payer_policy=SyntheticAdjudicationPolicy(**payload["payer_policy"]),
     )
 
 
