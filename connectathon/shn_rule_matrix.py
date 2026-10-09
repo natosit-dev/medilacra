@@ -155,41 +155,51 @@ def build_rule_case(
 def build_rule_matrix(
     start_seed: int = 200,
     repeats: int = 3,
+    count: int | None = None,
     payer_route: str = SHN_ROUTE_00301,
 ) -> dict[str, Any]:
-    """Build a balanced CRD matrix across three known payer behaviors."""
+    """Build a CRD matrix across three known payer behaviors.
+
+    If count is supplied, generate exactly that many cases by cycling the
+    scenarios in a deterministic near-balanced order. Otherwise preserve the
+    original repeats * scenario-count behavior.
+    """
     if repeats < 1:
         raise ValueError("repeats must be at least 1")
+    if count is not None and count < 1:
+        raise ValueError("count must be at least 1")
+
+    target_count = count if count is not None else repeats * len(SCENARIOS)
 
     cases: list[dict[str, Any]] = []
     seed = start_seed
 
-    for _ in range(repeats):
-        for scenario in SCENARIOS:
-            case = build_rule_case(scenario, seed, payer_route=payer_route)
-            reality = case["reality"]
-            encounter = reality["entities"]["encounter"]
-            transaction = reality["entities"]["transaction"]
-            order_code = case["crd_request"]["context"]["draftOrders"]["entry"][0]["resource"][
-                "code"
-            ]["coding"][0]["code"]
+    for i in range(target_count):
+        scenario = SCENARIOS[i % len(SCENARIOS)]
+        case = build_rule_case(scenario, seed, payer_route=payer_route)
+        reality = case["reality"]
+        encounter = reality["entities"]["encounter"]
+        transaction = reality["entities"]["transaction"]
+        order_code = case["crd_request"]["context"]["draftOrders"]["entry"][0]["resource"][
+            "code"
+        ]["coding"][0]["code"]
 
-            cases.append(
-                {
-                    "seed": seed,
-                    "scenario": scenario,
-                    "case_id": reality["case_id"],
-                    "patient_id": reality["entities"]["patient"]["patient_id"],
-                    "coverage_id": transaction["insurance_plan_id"],
-                    "service_request_id": encounter["placer_order_number"],
-                    "encounter_id": encounter["encounter_id"],
-                    "member_id": transaction["member_id"],
-                    "service_code": order_code,
-                    "expected_crd": case["expected_crd"],
-                    "request": f"cases/{reality['case_id']}/crd_request.json",
-                }
-            )
-            seed += 1
+        cases.append(
+            {
+                "seed": seed,
+                "scenario": scenario,
+                "case_id": reality["case_id"],
+                "patient_id": reality["entities"]["patient"]["patient_id"],
+                "coverage_id": transaction["insurance_plan_id"],
+                "service_request_id": encounter["placer_order_number"],
+                "encounter_id": encounter["encounter_id"],
+                "member_id": transaction["member_id"],
+                "service_code": order_code,
+                "expected_crd": case["expected_crd"],
+                "request": f"cases/{reality['case_id']}/crd_request.json",
+            }
+        )
+        seed += 1
 
     count = len(cases)
     identity_fields = (
@@ -209,7 +219,8 @@ def build_rule_matrix(
         "start_seed": start_seed,
         "end_seed": seed - 1,
         "repeats": repeats,
-        "count": count,
+        "requested_count": count,
+        "count": len(cases),
         "experimental_variable": "clinical service / payer-rule behavior",
         "scenarios": list(SCENARIOS),
         "cases": cases,
@@ -253,6 +264,12 @@ def main() -> int:
     )
     parser.add_argument("--start-seed", type=int, default=200)
     parser.add_argument("--repeats", type=int, default=3)
+    parser.add_argument(
+        "--count",
+        type=int,
+        default=None,
+        help="Generate exactly this many cases; cycles scenarios near-evenly",
+    )
     parser.add_argument("--payer-route", default=SHN_ROUTE_00301)
     parser.add_argument(
         "--out",
@@ -263,6 +280,7 @@ def main() -> int:
     matrix = build_rule_matrix(
         start_seed=args.start_seed,
         repeats=args.repeats,
+        count=args.count,
         payer_route=args.payer_route,
     )
     root = write_rule_matrix(matrix, args.out)
