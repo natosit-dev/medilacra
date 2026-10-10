@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0",
+  "id": "no-rule-default",
+  "label": "No Rule / Default",
+  "description": "Synthetic provider-side CRD scenario exercising the route-00301 no-rule/default response.",
+  "notes": [
+    "This scenario intentionally stops after CRD.",
+    "The absence of a questionnaire is a live payer decision, not a local shortcut."
+  ],
+  "rationale": "Provides a default-rule branch and keeps transport success separate from semantic routing.",
+  "assumptions": [],
+  "constraints": [
+    "Stop when the live payer response contains no questionnaire."
+  ],
+  "provenance": {
+    "date": "2026-10-10",
+    "source": "MediLacra SHN MVP-0"
+  },
+  "reality_builder": "default",
+  "payer": {
+    "route": "00301",
+    "identifier_system": "urn:oid:2.16.840.1.113883.6.300"
+  },
+  "workflow": {
+    "stages": ["crd"]
+  },
+  "service": {
+    "system": "http://www.ama-assn.org/go/cpt",
+    "code": "72148",
+    "display": "MRI lumbar spine without contrast"
+  },
+  "diagnosis": null,
+  "questionnaire_mappings": {},
+  "expected": {
+    "crd": {
+      "covered": "conditional",
+      "pa-needed": null,
+      "info-needed": "detail-code",
+      "questionnaire": null
+    },
+    "pas": null
+  }
+}
