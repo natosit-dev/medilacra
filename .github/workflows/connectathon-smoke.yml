@@ -65,6 +65,7 @@ jobs:
             connectathon/shn_provider/dtr.py \
             connectathon/shn_provider/pas.py \
             connectathon/shn_provider/workflow.py \
+            connectathon/shn_provider/run.py \
             pages/10_SHN_Provider_ePA.py
 
       - name: Check SHN batch runner syntax
