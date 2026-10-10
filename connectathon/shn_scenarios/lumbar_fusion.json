@@ -1,0 +1,77 @@
+{
+  "schema_version": "1.0",
+  "id": "lumbar-fusion-auth",
+  "label": "Lumbar Fusion — Authorization Required",
+  "description": "Synthetic provider-side lumbar-fusion prior authorization scenario for SHN route 00301.",
+  "notes": [
+    "Exercises CRD -> DTR -> PAS using the live payer-selected questionnaire.",
+    "Questionnaire answers must come from explicit MediLacra reality facts.",
+    "prior_imaging does not satisfy the stronger imaging-confirmed-instability question."
+  ],
+  "rationale": "Preserves the proven 2026-10-09 end-to-end authorization path while moving clinical/test differences into machine-readable configuration.",
+  "assumptions": [
+    "Route 00301 exposes the documented LumbarSpinalFusion rule."
+  ],
+  "constraints": [
+    "Do not invent missing Questionnaire answers.",
+    "Do not advance to DTR unless the live CRD response selects exactly one questionnaire."
+  ],
+  "provenance": {
+    "date": "2026-10-10",
+    "source": "MediLacra SHN MVP-0",
+    "evidence": "34/34 documented PAS submissions certified A1 with authorization"
+  },
+  "reality_builder": "lumbar_fusion",
+  "payer": {
+    "route": "00301",
+    "identifier_system": "urn:oid:2.16.840.1.113883.6.300"
+  },
+  "workflow": {
+    "stages": ["crd", "dtr", "pas"]
+  },
+  "service": {
+    "system": "http://www.ama-assn.org/go/cpt",
+    "code": "22633",
+    "display": "Lumbar spinal fusion"
+  },
+  "diagnosis": {
+    "system": "http://hl7.org/fhir/sid/icd-10-cm",
+    "code": "M43.16",
+    "display": "Spondylolisthesis, lumbar region"
+  },
+  "questionnaire_mappings": {
+    "http://example.org/fhir/Questionnaire/LumbarSpinalFusion": {
+      "items": {
+        "1.1": {
+          "text": "Weeks of conservative therapy completed",
+          "type": "integer",
+          "fact_path": "therapy_weeks",
+          "semantic_name": "conservative_therapy_weeks"
+        },
+        "1.2": {
+          "text": "Imaging confirms instability or spondylolisthesis",
+          "type": "boolean",
+          "fact_path": "imaging_confirms_instability_or_spondylolisthesis",
+          "semantic_name": "imaging_confirms_instability_or_spondylolisthesis"
+        }
+      }
+    }
+  },
+  "expected": {
+    "crd": {
+      "covered": "conditional",
+      "pa-needed": "auth-needed",
+      "doc-needed": "clinical",
+      "doc-purpose": "withpa",
+      "info-needed": "OTH",
+      "questionnaire": "http://example.org/fhir/Questionnaire/LumbarSpinalFusion"
+    },
+    "pas": {
+      "claim_response_outcome": "complete",
+      "review_action_code": "A1",
+      "review_action_display": "Certified in total",
+      "communication_request_count": 0,
+      "authorization_required": true
+    }
+  }
+}
