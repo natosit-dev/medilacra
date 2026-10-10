@@ -636,3 +636,14 @@ The complete MVP-0 path is therefore:
 ```
 
 The other 66 cases correctly stopped at CRD because their payer decisions did not require this DTR/PAS path.
+
+
+## 2026-10-10 — provider ePA workbench
+
+The proven SHN provider workflow has been lifted out of shell/file orchestration into a first-class Python provider workflow while preserving the existing shell runners as a known-good transport control.
+
+New scenario configuration is JSON-based and machine-readable, including notes, rationale, constraints and provenance. The Streamlit page is deliberately thin: it selects a scenario/seed, invokes `ProviderWorkflow`, and renders normalized state/artifacts. CRD, DTR, PAS, transport, branching and semantic materialization remain outside the UI.
+
+The current configured scenarios are lumbar-fusion authorization, explicit not-covered and no-rule/default. Live payer output controls whether a case advances into DTR/PAS.
+
+See `docs/SHN_PROVIDER_UI_BUILD_PLAN_2026-10-10.md`.
