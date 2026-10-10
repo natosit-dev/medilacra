@@ -70,7 +70,7 @@ def _stage_card(title: str, stage, *, extra: str | None = None) -> None:
         st.caption(extra)
 
 
-def _trace(stage, key: str) -> None:
+def _trace(stage) -> None:
     if not stage.transport:
         return
     st.caption(
@@ -80,7 +80,7 @@ def _trace(stage, key: str) -> None:
     )
     trace = stage.transport.get("trace_url")
     if trace:
-        st.link_button("Open SHN trace", trace, key=key)
+        st.link_button("Open SHN trace", trace)
 
 
 single_tab, cohort_tab, artifact_tab = st.tabs(
@@ -217,12 +217,12 @@ with single_tab:
     if case.crd.summary:
         st.markdown("### CRD decision")
         st.json(case.crd.summary, expanded=False)
-        _trace(case.crd, "single-crd-trace")
+        _trace(case.crd)
 
     if case.dtr.summary:
         st.markdown("### DTR package")
         st.json(case.dtr.summary, expanded=False)
-        _trace(case.dtr, "single-dtr-trace")
+        _trace(case.dtr)
 
     if case.materialization:
         st.markdown("### Payer question → MediLacra fact → answer")
@@ -253,7 +253,7 @@ with single_tab:
         )
         if case.pas.summary.get("behavior_match") is True:
             st.success("PAS response matches the configured scenario expectation.")
-        _trace(case.pas, "single-pas-trace")
+        _trace(case.pas)
 
 
 with cohort_tab:
