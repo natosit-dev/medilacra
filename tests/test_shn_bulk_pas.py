@@ -101,6 +101,11 @@ def test_pas_batch_can_skip_seed_300(tmp_path, monkeypatch):
         return qr, {
             "answers": [{}, {}],
             "coverage_reference": f"Coverage/{reality.coverage_id}",
+            "diagnosis": {
+                "system": reality.diagnosis_system,
+                "code": reality.diagnosis_code,
+                "display": reality.diagnosis_display,
+            },
         }
 
     import connectathon.shn_dtr_questionnaire_response as qrm
