@@ -22,7 +22,9 @@
     "identifier_system": "urn:oid:2.16.840.1.113883.6.300"
   },
   "workflow": {
-    "stages": ["crd"]
+    "stages": [
+      "crd"
+    ]
   },
   "service": {
     "system": "http://www.ama-assn.org/go/cpt",
@@ -38,5 +40,6 @@
       "questionnaire": null
     },
     "pas": null
-  }
+  },
+  "order": 20
 }
