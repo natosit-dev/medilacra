@@ -16,61 +16,132 @@
     "expected"
   ],
   "properties": {
-    "schema_version": {"const": "1.0"},
-    "id": {"type": "string", "minLength": 1},
-    "label": {"type": "string", "minLength": 1},
-    "description": {"type": "string"},
-    "notes": {"type": "array", "items": {"type": "string"}},
-    "rationale": {"type": "string"},
-    "assumptions": {"type": "array", "items": {"type": "string"}},
-    "constraints": {"type": "array", "items": {"type": "string"}},
+    "schema_version": {
+      "const": "1.0"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "rationale": {
+      "type": "string"
+    },
+    "assumptions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "constraints": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "provenance": {
       "type": "object",
       "additionalProperties": true
     },
     "reality_builder": {
       "type": "string",
-      "enum": ["default", "lumbar_fusion", "explicit_not_covered"]
+      "enum": [
+        "default",
+        "lumbar_fusion",
+        "explicit_not_covered"
+      ]
     },
     "payer": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["route", "identifier_system"],
+      "required": [
+        "route",
+        "identifier_system"
+      ],
       "properties": {
-        "route": {"type": "string", "minLength": 1},
-        "identifier_system": {"type": "string", "minLength": 1}
+        "route": {
+          "type": "string",
+          "minLength": 1
+        },
+        "identifier_system": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "workflow": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["stages"],
+      "required": [
+        "stages"
+      ],
       "properties": {
         "stages": {
           "type": "array",
           "minItems": 1,
-          "items": {"enum": ["crd", "dtr", "pas"]}
+          "items": {
+            "enum": [
+              "crd",
+              "dtr",
+              "pas"
+            ]
+          }
         }
       }
     },
     "service": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["system", "code", "display"],
+      "required": [
+        "system",
+        "code",
+        "display"
+      ],
       "properties": {
-        "system": {"type": "string"},
-        "code": {"type": "string"},
-        "display": {"type": "string"}
+        "system": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        },
+        "display": {
+          "type": "string"
+        }
       }
     },
     "diagnosis": {
-      "type": ["object", "null"],
+      "type": [
+        "object",
+        "null"
+      ],
       "additionalProperties": false,
-      "required": ["system", "code", "display"],
+      "required": [
+        "system",
+        "code",
+        "display"
+      ],
       "properties": {
-        "system": {"type": "string"},
-        "code": {"type": "string"},
-        "display": {"type": "string"}
+        "system": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        },
+        "display": {
+          "type": "string"
+        }
       }
     },
     "questionnaire_mappings": {
@@ -78,19 +149,39 @@
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["items"],
+        "required": [
+          "items"
+        ],
         "properties": {
           "items": {
             "type": "object",
             "additionalProperties": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["text", "type", "fact_path", "semantic_name"],
+              "required": [
+                "text",
+                "type",
+                "fact_path",
+                "semantic_name"
+              ],
               "properties": {
-                "text": {"type": "string"},
-                "type": {"enum": ["integer", "boolean", "string", "decimal"]},
-                "fact_path": {"type": "string"},
-                "semantic_name": {"type": "string"}
+                "text": {
+                  "type": "string"
+                },
+                "type": {
+                  "enum": [
+                    "integer",
+                    "boolean",
+                    "string",
+                    "decimal"
+                  ]
+                },
+                "fact_path": {
+                  "type": "string"
+                },
+                "semantic_name": {
+                  "type": "string"
+                }
               }
             }
           }
@@ -100,11 +191,24 @@
     "expected": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["crd"],
+      "required": [
+        "crd"
+      ],
       "properties": {
-        "crd": {"type": "object"},
-        "pas": {"type": ["object", "null"]}
+        "crd": {
+          "type": "object"
+        },
+        "pas": {
+          "type": [
+            "object",
+            "null"
+          ]
+        }
       }
+    },
+    "order": {
+      "type": "integer",
+      "minimum": 0
     }
   }
 }
