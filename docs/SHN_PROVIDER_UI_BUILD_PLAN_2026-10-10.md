@@ -254,3 +254,63 @@ Do not build:
 - new clinical inference.
 
 The workbench is a provider-side client over already-proven MediLacra reality and SHN transactions.
+
+
+## Implementation status — 2026-10-10
+
+The first provider-workbench slice is built.
+
+Implemented:
+
+- JSON scenario schema plus lumbar-fusion, explicit-not-covered and no-rule/default configs.
+- Machine-readable scenario commentary/provenance fields.
+- Provider-side Python transport client with in-memory token handling, correlation/leg metadata and HTTP 429 retry behavior.
+- Separate CRD, DTR and PAS provider modules.
+- Config-driven, fail-closed DTR QuestionnaireResponse materialization.
+- First-class `ProviderCase` / `ProviderWorkflow` orchestration with live-response branching.
+- Independent filesystem artifacts for every stage.
+- Provider workflow CLI.
+- Thin Streamlit page at `pages/10_SHN_Provider_ePA.py`.
+- Single-patient, cohort and raw-artifact views.
+- Regression tests for JSON config loading, semantic answer materialization, full fake-client CRD -> DTR -> PAS flow and CRD-only stop behavior.
+
+The stale `pages/10_SHN_MVP0.py` demo-transform page was removed.
+
+The existing shell runners remain intact as an independent transport control.
+
+GitHub Actions passed on the completed provider-workbench head:
+
+```text
+commit: 567c7115638382656f33b5a27e483467f1eab793
+workflow: Connectathon smoke tests
+conclusion: success
+```
+
+### Local offline smoke test
+
+```bash
+python -m connectathon.shn_provider.run \
+  --scenario lumbar-fusion-auth \
+  --seed 300 \
+  --build-only
+```
+
+### First live Python-workflow revalidation
+
+```bash
+python -m connectathon.shn_provider.run \
+  --scenario lumbar-fusion-auth \
+  --seed 300
+```
+
+Target remains the previously proven route-00301 result: CRD selects the lumbar-fusion questionnaire, DTR returns the package, MediLacra materializes the exact configured reality facts, and PAS returns A1 with an authorization.
+
+### UI
+
+```bash
+streamlit run medi_lacra_app.py
+```
+
+Open **10 SHN Provider ePA**.
+
+The live revalidation is intentionally left to the local environment holding the ignored SHN credentials; no secret or bearer token is committed or surfaced by the workbench.
