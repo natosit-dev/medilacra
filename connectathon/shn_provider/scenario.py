@@ -164,6 +164,7 @@ def list_scenarios() -> list[ScenarioConfig]:
         for path in sorted(SCENARIO_DIR.glob("*.json"))
         if path.name != "schema.json"
     ]
+    scenarios.sort(key=lambda scenario: (scenario.raw.get("order", 999), scenario.id))
     ids = [scenario.id for scenario in scenarios]
     if len(ids) != len(set(ids)):
         raise ValueError("duplicate SHN scenario ids")
