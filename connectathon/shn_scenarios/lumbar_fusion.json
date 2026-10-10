@@ -27,7 +27,11 @@
     "identifier_system": "urn:oid:2.16.840.1.113883.6.300"
   },
   "workflow": {
-    "stages": ["crd", "dtr", "pas"]
+    "stages": [
+      "crd",
+      "dtr",
+      "pas"
+    ]
   },
   "service": {
     "system": "http://www.ama-assn.org/go/cpt",
@@ -73,5 +77,6 @@
       "communication_request_count": 0,
       "authorization_required": true
     }
-  }
+  },
+  "order": 10
 }
