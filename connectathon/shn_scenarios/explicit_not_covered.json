@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "id": "explicit-not-covered",
+  "label": "Explicit Not Covered",
+  "description": "Synthetic provider-side CRD scenario exercising the route-00301 explicit not-covered rule.",
+  "notes": [
+    "This scenario intentionally stops after CRD.",
+    "It carries no invented richer clinical facts."
+  ],
+  "rationale": "Provides a negative branch in the provider workflow and proves that the orchestrator does not force every case into DTR/PAS.",
+  "assumptions": [],
+  "constraints": [
+    "Stop when the live payer response contains no questionnaire."
+  ],
+  "provenance": {
+    "date": "2026-10-10",
+    "source": "MediLacra SHN MVP-0"
+  },
+  "reality_builder": "explicit_not_covered",
+  "payer": {
+    "route": "00301",
+    "identifier_system": "urn:oid:2.16.840.1.113883.6.300"
+  },
+  "workflow": {
+    "stages": ["crd"]
+  },
+  "service": {
+    "system": "http://www.ama-assn.org/go/cpt",
+    "code": "42999",
+    "display": "Unlisted procedure"
+  },
+  "diagnosis": null,
+  "questionnaire_mappings": {},
+  "expected": {
+    "crd": {
+      "covered": "not-covered",
+      "pa-needed": null,
+      "questionnaire": null
+    },
+    "pas": null
+  }
+}
