@@ -251,3 +251,7 @@ connectathon/results/shn_lumbar_fusion_pas/
 
 # SHN bulk documented PAS generated/live artifacts
 connectathon/results/shn_bulk_pas/
+
+
+# SHN provider workbench generated/live artifacts
+connectathon/results/shn_provider/
