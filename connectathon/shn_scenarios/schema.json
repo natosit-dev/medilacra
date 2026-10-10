@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://medilacra.example/schemas/shn-provider-scenario.schema.json",
+  "title": "MediLacra SHN provider scenario",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "label",
+    "description",
+    "reality_builder",
+    "payer",
+    "workflow",
+    "service",
+    "expected"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "id": {"type": "string", "minLength": 1},
+    "label": {"type": "string", "minLength": 1},
+    "description": {"type": "string"},
+    "notes": {"type": "array", "items": {"type": "string"}},
+    "rationale": {"type": "string"},
+    "assumptions": {"type": "array", "items": {"type": "string"}},
+    "constraints": {"type": "array", "items": {"type": "string"}},
+    "provenance": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "reality_builder": {
+      "type": "string",
+      "enum": ["default", "lumbar_fusion", "explicit_not_covered"]
+    },
+    "payer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["route", "identifier_system"],
+      "properties": {
+        "route": {"type": "string", "minLength": 1},
+        "identifier_system": {"type": "string", "minLength": 1}
+      }
+    },
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stages"],
+      "properties": {
+        "stages": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"enum": ["crd", "dtr", "pas"]}
+        }
+      }
+    },
+    "service": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["system", "code", "display"],
+      "properties": {
+        "system": {"type": "string"},
+        "code": {"type": "string"},
+        "display": {"type": "string"}
+      }
+    },
+    "diagnosis": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["system", "code", "display"],
+      "properties": {
+        "system": {"type": "string"},
+        "code": {"type": "string"},
+        "display": {"type": "string"}
+      }
+    },
+    "questionnaire_mappings": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items"],
+        "properties": {
+          "items": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["text", "type", "fact_path", "semantic_name"],
+              "properties": {
+                "text": {"type": "string"},
+                "type": {"enum": ["integer", "boolean", "string", "decimal"]},
+                "fact_path": {"type": "string"},
+                "semantic_name": {"type": "string"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "expected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["crd"],
+      "properties": {
+        "crd": {"type": "object"},
+        "pas": {"type": ["object", "null"]}
+      }
+    }
+  }
+}
