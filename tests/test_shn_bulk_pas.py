@@ -98,7 +98,7 @@ def test_pas_batch_can_skip_seed_300(tmp_path, monkeypatch):
                 }
             ],
         }
-        return qr, {"answers": [{}, {}]}
+        return qr, {\n            "answers": [{}, {}],\n            "coverage_reference": f"Coverage/{reality.coverage_id}",\n        }
 
     import connectathon.shn_dtr_questionnaire_response as qrm
     monkeypatch.setattr(qrm, "materialize_questionnaire_response", fake_materialize)
