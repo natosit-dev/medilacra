@@ -54,7 +54,18 @@ jobs:
             experiments/disco_inferno/fhir_corruptions.py \
             hl7_demo/labs.py \
             pages/9_PIQI_Connectathon_43.py \
-            pages/10_SHN_MVP0.py
+            connectathon/shn_provider/__init__.py \
+            connectathon/shn_provider/scenario.py \
+            connectathon/shn_provider/scenario_registry.py \
+            connectathon/shn_provider/client.py \
+            connectathon/shn_provider/summaries.py \
+            connectathon/shn_provider/state.py \
+            connectathon/shn_provider/artifacts.py \
+            connectathon/shn_provider/crd.py \
+            connectathon/shn_provider/dtr.py \
+            connectathon/shn_provider/pas.py \
+            connectathon/shn_provider/workflow.py \
+            pages/10_SHN_Provider_ePA.py
 
       - name: Check SHN batch runner syntax
         run: |
@@ -82,4 +93,5 @@ jobs:
             tests/test_shn_bulk_dtr.py \
             tests/test_shn_dtr_questionnaire_response.py \
             tests/test_shn_lumbar_fusion_pas.py \
-            tests/test_shn_bulk_pas.py
+            tests/test_shn_bulk_pas.py \
+            tests/test_shn_provider_workflow.py
