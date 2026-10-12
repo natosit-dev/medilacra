@@ -5,7 +5,8 @@ from datetime import datetime
 import duckdb
 import pandas as pd
 
-from pipeline_duckdb import run_and_persist
+from hl7_demo.pipeline import run_pipeline
+from profiles.site_profile import list_profiles, load_profile
 from storage_duckdb_entities import DEFAULT_DB_PATH, init_db
 
 st.set_page_config(page_title="MediLacra — Generate & Persist", layout="wide")
@@ -21,6 +22,16 @@ with st.sidebar:
     out_dir = st.text_input("Output folder", "./output", key="gp_outdir")
     miles = st.number_input("AirNow radius (miles)", 1, 200, 75, key="gp_miles")
     db_path = st.text_input("DuckDB path", DEFAULT_DB_PATH, key="gp_db")
+    profile_files = list_profiles()
+    selected_profile = st.selectbox(
+        "Site profile",
+        options=["(none)"] + profile_files,
+        key="gp_site_profile",
+        help=(
+            "Carries the site's existing encounter/location probability model. "
+            "Unified JSON profiles may also contain HL7 interface mappings."
+        ),
+    )
     go = st.button("Run & Persist", type="primary", use_container_width=True)
     include_labs = st.checkbox("Include Labs (ORM + ORU)", value=True, key="gp_labs")
     add_places_obesity_obx = st.checkbox("Add Places/Obesity OBX to ADT", value=False, key="gp_places")
@@ -31,11 +42,36 @@ with st.sidebar:
 init_db(db_path)
 
 if go:
-    counts = run_and_persist(
-        int(n), report_glob, int(seed) if use_seed else None,
-        bool(per_enc), not per_enc, out_dir, int(miles), db_path=db_path
+    site_profile = (
+        load_profile(selected_profile)
+        if selected_profile != "(none)"
+        else None
     )
-    st.success(f"Done. ADT: {counts.get('ADT',0)}, ORU: {counts.get('ORU',0)}, DFT: {counts.get('DFT',0)}")
+    counts = run_pipeline(
+        n_patients=int(n),
+        report_glob=report_glob,
+        seed=int(seed) if use_seed else None,
+        per_encounter=bool(per_enc),
+        bulk=not per_enc,
+        out_dir=out_dir,
+        miles=int(miles),
+        add_places_obesity_obx=bool(add_places_obesity_obx),
+        add_unemployment_obx=bool(add_unemployment_obx),
+        include_labs=bool(include_labs),
+        persist="duckdb",
+        scenario_profile=site_profile,
+        duckdb_path=db_path,
+    )
+    profile_note = (
+        f" using {selected_profile}"
+        if selected_profile != "(none)"
+        else ""
+    )
+    st.success(
+        f"Done{profile_note}. ADT: {counts.get('ADT',0)}, "
+        f"ORU: {counts.get('ORU',0)}, DFT: {counts.get('DFT',0)}, "
+        f"ORM: {counts.get('ORM',0)}, ORU_LABS: {counts.get('ORU_LABS',0)}"
+    )
 
     # Show recent message files
     files = sorted(glob.glob(os.path.join(out_dir, "*.hl7")), key=os.path.getmtime, reverse=True)[:25]
@@ -43,7 +79,10 @@ if go:
     for f in files:
         st.code(os.path.basename(f))
 
-st.caption("Persists: patients, encounters, observations, transactions, messages (DuckDB).")
+st.caption(
+    "Persists: patients, encounters, observations, transactions, messages (DuckDB). "
+    "When selected, the Site Profile supplies the existing visit/location probability model."
+)
 
 # -------------------------
 # Preview entities section
