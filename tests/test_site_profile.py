@@ -267,3 +267,34 @@ def test_existing_site_probability_shape_still_drives_preview():
     assert {row["pv1_2"] for row in rows} == {"E"}
     assert {row["facility_code"] for row in rows} == {"FAC"}
     assert {row["hospital_service"] for row in rows} == {"EMERGENCY"}
+
+
+def test_profile_listing_and_legacy_yaml_loading(tmp_path):
+    (tmp_path / "legacy.yaml").write_text(
+        "profile_name: Legacy Hospital\n"
+        "facilities: []\n"
+        "departments: []\n"
+        "visit_mix: {}\n"
+        "routing: {}\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "modern.json").write_text(
+        json.dumps(
+            {
+                "profile_name": "Modern Hospital",
+                "facilities": [],
+                "departments": [],
+                "visit_mix": {},
+                "routing": {},
+                "interfaces": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    from profiles.site_profile import list_profiles
+
+    assert list_profiles(tmp_path) == ["legacy.yaml", "modern.json"]
+    legacy = load_profile("legacy.yaml", profile_dir=tmp_path)
+    assert legacy["profile_name"] == "Legacy Hospital"
+    assert legacy["interfaces"] == {}
