@@ -6,6 +6,8 @@ import streamlit as st
 
 from connectathon.shn_provider.client import SHNProviderClient
 from connectathon.shn_provider.scenario import get_scenario, list_scenarios
+from connectathon.shn_provider.reference_suite import ReferenceSuiteRunner, result_rows
+from connectathon.shn_provider.test_case import get_test_case, list_test_cases
 from connectathon.shn_provider.workflow import ProviderWorkflow, cohort_rows
 
 
@@ -27,6 +29,9 @@ scenario_ids = [scenario.id for scenario in scenarios]
 credentials_ready = SHNProviderClient.credentials_available()
 client = SHNProviderClient.from_environment() if credentials_ready else None
 workflow = ProviderWorkflow(client=client)
+reference_runner = ReferenceSuiteRunner(client=client)
+reference_cases = list_test_cases()
+reference_by_id = {case.id: case for case in reference_cases}
 
 with st.sidebar:
     st.header("Provider connection")
@@ -83,8 +88,8 @@ def _trace(stage) -> None:
         st.link_button("Open SHN trace", trace)
 
 
-single_tab, cohort_tab, artifact_tab = st.tabs(
-    ["Single Patient", "Cohort", "Artifacts / Raw"]
+single_tab, cohort_tab, artifact_tab, reference_tab = st.tabs(
+    ["Single Patient", "Cohort", "Artifacts / Raw", "Reference Suite"]
 )
 
 with single_tab:
@@ -374,3 +379,126 @@ with artifact_tab:
                     "questionnaire_response.json",
                     "dl-qr",
                 )
+
+
+with reference_tab:
+    st.markdown("### SHN Connectathon reference suite")
+    st.caption(
+        "Executable TP-01–TP-05 and TN-01–TN-10 contracts. "
+        "Positive cases reuse known-good reference payload structure; negative cases "
+        "apply exactly one named mutation immediately before transport."
+    )
+
+    reference_id = st.selectbox(
+        "Test case",
+        [case.id for case in reference_cases],
+        format_func=lambda test_id: (
+            f"{test_id} — {reference_by_id[test_id].label}"
+        ),
+        key="shn_reference_test_id",
+    )
+    reference_case = get_test_case(reference_id)
+
+    ref_cols = st.columns(3)
+    ref_cols[0].metric("Kind", reference_case.kind)
+    ref_cols[1].metric("Route", reference_case.route or "multiple")
+    ref_cols[2].metric(
+        "Execution",
+        "manual" if reference_case.manual else "automated",
+    )
+
+    st.write(reference_case.description)
+    if reference_case.notes:
+        st.markdown("\n".join(f"- {note}" for note in reference_case.notes))
+
+    with st.expander("Test contract", expanded=False):
+        st.json(reference_case.raw)
+
+    can_run_reference = reference_case.manual or credentials_ready
+    if st.button(
+        "Run reference test",
+        type="primary",
+        disabled=not can_run_reference,
+        use_container_width=True,
+        key="run-shn-reference-test",
+    ):
+        try:
+            if reference_case.manual:
+                manual_runner = ReferenceSuiteRunner(client=None)
+                reference_result = manual_runner.run(reference_id)
+            else:
+                with st.spinner(f"Running {reference_id} through SHN..."):
+                    reference_result = reference_runner.run(reference_id)
+            st.session_state["shn_reference_result"] = reference_result
+        except Exception as exc:
+            st.exception(exc)
+
+    reference_result = st.session_state.get("shn_reference_result")
+    if reference_result and reference_result.test_id == reference_id:
+        if reference_result.passed is True:
+            st.success(f"{reference_result.test_id}: PASS")
+        elif reference_result.passed is False:
+            st.error(f"{reference_result.test_id}: FAIL")
+        else:
+            st.info(f"{reference_result.test_id}: manual observation required")
+
+        st.caption(
+            f"Run: {reference_result.run_id} • "
+            f"Artifacts: {reference_result.artifact_dir or 'not persisted'}"
+        )
+        st.dataframe(
+            result_rows(reference_result),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+        for index, operation in enumerate(reference_result.operations, start=1):
+            marker = (
+                "PASS" if operation.passed is True
+                else "FAIL" if operation.passed is False
+                else "MANUAL"
+            )
+            with st.expander(
+                f"{index}. {operation.operation_id} — {operation.operation_type} — {marker}",
+                expanded=operation.passed is False,
+            ):
+                exp_col, obs_col = st.columns(2)
+                with exp_col:
+                    st.markdown("**Expected**")
+                    st.json(operation.expected)
+                with obs_col:
+                    st.markdown("**Observed**")
+                    st.json(operation.observed)
+
+                if operation.transport:
+                    st.markdown("**Transport**")
+                    st.json(operation.transport, expanded=False)
+                    if isinstance(operation.transport, dict):
+                        direct_trace = operation.transport.get("trace_url")
+                        if direct_trace:
+                            st.link_button(
+                                "Open SHN trace",
+                                direct_trace,
+                                key=f"ref-trace-{reference_result.run_id}-{index}",
+                            )
+                        for leg_name in ("first", "second"):
+                            leg = operation.transport.get(leg_name)
+                            if isinstance(leg, dict) and leg.get("trace_url"):
+                                st.link_button(
+                                    f"Open {leg_name} SHN trace",
+                                    leg["trace_url"],
+                                    key=(
+                                        f"ref-trace-{reference_result.run_id}-"
+                                        f"{index}-{leg_name}"
+                                    ),
+                                )
+
+                if operation.error:
+                    st.error(operation.error)
+
+                if operation.request is not None:
+                    st.markdown("**Request**")
+                    st.json(operation.request, expanded=False)
+                if operation.response is not None:
+                    st.markdown("**Response**")
+                    st.json(operation.response, expanded=False)
