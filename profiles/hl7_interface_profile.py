@@ -257,7 +257,7 @@ def build_interface_record(
                     "mrn": "PID-3.1",
                     "assigning_authority": "PID-3.4",
                 },
-                "forerun_verification": verification(
+                "verification": verification(
                     "mrn",
                     "assigning_authority",
                 ),
@@ -266,7 +266,7 @@ def build_interface_record(
                 "transaction_dictionary_message": "Date of Birth",
                 "recommended_format": "PID-7",
                 "data_element_destination": "PID-7",
-                "forerun_verification": verification("date_of_birth")[
+                "verification": verification("date_of_birth")[
                     "date_of_birth"
                 ],
             },
@@ -274,7 +274,7 @@ def build_interface_record(
                 "transaction_dictionary_message": pv1_44_meaning.strip(),
                 "recommended_format": "PV1-44",
                 "data_element_destination": "PV1-44",
-                "forerun_verification": verification("pv1_44")["pv1_44"],
+                "verification": verification("pv1_44")["pv1_44"],
             },
         },
     }
