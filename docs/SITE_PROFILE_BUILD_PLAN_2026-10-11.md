@@ -71,7 +71,7 @@ Only the old column ontology is retained:
 - Transaction Dictionary Message
 - Recommended Format
 - Data Element Destination
-- Forerun Verification
+- Verification
 
 No old row-level mappings are reused.
 
@@ -284,7 +284,7 @@ Implemented:
   - Transaction Dictionary Message,
   - Recommended Format,
   - Data Element Destination,
-  - Forerun Verification;
+  - Verification;
 - Site Admin now has an **Interface Profile** tab;
 - Generate & Persist and the main generator both load unified JSON profiles as well as legacy YAML;
 - Generate & Persist again passes the selected site's existing probability/routing model into the unified pipeline.
