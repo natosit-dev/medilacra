@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "id": "TP-05",
+  "label": "Inquiry on both reference routes",
+  "order": 5,
+  "kind": "positive",
+  "description": "Submit known claims and query the payer-held decisions on routes 00301 and 00300, then query a deliberately non-matching member.",
+  "notes": ["Inquiry may return more than one matching claim because the shared reference payer retains matching submissions until its next clearing."],
+  "rationale": "Exercises PAS inquiry independently of the submit response.",
+  "constraints": ["The no-match inquiry must return an empty result rather than an error."],
+  "route": null,
+  "ig_line": null,
+  "member_id": "MBR-COVERED",
+  "service": null,
+  "base_case": null,
+  "manual": false,
+  "operations": [
+    {"id": "submit-00301", "type": "pas_submit", "route": "00301", "service_code": "G0151", "expected": {"http_status": 200}},
+    {"id": "inquire-00301", "type": "pas_inquire", "source": "submit-00301", "route": "00301", "expected": {"http_status": 200, "inquiry_response_count_min": 1}},
+    {"id": "submit-00300", "type": "pas_submit", "route": "00300", "service_code": "L8000", "expected": {"http_status": 200}},
+    {"id": "inquire-00300", "type": "pas_inquire", "source": "submit-00300", "route": "00300", "expected": {"http_status": 200, "inquiry_response_count_min": 1}},
+    {"id": "inquire-no-match", "type": "pas_inquire", "source": "submit-00300", "route": "00300", "mutation": "no_match_inquiry", "expected": {"http_status": 200, "inquiry_response_count": 0}}
+  ],
+  "provenance": {"date": "2026-10-12", "source": "SHN Connectathon Test Process 2026-10-14 staff draft; SHN Provider Test Endpoint guide"}
+}
