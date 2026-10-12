@@ -7,7 +7,9 @@
   "description": "Da Vinci 2.0 reference-payer denial path for G0151.",
   "notes": [],
   "rationale": "Exercises an A3 decision using the same PAS structure as the known-good approval.",
-  "constraints": ["Use synthetic member MBR-COVERED."],
+  "constraints": [
+    "Use synthetic member MBR-COVERED."
+  ],
   "route": "00300",
   "ig_line": "2.0",
   "member_id": "MBR-COVERED",
@@ -19,7 +21,18 @@
   "base_case": "TP-02",
   "manual": false,
   "operations": [
-    {"id": "pas-submit", "type": "pas_submit", "expected": {"http_status": 200, "review_action_code": "A3"}}
+    {
+      "id": "pas-submit",
+      "type": "pas_submit",
+      "expected": {
+        "http_status": 200,
+        "review_action_code": "A3",
+        "review_action_display": "Not Certified"
+      }
+    }
   ],
-  "provenance": {"date": "2026-10-12", "source": "SHN Connectathon Test Process 2026-10-14 staff draft; SHN Provider Test Endpoint guide"}
+  "provenance": {
+    "date": "2026-10-12",
+    "source": "SHN Connectathon Test Process 2026-10-14 staff draft; SHN Provider Test Endpoint guide"
+  }
 }
