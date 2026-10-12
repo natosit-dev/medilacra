@@ -37,6 +37,30 @@ def _extension_scalar(extension: dict[str, Any]) -> Any:
     return None
 
 
+def error_text(body: Any) -> str | None:
+    if isinstance(body, str):
+        return body
+    if not isinstance(body, dict):
+        return None
+    if body.get("error"):
+        return str(body["error"])
+    if body.get("resourceType") == "OperationOutcome":
+        parts = []
+        for issue in body.get("issue", []):
+            value = issue.get("diagnostics") or issue.get("details", {}).get("text")
+            if value:
+                parts.append(str(value))
+        return " | ".join(parts) or None
+    parts = []
+    for node in _walk(body):
+        if node.get("resourceType") == "OperationOutcome":
+            for issue in node.get("issue", []):
+                value = issue.get("diagnostics") or issue.get("details", {}).get("text")
+                if value:
+                    parts.append(str(value))
+    return " | ".join(dict.fromkeys(parts)) or None
+
+
 def summarize_crd(
     body: dict[str, Any],
     expected: dict[str, Any] | None = None,
@@ -73,6 +97,8 @@ def summarize_crd(
         "info-needed": values.get("info-needed"),
         "coverage-assertion-id": values.get("coverage-assertion-id"),
         "questionnaire": questionnaire,
+        "questionnaire_present": bool(questionnaire),
+        "error_text": error_text(body),
     }
 
     if expected is not None:
@@ -113,7 +139,10 @@ def summarize_dtr(body: dict[str, Any]) -> dict[str, Any]:
     outcomes = []
     for parameter in body.get("parameter", []):
         resource = parameter.get("resource") or {}
-        if parameter.get("name") == "outcome" and resource.get("resourceType") == "OperationOutcome":
+        if (
+            parameter.get("name") == "outcome"
+            and resource.get("resourceType") == "OperationOutcome"
+        ):
             outcomes.extend(resource.get("issue", []))
 
     canonical = questionnaires[0].get("url") if len(questionnaires) == 1 else None
@@ -130,8 +159,14 @@ def summarize_dtr(body: dict[str, Any]) -> dict[str, Any]:
         if len(set(coverage_refs)) == 1:
             qr_coverage = coverage_refs[0]
 
+    issue_text = [
+        issue.get("diagnostics") or issue.get("details", {}).get("text")
+        for issue in outcomes
+        if issue.get("diagnostics") or issue.get("details", {}).get("text")
+    ]
     return {
         "resource_counts": dict(sorted((k, v) for k, v in counts.items() if k)),
+        "package_present": bool(resources),
         "questionnaire_count": len(questionnaires),
         "questionnaire": canonical,
         "questionnaire_response_count": len(qrs),
@@ -143,33 +178,24 @@ def summarize_dtr(body: dict[str, Any]) -> dict[str, Any]:
             for issue in outcomes
             if issue.get("severity") in {"warning", "information"}
         ],
+        "error_text": " | ".join(str(value) for value in issue_text) or error_text(body),
     }
 
 
-def summarize_pas(
-    body: dict[str, Any],
-    expected: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    resources = [
+def _bundle_resources(body: dict[str, Any]) -> list[dict[str, Any]]:
+    return [
         entry.get("resource")
         for entry in body.get("entry", [])
         if isinstance(entry.get("resource"), dict)
     ]
-    claim_responses = [
-        resource for resource in resources
-        if resource.get("resourceType") == "ClaimResponse"
-    ]
-    communication_requests = [
-        resource for resource in resources
-        if resource.get("resourceType") == "CommunicationRequest"
-    ]
 
-    outcome = claim_responses[0].get("outcome") if len(claim_responses) == 1 else None
+
+def _review_action(body: dict[str, Any]) -> tuple[str | None, str | None, str | None]:
     review_codes: list[tuple[str | None, str | None]] = []
     authorization_numbers: list[str] = []
 
     for node in _walk(body):
-        url = node.get("url", "")
+        url = str(node.get("url", ""))
         if url.endswith("extension-reviewActionCode"):
             coding = node.get("valueCodeableConcept", {}).get("coding", [])
             if coding:
@@ -180,10 +206,48 @@ def summarize_pas(
                     authorization_numbers.append(child["valueString"])
 
     review_codes = list(dict.fromkeys(review_codes))
+    authorization_numbers = list(dict.fromkeys(authorization_numbers))
     review_code = review_codes[0][0] if len(review_codes) == 1 else None
     review_display = review_codes[0][1] if len(review_codes) == 1 else None
-    authorization_numbers = list(dict.fromkeys(authorization_numbers))
     authorization = authorization_numbers[0] if len(authorization_numbers) == 1 else None
+    return review_code, review_display, authorization
+
+
+def summarize_pas(
+    body: dict[str, Any],
+    expected: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    resources = _bundle_resources(body)
+    claim_responses = [
+        resource for resource in resources
+        if resource.get("resourceType") == "ClaimResponse"
+    ]
+    communication_requests = [
+        resource for resource in resources
+        if resource.get("resourceType") == "CommunicationRequest"
+    ]
+    tasks = [
+        resource for resource in resources
+        if resource.get("resourceType") == "Task"
+    ]
+
+    outcome = claim_responses[0].get("outcome") if len(claim_responses) == 1 else None
+    review_code, review_display, authorization = _review_action(body)
+
+    communication_payloads = []
+    for resource in communication_requests:
+        for payload in resource.get("payload", []):
+            if payload.get("contentString") is not None:
+                communication_payloads.append(payload["contentString"])
+
+    task_statuses = [task.get("status") for task in tasks if task.get("status")]
+    task_codes = []
+    for task in tasks:
+        coding = task.get("code", {}).get("coding", [])
+        if coding:
+            task_codes.append(coding[0].get("code"))
+        elif task.get("code", {}).get("text"):
+            task_codes.append(task["code"]["text"])
 
     summary: dict[str, Any] = {
         "claim_response_count": len(claim_responses),
@@ -191,22 +255,67 @@ def summarize_pas(
         "review_action_code": review_code,
         "review_action_display": review_display,
         "communication_request_count": len(communication_requests),
+        "communication_request_payloads": communication_payloads,
+        "task_count": len(tasks),
+        "task_status": task_statuses[0] if len(set(task_statuses)) == 1 and task_statuses else None,
+        "task_code": task_codes[0] if len(set(task_codes)) == 1 and task_codes else None,
         "authorization": authorization,
+        "error_text": error_text(body),
     }
 
     if expected is not None:
         checks = {
-            "claim_response_outcome": outcome == expected.get("claim_response_outcome"),
-            "review_action_code": review_code == expected.get("review_action_code"),
-            "review_action_display": review_display == expected.get("review_action_display"),
-            "communication_request_count": (
-                len(communication_requests)
-                == expected.get("communication_request_count")
-            ),
+            key: summary.get(key) == value
+            for key, value in expected.items()
+            if key in summary
         }
         if expected.get("authorization_required"):
             checks["authorization_required"] = bool(authorization)
         summary["expected_checks"] = checks
         summary["behavior_match"] = all(checks.values())
-
     return summary
+
+
+def summarize_inquiry(body: dict[str, Any]) -> dict[str, Any]:
+    bundles: list[dict[str, Any]] = []
+    if body.get("resourceType") == "Parameters":
+        for parameter in body.get("parameter", []):
+            if parameter.get("name") == "responseBundle":
+                resource = parameter.get("resource")
+                if isinstance(resource, dict) and resource.get("resourceType") == "Bundle":
+                    bundles.append(resource)
+    elif body.get("resourceType") == "Bundle":
+        bundles.append(body)
+
+    claim_responses = []
+    communication_requests = []
+    for bundle in bundles:
+        resources = _bundle_resources(bundle)
+        claim_responses.extend(
+            resource for resource in resources
+            if resource.get("resourceType") == "ClaimResponse"
+        )
+        communication_requests.extend(
+            resource for resource in resources
+            if resource.get("resourceType") == "CommunicationRequest"
+        )
+
+    reviews = []
+    for bundle in bundles:
+        code, display, authorization = _review_action(bundle)
+        if code or display or authorization:
+            reviews.append(
+                {
+                    "review_action_code": code,
+                    "review_action_display": display,
+                    "authorization": authorization,
+                }
+            )
+
+    return {
+        "response_bundle_count": len(bundles),
+        "inquiry_response_count": len(claim_responses),
+        "communication_request_count": len(communication_requests),
+        "decisions": reviews,
+        "error_text": error_text(body),
+    }
