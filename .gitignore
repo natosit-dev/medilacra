@@ -255,3 +255,7 @@ connectathon/results/shn_bulk_pas/
 
 # SHN provider workbench generated/live artifacts
 connectathon/results/shn_provider/
+
+
+# SHN Connectathon reference-suite generated/live artifacts
+connectathon/results/shn_reference_suite/
