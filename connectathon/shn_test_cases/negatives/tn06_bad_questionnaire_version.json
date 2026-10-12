@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "id": "TN-06",
+  "label": "Unknown DTR questionnaire version",
+  "order": 106,
+  "kind": "negative",
+  "description": "Append a version suffix the payer does not carry to a known-good DTR questionnaire canonical.",
+  "notes": [],
+  "rationale": "Confirms one documented failure boundary from a known-good request.",
+  "constraints": [
+    "Apply exactly one named mutation immediately before transport."
+  ],
+  "route": "00301",
+  "ig_line": null,
+  "member_id": "MBR-COVERED",
+  "service": null,
+  "base_case": "TP-01",
+  "manual": false,
+  "operations": [
+    {
+      "id": "negative",
+      "type": "negative",
+      "mutation": "bad_questionnaire_version",
+      "expected": {
+        "http_status": 200,
+        "package_present": false,
+        "error_contains": "Questionnaire not found"
+      }
+    }
+  ],
+  "provenance": {
+    "date": "2026-10-12",
+    "source": "SHN Connectathon Test Process 2026-10-14 staff draft; SHN Provider Test Endpoint guide"
+  }
+}
