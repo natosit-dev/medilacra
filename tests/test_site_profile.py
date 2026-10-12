@@ -186,6 +186,8 @@ def test_persisted_interface_record_drops_examples_and_raw_messages():
     assert "SECRET-MRN" not in serialized
     assert "SECRET-AUTH" not in serialized
     assert "examples" not in serialized
+    assert "forerun" not in serialized.lower()
+    assert "verification" in record["mappings"]["patient_identifier"]
     assert record["mappings"]["pv1_44"]["transaction_dictionary_message"] == (
         "Admission date/time"
     )
