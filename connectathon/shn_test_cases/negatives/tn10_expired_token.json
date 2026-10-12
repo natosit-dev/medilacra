@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "id": "TN-10",
+  "label": "Expired token",
+  "order": 110,
+  "kind": "negative",
+  "description": "Manual negative case: send a bearer token after its five-minute lifetime and confirm the token is rejected.",
+  "notes": [
+    "This case is intentionally manual. The harness does not persist a token or sleep for five minutes, and the staff draft does not establish an exact HTTP status."
+  ],
+  "rationale": "Confirms one documented failure boundary from a known-good request.",
+  "constraints": [
+    "Apply exactly one named mutation immediately before transport."
+  ],
+  "route": "00301",
+  "ig_line": null,
+  "member_id": "MBR-COVERED",
+  "service": null,
+  "base_case": "TP-01",
+  "manual": true,
+  "operations": [
+    {
+      "id": "negative",
+      "type": "negative",
+      "mutation": "expired_token",
+      "expected": {
+        "token_rejected": true
+      }
+    }
+  ],
+  "provenance": {
+    "date": "2026-10-12",
+    "source": "SHN Connectathon Test Process 2026-10-14 staff draft; SHN Provider Test Endpoint guide"
+  }
+}
