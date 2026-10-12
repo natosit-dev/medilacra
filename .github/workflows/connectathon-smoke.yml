@@ -5,6 +5,7 @@ on:
     branches:
       - connectathon/piqi-43
       - experiment/shn-mvp0
+      - site-profile
   pull_request:
     branches:
       - main
@@ -29,7 +30,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install test dependencies
-        run: python -m pip install pytest faker
+        run: python -m pip install pytest faker pyyaml
 
       - name: Compile Connectathon modules
         run: |
@@ -66,7 +67,12 @@ jobs:
             connectathon/shn_provider/pas.py \
             connectathon/shn_provider/workflow.py \
             connectathon/shn_provider/run.py \
-            pages/10_SHN_Provider_ePA.py
+            pages/10_SHN_Provider_ePA.py \
+            profiles/__init__.py \
+            profiles/site_profile.py \
+            profiles/hl7_interface_profile.py \
+            pages/5_Site_and_Scenario_Setup.py \
+            pages/2_Generate_and_Persist.py
 
       - name: Check SHN batch runner syntax
         run: |
@@ -95,4 +101,5 @@ jobs:
             tests/test_shn_dtr_questionnaire_response.py \
             tests/test_shn_lumbar_fusion_pas.py \
             tests/test_shn_bulk_pas.py \
-            tests/test_shn_provider_workflow.py
+            tests/test_shn_provider_workflow.py \
+            tests/test_site_profile.py
