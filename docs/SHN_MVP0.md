@@ -647,3 +647,14 @@ New scenario configuration is JSON-based and machine-readable, including notes, 
 The current configured scenarios are lumbar-fusion authorization, explicit not-covered and no-rule/default. Live payer output controls whether a case advances into DTR/PAS.
 
 See `docs/SHN_PROVIDER_UI_BUILD_PLAN_2026-10-10.md`.
+
+
+## 2026-10-12 — executable SHN Connectathon reference suite
+
+The provider workbench now includes an executable reference-suite layer for TP-01 through TP-05 and TN-01 through TN-10.
+
+Reference tests are JSON contracts. Positive cases reuse frozen known-good request structure and make explicit route/service substitutions. Negative cases begin from known-good payloads and apply one named mutation immediately before transport.
+
+The suite records ordered operations, expected vs observed behavior, correlation/leg metadata, trace links and persisted evidence. Normal requests now use UUID4 correlation IDs. TN-10 remains manual so MediLacra does not persist or solicit stale bearer tokens.
+
+See `docs/SHN_REFERENCE_TEST_SUITE_BUILD_PLAN_2026-10-12.md`.
