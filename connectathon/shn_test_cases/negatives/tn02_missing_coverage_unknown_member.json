@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "id": "TN-02",
+  "label": "Unknown member without coverage",
+  "order": 102,
+  "kind": "negative",
+  "description": "Send a DTR request for a non-reference synthetic member with the coverage parameter removed.",
+  "notes": [],
+  "rationale": "Confirms one documented failure boundary from a known-good request.",
+  "constraints": [
+    "Apply exactly one named mutation immediately before transport."
+  ],
+  "route": "00300",
+  "ig_line": null,
+  "member_id": "MBR-COVERED",
+  "service": null,
+  "base_case": "TP-02",
+  "manual": false,
+  "operations": [
+    {
+      "id": "negative",
+      "type": "negative",
+      "mutation": "missing_coverage_unknown_member",
+      "expected": {
+        "http_status": 422
+      }
+    }
+  ],
+  "provenance": {
+    "date": "2026-10-12",
+    "source": "SHN Connectathon Test Process 2026-10-14 staff draft; SHN Provider Test Endpoint guide"
+  }
+}
