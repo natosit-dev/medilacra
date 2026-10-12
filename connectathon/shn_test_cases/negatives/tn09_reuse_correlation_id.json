@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0",
+  "id": "TN-09",
+  "label": "Reused correlation ID",
+  "order": 109,
+  "kind": "negative",
+  "description": "Send the same known-good CRD request twice with the exact same X-Correlation-Id.",
+  "notes": [],
+  "rationale": "Confirms one documented failure boundary from a known-good request.",
+  "constraints": [
+    "Apply exactly one named mutation immediately before transport."
+  ],
+  "route": "00301",
+  "ig_line": null,
+  "member_id": "MBR-COVERED",
+  "service": null,
+  "base_case": "TP-01",
+  "manual": false,
+  "operations": [
+    {
+      "id": "negative",
+      "type": "negative",
+      "mutation": "reuse_correlation_id",
+      "expected": {
+        "first_http_status": 200,
+        "second_http_status": 502
+      }
+    }
+  ],
+  "provenance": {
+    "date": "2026-10-12",
+    "source": "SHN Connectathon Test Process 2026-10-14 staff draft; SHN Provider Test Endpoint guide"
+  }
+}
