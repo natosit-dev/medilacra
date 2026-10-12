@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "id": "TP-03",
+  "label": "Pend with Task on route 00300",
+  "order": 3,
+  "kind": "positive",
+  "description": "Da Vinci 2.0 reference-payer pend path for E1390.",
+  "notes": ["The 2.0 pended shape uses a Task rather than the 2.2 CommunicationRequest shape."],
+  "rationale": "Exercises a materially different PAS response shape.",
+  "constraints": ["Use the same reference PAS structure as TP-02 with the service code changed to E1390."],
+  "route": "00300",
+  "ig_line": "2.0",
+  "member_id": "MBR-COVERED",
+  "service": {
+    "system": "http://www.cms.gov/Medicare/Coding/HCPCSReleaseCodeSets",
+    "code": "E1390",
+    "display": "Oxygen concentrator"
+  },
+  "base_case": "TP-02",
+  "manual": false,
+  "operations": [
+    {"id": "pas-submit", "type": "pas_submit", "expected": {"http_status": 200, "claim_response_outcome": "queued", "review_action_code": "A4", "task_count": 1, "task_status": "requested", "task_code": "attachment-request-questionnaire"}}
+  ],
+  "provenance": {"date": "2026-10-12", "source": "SHN Connectathon Test Process 2026-10-14 staff draft; SHN Provider Test Endpoint guide"}
+}
