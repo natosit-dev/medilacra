@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "id": "TN-01",
+  "label": "Unknown payer identifier",
+  "order": 101,
+  "kind": "negative",
+  "description": "Send a known-good CRD request with an unregistered payer identifier.",
+  "notes": [],
+  "rationale": "Confirms one documented failure boundary from a known-good request.",
+  "constraints": [
+    "Apply exactly one named mutation immediately before transport."
+  ],
+  "route": "00301",
+  "ig_line": null,
+  "member_id": "MBR-COVERED",
+  "service": null,
+  "base_case": "TP-01",
+  "manual": false,
+  "operations": [
+    {
+      "id": "negative",
+      "type": "negative",
+      "mutation": "unknown_payer",
+      "expected": {
+        "http_status": 422
+      }
+    }
+  ],
+  "provenance": {
+    "date": "2026-10-12",
+    "source": "SHN Connectathon Test Process 2026-10-14 staff draft; SHN Provider Test Endpoint guide"
+  }
+}
