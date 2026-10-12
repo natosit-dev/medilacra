@@ -74,8 +74,17 @@ def _boolish(s: Optional[str], default=False) -> bool:
     return s in ("true", "t", "1", "y", "yes", "r", "required")
 
 def _first_attr(e: ET.Element, *names: str) -> Optional[str]:
+    """Return the first matching attribute, case-insensitively.
+
+    IRIS schema exports use lower-case attributes such as name/structure,
+    while earlier test fixtures used title-case.
+    """
+    attrs_ci = {key.lower(): value for key, value in e.attrib.items()}
     for n in names:
         v = e.get(n)
+        if v:
+            return v
+        v = attrs_ci.get(n.lower())
         if v:
             return v
     return None
