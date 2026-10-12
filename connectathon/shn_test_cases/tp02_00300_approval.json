@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "id": "TP-02",
+  "label": "Approval on route 00300",
+  "order": 2,
+  "kind": "positive",
+  "description": "Da Vinci 2.0 reference-payer approval path for L8000.",
+  "notes": ["A questionnaire is present even though doc-needed is no-doc; DTR selection follows the live questionnaire, not doc-needed alone."],
+  "rationale": "Exercises the 00300 approval path and the off-value-set doc-needed behavior.",
+  "constraints": ["Use synthetic member MBR-COVERED."],
+  "route": "00300",
+  "ig_line": "2.0",
+  "member_id": "MBR-COVERED",
+  "service": {
+    "system": "http://www.cms.gov/Medicare/Coding/HCPCSReleaseCodeSets",
+    "code": "L8000",
+    "display": "Breast prosthesis, mastectomy bra"
+  },
+  "base_case": null,
+  "manual": false,
+  "operations": [
+    {"id": "crd", "type": "crd", "expected": {"http_status": 200, "doc-needed": "no-doc", "questionnaire_present": true}},
+    {"id": "dtr", "type": "dtr", "expected": {"http_status": 200, "package_present": true, "questionnaire": "http://example.org/fhir/Questionnaire/PriorAuthRequired"}},
+    {"id": "pas-submit", "type": "pas_submit", "expected": {"http_status": 200, "claim_response_outcome": "complete", "review_action_code": "A1", "authorization_required": true}}
+  ],
+  "provenance": {"date": "2026-10-12", "source": "SHN Connectathon Test Process 2026-10-14 staff draft; SHN Provider Test Endpoint guide"}
+}
