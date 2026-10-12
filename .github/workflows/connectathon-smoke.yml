@@ -72,7 +72,8 @@ jobs:
             profiles/site_profile.py \
             profiles/hl7_interface_profile.py \
             pages/5_Site_and_Scenario_Setup.py \
-            pages/2_Generate_and_Persist.py
+            pages/2_Generate_and_Persist.py \
+            medi_lacra_app.py
 
       - name: Check SHN batch runner syntax
         run: |
