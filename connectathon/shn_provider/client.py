@@ -7,6 +7,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -176,27 +177,29 @@ class SHNProviderClient:
         return self._token
 
     @staticmethod
-    def _correlation_id(prefix: str) -> str:
-        stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
-        suffix = f"-{stamp}"
-        clean = "".join(ch if ch.isalnum() or ch in "-._" else "-" for ch in prefix)
-        return f"{clean[:64-len(suffix)]}{suffix}"
+    def _correlation_id(prefix: str | None = None) -> str:
+        # The Connectathon process requires a fresh UUID for every normal request.
+        # prefix remains accepted for call-site readability but is not serialized.
+        return str(uuid.uuid4())
 
     def post(
         self,
         path: str,
         payload: dict[str, Any],
         *,
-        correlation_prefix: str,
+        correlation_prefix: str | None = None,
+        correlation_id: str | None = None,
         content_type: str = "application/json",
+        bearer_token: str | None = None,
+        retry_429: bool = True,
     ) -> SHNResponse:
-        sent_correlation_id = self._correlation_id(correlation_prefix)
+        sent_correlation_id = correlation_id or self._correlation_id(correlation_prefix)
         attempts = 0
         started = time.monotonic()
 
         while True:
             attempts += 1
-            token = self._ensure_token()
+            token = bearer_token or self._ensure_token()
             request = urllib.request.Request(
                 f"{self.base_url}{path}",
                 data=json.dumps(payload).encode("utf-8"),
@@ -209,7 +212,7 @@ class SHNProviderClient:
             )
             status, body, headers = self._open(request)
 
-            if status != 429 or attempts > self.max_retries:
+            if status != 429 or not retry_429 or attempts > self.max_retries:
                 break
 
             retry_after = headers.get("Retry-After")
@@ -218,8 +221,9 @@ class SHNProviderClient:
             except (TypeError, ValueError):
                 delay = self.default_retry_after
             time.sleep(max(0, delay))
-            self._token = None
-            self._token_expires_at = 0.0
+            if bearer_token is None:
+                self._token = None
+                self._token_expires_at = 0.0
 
         elapsed_ms = (time.monotonic() - started) * 1000.0
         correlation_id = headers.get("X-Correlation-Id")
