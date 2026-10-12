@@ -351,3 +351,66 @@ TN-09 and TN-10 receive narrow test-only hooks to bypass normal safe behavior:
 18. Extend thin Streamlit UI.
 19. Run offline regression suite.
 20. Leave live Connectathon execution to the local environment holding ignored SHN credentials; record observed differences rather than silently changing expected behavior.
+
+
+## Implementation status — 2026-10-12
+
+The first reference-suite slice is built.
+
+Implemented:
+
+- TP-01 through TP-05 as declarative JSON test contracts.
+- TN-01 through TN-10 as declarative JSON negative-test contracts.
+- Reusable reference payload builders over the frozen 00301 known-good CRD/DTR/PAS artifacts.
+- Explicit named mutation layer; normal transaction builders remain valid-data builders.
+- Ordered `OperationResult` / `ReferenceRunResult` execution model.
+- TP-01 CRD -> DTR -> PAS pend -> DTR relaunch -> inquiry orchestration.
+- TP-02 00300 L8000 approval orchestration.
+- TP-03 00300 E1390 A4 + Task normalization.
+- TP-04 00300 G0151 A3 normalization.
+- TP-05 matching inquiries on both routes plus a no-match inquiry.
+- PAS normalization for CommunicationRequest payloads, Task status/code and authorization.
+- Inquiry normalization for Parameters/responseBundle responses.
+- UUID4 correlation IDs for ordinary requests.
+- Narrow correlation/path/bearer overrides used only by the negative-test harness.
+- TN-10 represented as an explicit manual case rather than persisting a token or sleeping five minutes.
+- Artifact writer rejects `client_secret`, `access_token`, `bearer_token` and HTTP `Authorization` keys.
+- Reference-suite CLI.
+- Reference Suite tab in the thin Streamlit provider workbench.
+- Offline fake-transport regression coverage for every automated TP/TN case.
+
+GitHub Actions passed after the UI integration:
+
+```text
+commit: 3ea26eb053e0f2d2dc1063ee01e626d124337162
+workflow: Connectathon smoke tests
+conclusion: success
+```
+
+### CLI
+
+Run an individual live case:
+
+```bash
+python -m connectathon.shn_provider.reference_run TP-01
+python -m connectathon.shn_provider.reference_run TP-02
+python -m connectathon.shn_provider.reference_run TN-01
+```
+
+TN-10 intentionally returns a manual-observation record rather than handling a bearer token:
+
+```bash
+python -m connectathon.shn_provider.reference_run TN-10
+```
+
+### UI
+
+```bash
+streamlit run medi_lacra_app.py
+```
+
+Open **SHN Provider ePA -> Reference Suite**.
+
+### Live boundary
+
+No live TP/TN suite traffic is run from CI. Live execution belongs in the local environment holding the ignored provider-test credentials. A mismatch between the staff draft and the live endpoint is recorded as a failed expectation with the actual response and trace; the harness does not silently change the contract.
