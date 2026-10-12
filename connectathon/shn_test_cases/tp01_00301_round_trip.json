@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "id": "TP-01",
+  "label": "Full round trip on route 00301",
+  "order": 1,
+  "kind": "positive",
+  "description": "Canonical Da Vinci 2.2 reference-payer round trip: CRD, DTR, PAS pend, DTR relaunch, PAS inquiry.",
+  "notes": [
+    "The initial PAS request intentionally does not carry completed documentation.",
+    "The DTR relaunch uses the CommunicationRequest trace identifier as context and sends no questionnaire canonical."
+  ],
+  "rationale": "Establishes the known-good 00301 Connectathon path before variants.",
+  "constraints": ["Use synthetic member MBR-COVERED.", "Use a fresh correlation UUID for each normal request."],
+  "route": "00301",
+  "ig_line": "2.2",
+  "member_id": "MBR-COVERED",
+  "service": {
+    "system": "http://www.cms.gov/Medicare/Coding/HCPCSReleaseCodeSets",
+    "code": "G0151",
+    "display": "Services performed by a qualified physical therapist in the home health setting"
+  },
+  "base_case": null,
+  "manual": false,
+  "operations": [
+    {"id": "crd", "type": "crd", "expected": {"http_status": 200, "doc-needed": "clinical", "questionnaire_present": true}},
+    {"id": "dtr", "type": "dtr", "expected": {"http_status": 200, "package_present": true, "questionnaire": "http://example.org/fhir/Questionnaire/HomeHealthAssessment"}},
+    {"id": "pas-submit", "type": "pas_submit", "expected": {"http_status": 200, "claim_response_outcome": "complete", "review_action_code": "A4", "communication_request_count": 1}},
+    {"id": "dtr-relaunch", "type": "dtr_relaunch", "source": "pas-submit", "expected": {"http_status": 200, "package_present": true, "questionnaire": "http://example.org/fhir/Questionnaire/HomeHealthAssessment"}},
+    {"id": "pas-inquire", "type": "pas_inquire", "source": "pas-submit", "expected": {"http_status": 200, "inquiry_response_count_min": 1}}
+  ],
+  "provenance": {"date": "2026-10-12", "source": "SHN Connectathon Test Process 2026-10-14 staff draft; SHN Provider Test Endpoint guide"}
+}
