@@ -258,3 +258,62 @@ The branch is successful when MediLacra can:
 9. preserve the existing site probability/routing behavior.
 
 That is the whole first slice. No generic mapping engine, database, semantic inference, drag-and-drop designer, or interface-engine rewrite.
+
+
+## Implementation status — 2026-10-11
+
+The first site/interface profile slice is built.
+
+Implemented:
+
+- new branch `site-profile`, based on `experiment/shn-mvp0`;
+- unified JSON profile storage in `profiles/site_profile.py`;
+- legacy YAML profiles remain readable;
+- new/edited profiles save as JSON;
+- existing facilities, departments, visit-mix, routing, and location-weight behavior is preserved;
+- HL7 interface analyzer in `profiles/hl7_interface_profile.py`;
+- exact MSH-9.1 / MSH-9.2 / MSH-9.3 grouping;
+- correct special MSH field numbering;
+- PID-3.1 MRN observation;
+- PID-3.4 Assigning Authority observation;
+- PID-7 DOB observation;
+- PV1-44 observation scoped to exact message semantics;
+- root MSH-9.3 resolution against the existing IRIS-derived HL7 v2.5 registry;
+- transient examples are available only on explicit UI reveal and are not persisted;
+- persistable mappings use the retained old column ontology:
+  - Transaction Dictionary Message,
+  - Recommended Format,
+  - Data Element Destination,
+  - Forerun Verification;
+- Site Admin now has an **Interface Profile** tab;
+- Generate & Persist and the main generator both load unified JSON profiles as well as legacy YAML;
+- Generate & Persist again passes the selected site's existing probability/routing model into the unified pipeline.
+
+During testing, the existing IRIS schema loader was found to expect title-case XML attributes while the real export uses lower-case attributes such as `name` and `structure`. The loader now reads attributes case-insensitively, which allows `ADT_A01` and other root structures to resolve correctly.
+
+### Explicit boundary
+
+This slice captures and persists the observed interface profile. It does **not** yet implement a general arbitrary field-destination serializer.
+
+The selected unified profile already drives the site's existing encounter/location probability model during generation. The new interface mappings are stored alongside it so the next serialization slice can consume them without redesigning the profile.
+
+### Automated regression
+
+GitHub Actions on the completed code/test head:
+
+```text
+76 passed in 1.67s
+Connectathon smoke tests: success
+```
+
+Coverage includes:
+
+- MSH-9 special numbering,
+- exact message-semantic grouping,
+- shared ADT_A01 root resolution across A01/A08,
+- PID-3.1 / PID-3.4 / PID-7 / PV1-44 extraction,
+- PV1-44 verification scoped by message semantics,
+- removal of PHI-like example values from persisted interface records,
+- JSON save/reload,
+- legacy YAML loading,
+- preservation of existing site probability behavior.
