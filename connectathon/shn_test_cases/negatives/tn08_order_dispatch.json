@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "id": "TN-08",
+  "label": "order-dispatch not offered",
+  "order": 108,
+  "kind": "negative",
+  "description": "Send CRD to the unadvertised shn-order-dispatch path.",
+  "notes": [],
+  "rationale": "Confirms one documented failure boundary from a known-good request.",
+  "constraints": [
+    "Apply exactly one named mutation immediately before transport."
+  ],
+  "route": "00301",
+  "ig_line": null,
+  "member_id": "MBR-COVERED",
+  "service": null,
+  "base_case": "TP-01",
+  "manual": false,
+  "operations": [
+    {
+      "id": "negative",
+      "type": "negative",
+      "mutation": "order_dispatch",
+      "expected": {
+        "http_status": 404
+      }
+    }
+  ],
+  "provenance": {
+    "date": "2026-10-12",
+    "source": "SHN Connectathon Test Process 2026-10-14 staff draft; SHN Provider Test Endpoint guide"
+  }
+}
