@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "id": "TN-04",
+  "label": "PAS without Coverage beneficiary",
+  "order": 104,
+  "kind": "negative",
+  "description": "Remove Coverage.beneficiary from a known-good PAS request.",
+  "notes": [],
+  "rationale": "Confirms one documented failure boundary from a known-good request.",
+  "constraints": [
+    "Apply exactly one named mutation immediately before transport."
+  ],
+  "route": "00301",
+  "ig_line": null,
+  "member_id": "MBR-COVERED",
+  "service": null,
+  "base_case": "TP-01",
+  "manual": false,
+  "operations": [
+    {
+      "id": "negative",
+      "type": "negative",
+      "mutation": "remove_coverage_beneficiary",
+      "expected": {
+        "http_status": 200,
+        "review_action_code": "A3",
+        "communication_request_count": 0
+      }
+    }
+  ],
+  "provenance": {
+    "date": "2026-10-12",
+    "source": "SHN Connectathon Test Process 2026-10-14 staff draft; SHN Provider Test Endpoint guide"
+  }
+}
