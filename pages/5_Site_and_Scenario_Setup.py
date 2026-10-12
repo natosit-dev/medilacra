@@ -11,6 +11,16 @@ from typing import Dict, List, Optional, Tuple
 
 import streamlit as st
 
+from profiles.site_profile import (
+    default_profile as unified_default_profile,
+    generate_preview as unified_generate_preview,
+    list_profiles as unified_list_profiles,
+    load_profile as unified_load_profile,
+    save_profile as unified_save_profile,
+    validate_profile as unified_validate_profile,
+)
+from profiles.hl7_interface_profile import analyze_hl7, build_interface_record
+
 try:
     import yaml  # PyYAML
 except Exception as e:
@@ -283,7 +293,7 @@ def generate_preview(profile: Dict, n: int = 10, seed: Optional[int] = None) -> 
 # -----------------------
 def init_state():
     if "scenario_profile" not in st.session_state:
-        st.session_state["scenario_profile"] = default_profile()
+        st.session_state["scenario_profile"] = unified_default_profile()
 
 def get_profile() -> Dict:
     return st.session_state["scenario_profile"]
@@ -451,13 +461,14 @@ def header_bar():
         profile["profile_name"] = st.session_state["profile_name_input"]
 
     with mid:
-        existing = list_profiles()
+        existing = unified_list_profiles()
         selected = st.selectbox("Load existing profile", options=["(select)"] + existing, index=0, key="load_profile_select")
         if selected != "(select)":
             if st.button("Load", key="btn_load"):
                 try:
-                    loaded = load_profile(selected)
+                    loaded = unified_load_profile(selected)
                     set_profile(loaded)
+                    st.session_state.pop("hl7_interface_analysis", None)
                     st.success(f"Loaded {selected}")
                 except Exception as e:
                     logger.exception("Failed to load profile")
@@ -466,7 +477,7 @@ def header_bar():
     with right:
         if st.button("Save", key="btn_save"):
             try:
-                saved_name = save_profile(profile)
+                saved_name = unified_save_profile(profile)
                 st.success(f"Saved as {saved_name}")
             except Exception as e:
                 logger.exception("Failed to save profile")
@@ -474,6 +485,196 @@ def header_bar():
 
     st.text_area("Notes", value=profile.get("notes", ""), key="profile_notes")
     profile["notes"] = st.session_state["profile_notes"]
+
+def interface_profile_tab():
+    profile = get_profile()
+    profile.setdefault("interfaces", {})
+
+    st.subheader("HL7 Interface Profile")
+    st.caption(
+        "Drop real HL7 examples here to observe the interface. Raw messages and "
+        "example values are not saved into the profile."
+    )
+
+    left, right = st.columns([2, 1])
+    with left:
+        pasted = st.text_area(
+            "Paste HL7 v2 messages",
+            height=220,
+            placeholder="MSH|^~\\&|...\nPID|...\nPV1|...",
+            key="interface_hl7_paste",
+        )
+    with right:
+        uploaded = st.file_uploader(
+            "Or upload one .hl7/.txt file",
+            type=["hl7", "txt"],
+            key="interface_hl7_upload",
+        )
+        analyze = st.button(
+            "Analyze Messages",
+            type="primary",
+            use_container_width=True,
+            key="interface_analyze",
+        )
+        st.caption(
+            "MVP fields: MSH-9, PID-3.1, PID-3.4, PID-7, PV1-44."
+        )
+
+    if analyze:
+        try:
+            source = ""
+            if uploaded is not None:
+                source = uploaded.getvalue().decode("utf-8", errors="replace")
+            elif pasted.strip():
+                source = pasted
+
+            if not source.strip():
+                st.warning("Paste or upload HL7 messages first.")
+            else:
+                st.session_state["hl7_interface_analysis"] = analyze_hl7(source)
+        except Exception as exc:
+            logger.exception("HL7 interface analysis failed")
+            st.error(f"Analysis failed: {exc}")
+
+    analysis = st.session_state.get("hl7_interface_analysis")
+    if not analysis:
+        existing = profile.get("interfaces") or {}
+        if existing:
+            st.markdown("**Saved interface message profiles**")
+            st.dataframe(
+                [
+                    {
+                        "MSH-9": signature,
+                        "root_schema": value.get("root_schema"),
+                        "messages_profiled": value.get("sample_message_count"),
+                    }
+                    for signature, value in sorted(existing.items())
+                ],
+                use_container_width=True,
+                hide_index=True,
+            )
+        return
+
+    m1, m2 = st.columns(2)
+    m1.metric("Messages analyzed", analysis["message_count"])
+    m2.metric("Distinct MSH-9 triplets", analysis["group_count"])
+
+    signatures = [group["signature"] for group in analysis["groups"]]
+    selected_signature = st.selectbox(
+        "Message semantics",
+        signatures,
+        key="interface_signature",
+    )
+    group = next(
+        group
+        for group in analysis["groups"]
+        if group["signature"] == selected_signature
+    )
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("MSH-9.1", group["message_code"])
+    c2.metric("MSH-9.2", group["trigger_event"])
+    c3.metric("MSH-9.3", group["root_schema"] or "—")
+    c4.metric("Messages", group["message_count"])
+
+    resolution = group["schema_resolution"]
+    if resolution.get("resolved"):
+        st.success(
+            f"Root schema {group['root_schema']} found in the existing "
+            f"HL7 v{resolution.get('registry_version') or '?'} registry."
+        )
+    elif not group["root_schema"]:
+        st.warning("MSH-9.3 is blank; no root schema was supplied by this feed.")
+    elif resolution.get("registry_available"):
+        st.warning(
+            f"MSH-9.3 {group['root_schema']} was not found in the existing registry."
+        )
+    else:
+        st.warning("The local HL7 registry is unavailable, so MSH-9.3 was not resolved.")
+
+    rows = []
+    for key in ("mrn", "assigning_authority", "date_of_birth", "pv1_44"):
+        field = group["fields"][key]
+        rows.append(
+            {
+                "Data Element": field["label"],
+                "Destination": field["path"],
+                "Observed": f"{field['present']}/{field['total']}",
+                "Coverage": f"{field['coverage_pct']:.1f}%",
+                "Unique Values": field["unique_values"],
+            }
+        )
+
+    st.markdown("**Observed fields**")
+    st.dataframe(rows, use_container_width=True, hide_index=True)
+    st.caption(
+        "MRN and Assigning Authority are treated as one identifier mapping: "
+        "PID-3.1 + PID-3.4."
+    )
+
+    if st.checkbox(
+        "Show transient example values (may contain PHI)",
+        value=False,
+        key="interface_show_examples",
+    ):
+        st.warning("Examples are shown only in this session and are not saved.")
+        st.json(
+            {
+                group["fields"][key]["path"]: group["fields"][key]["examples"]
+                for key in group["fields"]
+            }
+        )
+
+    existing_group = (profile.get("interfaces") or {}).get(selected_signature, {})
+    existing_pv1 = (
+        existing_group.get("mappings", {})
+        .get("pv1_44", {})
+        .get("transaction_dictionary_message", "")
+    )
+    pv1_44_meaning = st.text_input(
+        f"PV1-44 meaning for {selected_signature}",
+        value=existing_pv1,
+        placeholder="e.g. Admission date/time",
+        help=(
+            "Human-confirmed meaning for this exact message code + trigger + "
+            "root structure. Leave blank if not yet known."
+        ),
+        key=f"pv1_44_meaning_{selected_signature}",
+    )
+
+    if st.button(
+        "Apply this message profile",
+        use_container_width=True,
+        key=f"apply_interface_{selected_signature}",
+    ):
+        profile["interfaces"][selected_signature] = build_interface_record(
+            group,
+            pv1_44_meaning=pv1_44_meaning,
+        )
+        st.success(
+            f"Applied {selected_signature} to the current site profile. "
+            "Use Save above to write the unified JSON profile."
+        )
+
+    if profile.get("interfaces"):
+        st.markdown("**Currently attached to this site profile**")
+        attached = []
+        for signature, value in sorted(profile["interfaces"].items()):
+            pv1 = (
+                value.get("mappings", {})
+                .get("pv1_44", {})
+                .get("transaction_dictionary_message", "")
+            )
+            attached.append(
+                {
+                    "MSH-9": signature,
+                    "root_schema": value.get("root_schema") or "—",
+                    "PV1-44 meaning": pv1 or "unconfirmed",
+                    "messages_profiled": value.get("sample_message_count"),
+                }
+            )
+        st.dataframe(attached, use_container_width=True, hide_index=True)
+
 
 def validate_and_preview():
     profile = get_profile()
@@ -486,14 +687,14 @@ def validate_and_preview():
     validate_btn = c3.button("Validate & Preview", key="btn_preview")
 
     if validate_btn:
-        errs = validate_profile(profile)
+        errs = unified_validate_profile(profile)
         if errs:
             st.error("Validation failed:")
             for e in errs:
                 st.write(f"- {e}")
             return
 
-        rows = generate_preview(profile, n=n, seed=seed)
+        rows = unified_generate_preview(profile, n=n, seed=seed)
         if not rows:
             st.warning("No preview rows generated.")
             return
@@ -509,13 +710,22 @@ def validate_and_preview():
 # -----------------------
 def main():
     st.set_page_config(page_title="Site & Scenario Setup", page_icon=None, layout="wide")
-    st.title("Site & Scenario Setup (MVP)")
-    st.caption("Define facilities, locations, departments, and visit routing. Save a scenario profile for generators to consume.")
+    st.title("Site & Interface Profile")
+    st.caption(
+        "Define the site's facilities, generation probabilities, routing, and "
+        "observed HL7 interface semantics in one profile."
+    )
 
     init_state()
     header_bar()
 
-    tabs = st.tabs(["Facilities & Locations", "Departments", "Visit Mix & Routing", "Validate & Preview"])
+    tabs = st.tabs([
+        "Facilities & Locations",
+        "Departments",
+        "Visit Mix & Routing",
+        "Interface Profile",
+        "Validate & Preview",
+    ])
     with tabs[0]:
         facilities_locations_tab()
     with tabs[1]:
@@ -523,6 +733,8 @@ def main():
     with tabs[2]:
         visit_mix_routing_tab()
     with tabs[3]:
+        interface_profile_tab()
+    with tabs[4]:
         validate_and_preview()
 
 if __name__ == "__main__":
