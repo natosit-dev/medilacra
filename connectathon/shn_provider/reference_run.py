@@ -4,6 +4,7 @@ import argparse
 import json
 
 from .client import SHNProviderClient
+from .export import build_export_zip
 from .reference_suite import ReferenceSuiteRunner
 from .test_case import list_test_cases
 
@@ -21,7 +22,12 @@ def main() -> int:
     parser.add_argument(
         "--no-artifacts",
         action="store_true",
-        help="Do not persist request/response evidence",
+        help="Do not persist request/response evidence or full logs",
+    )
+    parser.add_argument(
+        "--export",
+        action="store_true",
+        help="Create a ZIP containing the complete run log and evidence",
     )
     args = parser.parse_args()
 
@@ -30,9 +36,20 @@ def main() -> int:
     runner = ReferenceSuiteRunner(
         client=client,
         persist_artifacts=not args.no_artifacts,
+        execution_mode="cli",
     )
     result = runner.run(args.test_id)
-    print(json.dumps(result.manifest(), indent=2, sort_keys=True))
+
+    if args.export:
+        if args.no_artifacts or not result.artifact_dir:
+            raise SystemExit("--export requires persisted artifacts")
+        export_path = build_export_zip(result.artifact_dir)
+        result_manifest = result.manifest()
+        result_manifest["export_path"] = str(export_path)
+    else:
+        result_manifest = result.manifest()
+
+    print(json.dumps(result_manifest, indent=2, sort_keys=True))
 
     if result.manual:
         return 2
