@@ -22,12 +22,13 @@ def build_request(
     scenario: ScenarioConfig,
     seed: int,
     crd_response: dict[str, Any],
+    payer_route: str | None = None,
 ) -> dict[str, Any]:
     if not scenario.has_stage("dtr"):
         raise ValueError(f"scenario {scenario.id!r} has no DTR stage")
 
     reality = build_scenario_reality(scenario, seed)
-    crd_request = build_crd_request(scenario, seed)
+    crd_request = build_crd_request(scenario, seed, payer_route=payer_route)
     canonical = extract_questionnaire_canonical(crd_response)
 
     patient = copy.deepcopy(crd_request["prefetch"]["patient"])
