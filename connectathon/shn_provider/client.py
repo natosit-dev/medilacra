@@ -10,7 +10,7 @@ import urllib.request
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 
 DEFAULT_BASE_URL = "https://pa-test.shn-preview.org"
@@ -68,6 +68,7 @@ class SHNProviderClient:
         timeout_seconds: float = 30.0,
         max_retries: int = 2,
         default_retry_after: int = 65,
+        event_sink: Callable[[str, str, dict[str, Any]], Any] | None = None,
     ) -> None:
         self.client_file = Path(client_file)
         self.base_url = base_url.rstrip("/")
@@ -77,6 +78,7 @@ class SHNProviderClient:
         self.default_retry_after = int(default_retry_after)
         self._token: str | None = None
         self._token_expires_at = 0.0
+        self.event_sink = event_sink
 
     @classmethod
     def from_environment(cls) -> "SHNProviderClient":
@@ -101,6 +103,15 @@ class SHNProviderClient:
         except Exception:
             return False
         return bool(data.get("client_id") and data.get("client_secret"))
+
+    def _emit(
+        self,
+        event_type: str,
+        phase: str,
+        data: dict[str, Any] | None = None,
+    ) -> None:
+        if self.event_sink is not None:
+            self.event_sink(event_type, phase, data or {})
 
     def _credentials(self) -> tuple[str, str]:
         if not self.client_file.is_file():
@@ -147,8 +158,26 @@ class SHNProviderClient:
     def _ensure_token(self) -> str:
         now = time.monotonic()
         if self._token and now < self._token_expires_at:
+            self._emit(
+                "auth.token.reused",
+                "authentication",
+                {
+                    "auth_method": "client_secret_basic",
+                    "token_endpoint": f"{self.base_url}/oauth/token",
+                    "credential_source": str(self.client_file),
+                },
+            )
             return self._token
 
+        self._emit(
+            "auth.token.requested",
+            "authentication",
+            {
+                "auth_method": "client_secret_basic",
+                "token_endpoint": f"{self.base_url}/oauth/token",
+                "credential_source": str(self.client_file),
+            },
+        )
         client_id, client_secret = self._credentials()
         credential = base64.b64encode(
             f"{client_id}:{client_secret}".encode("utf-8")
@@ -167,13 +196,43 @@ class SHNProviderClient:
         )
         status, payload, _headers = self._open(request)
         if status != 200 or not isinstance(payload, dict):
+            self._emit(
+                "auth.token.failed",
+                "authentication",
+                {
+                    "auth_method": "client_secret_basic",
+                    "token_endpoint": f"{self.base_url}/oauth/token",
+                    "http_status": status,
+                },
+            )
             raise RuntimeError(f"SHN token request failed with HTTP {status}: {payload}")
         token = payload.get("access_token")
         if not token:
+            self._emit(
+                "auth.token.failed",
+                "authentication",
+                {
+                    "auth_method": "client_secret_basic",
+                    "token_endpoint": f"{self.base_url}/oauth/token",
+                    "http_status": status,
+                    "reason": "token response contains no access_token",
+                },
+            )
             raise RuntimeError("SHN token response contains no access_token")
         expires_in = int(payload.get("expires_in", 300))
         self._token = str(token)
         self._token_expires_at = time.monotonic() + max(1, expires_in - 60)
+        self._emit(
+            "auth.token.acquired",
+            "authentication",
+            {
+                "auth_method": "client_secret_basic",
+                "token_endpoint": f"{self.base_url}/oauth/token",
+                "http_status": status,
+                "expires_in_seconds": expires_in,
+                "credential_source": str(self.client_file),
+            },
+        )
         return self._token
 
     @staticmethod
