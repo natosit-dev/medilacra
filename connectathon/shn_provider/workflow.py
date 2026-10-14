@@ -5,6 +5,7 @@ from typing import Any, Iterable
 
 from . import crd, dtr, pas
 from .artifacts import DEFAULT_ROOT, write_case_artifacts
+from .crd import validate_payer_route
 from .client import SHNProviderClient, SHNResponse
 from .scenario import ScenarioConfig, get_scenario, list_scenarios
 from .scenario_registry import scenario_reality_manifest
@@ -48,22 +49,29 @@ class ProviderWorkflow:
         self,
         scenario_id: str,
         seed: int,
+        payer_route: str | None = None,
     ) -> ProviderCase:
         scenario = get_scenario(scenario_id)
+        route = validate_payer_route(payer_route if payer_route is not None else scenario.payer_route)
         reality = scenario_reality_manifest(scenario, seed)
+        # Keep source clinical identity invariant; separate artifacts by network route.
+        case_id = reality["case_id"]
+        if route != scenario.payer_route:
+            case_id = f"{case_id}--payer-{route}"
         case = ProviderCase(
             scenario_id=scenario.id,
             scenario_label=scenario.label,
             seed=int(seed),
-            case_id=reality["case_id"],
+            case_id=case_id,
             reality=reality,
+            payer_route=route,
         )
         self._persist(case)
         return case
 
     def build_crd(self, case: ProviderCase) -> dict[str, Any]:
         scenario = self._scenario(case)
-        case.crd.request = crd.build_request(scenario, case.seed)
+        case.crd.request = crd.build_request(scenario, case.seed, payer_route=case.payer_route)
         case.status = "crd-built"
         self._persist(case)
         return case.crd.request
@@ -113,6 +121,7 @@ class ProviderWorkflow:
             scenario,
             case.seed,
             case.crd.response,
+            payer_route=case.payer_route,
         )
         case.status = "dtr-built"
         self._persist(case)
@@ -170,6 +179,7 @@ class ProviderWorkflow:
             scenario,
             case.seed,
             case.questionnaire_response,
+            payer_route=case.payer_route,
         )
         case.status = "pas-built"
         self._persist(case)
@@ -260,6 +270,7 @@ class ProviderWorkflow:
         start_seed: int,
         count: int,
         scenario_ids: Iterable[str] | None = None,
+        payer_route: str | None = None,
     ) -> list[ProviderCase]:
         if count < 1:
             raise ValueError("count must be at least 1")
@@ -270,7 +281,7 @@ class ProviderWorkflow:
         cases: list[ProviderCase] = []
         for index in range(count):
             scenario_id = ids[index % len(ids)]
-            case = self.create_case(scenario_id, start_seed + index)
+            case = self.create_case(scenario_id, start_seed + index, payer_route=payer_route)
             try:
                 self.run_to_completion(case)
             except Exception as exc:
@@ -290,6 +301,7 @@ def cohort_rows(cases: Iterable[ProviderCase]) -> list[dict[str, Any]]:
             {
                 "seed": case.seed,
                 "scenario": case.scenario_id,
+                "payer_route": case.payer_route,
                 "case_id": case.case_id,
                 "patient": case.reality["entities"]["patient"]["patient_id"],
                 "service": case.reality["clinical_facts"]["ordered_service"]["code"],

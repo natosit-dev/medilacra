@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import hashlib
 import json
 
 import streamlit as st
 
 from connectathon.shn_provider.client import SHNProviderClient
+from connectathon.shn_provider.crd import validate_payer_route
 from connectathon.shn_provider.export import export_zip_bytes
 from connectathon.shn_provider.scenario import get_scenario, list_scenarios
 from connectathon.shn_provider.reference_suite import ReferenceSuiteRunner, result_rows
@@ -29,9 +31,6 @@ scenarios = list_scenarios()
 scenario_by_id = {scenario.id: scenario for scenario in scenarios}
 scenario_ids = [scenario.id for scenario in scenarios]
 credentials_ready = SHNProviderClient.credentials_available()
-client = SHNProviderClient.from_environment() if credentials_ready else None
-workflow = ProviderWorkflow(client=client)
-reference_runner = ReferenceSuiteRunner(client=client, execution_mode="streamlit")
 reference_cases = list_test_cases()
 reference_by_id = {case.id: case for case in reference_cases}
 
@@ -46,8 +45,76 @@ with st.sidebar:
             "Offline request construction still works. Live buttons are disabled. "
             "Set SHN_CLIENT_FILE or use the existing ignored provider-test client.json."
         )
-    st.code("https://pa-test.shn-preview.org", language=None)
-    st.caption("Provider test endpoint • route configured per scenario")
+    crd_route = st.radio(
+        "CRD order-sign destination",
+        ["SHN Preview (direct)", "AEGIS Touchstone (proxy)"],
+        key="shn_provider_crd_route",
+    )
+    touchstone_crd_url = None
+    touchstone_user_key = None
+    if crd_route == "AEGIS Touchstone (proxy)":
+        touchstone_crd_url = st.text_input(
+            "Touchstone full request URL",
+            value="https://touchstone.aegis.net:59747/cds-services/shn-order-sign",
+            help="Confirm this exact URL on Touchstone's Waiting for Request page.",
+            key="shn_touchstone_crd_url",
+        )
+        touchstone_user_key = st.text_input(
+            "Touchstone USER_KEY",
+            type="password",
+            key="shn_touchstone_user_key",
+            help="From the active Touchstone execution; never enter your SHN client secret.",
+        )
+        st.caption(
+            "Only CRD order-sign goes through AEGIS. The SHN token is still "
+            "obtained directly from SHN; DTR and PAS remain direct. "
+            "Touchstone sees the proxied bearer token and synthetic request."
+        )
+        if not touchstone_user_key:
+            st.warning("Enter USER_KEY from the Touchstone Waiting for Request instructions.")
+    else:
+        st.code("https://pa-test.shn-preview.org", language=None)
+        st.caption("Provider test endpoint • route configured per scenario")
+
+    st.divider()
+    payer_input = st.text_input(
+        "Payer ID (CRD / DTR / PAS)",
+        value=scenarios[0].payer_route,
+        key="shn_provider_payer_route",
+        help="SHN payer routing identifier, e.g. 00301. Leading zeros are significant.",
+    )
+    st.caption("Changes only the network payer identity; synthetic clinical facts stay the same.")
+    if payer_input != scenarios[0].payer_route:
+        st.caption(
+            "Non-default payer routes must exist in SHN. PAS still uses the "
+            "reference test fixture's payer NPI until payer-specific details are supplied."
+        )
+    try:
+        payer_route = validate_payer_route(payer_input)
+    except ValueError as exc:
+        st.error(str(exc))
+        st.stop()
+
+# Keep the previously validated reference suite on the direct SHN route.
+# Only the interactive provider workflow opts into the Touchstone proxy.
+client = None
+if credentials_ready and (
+    crd_route == "SHN Preview (direct)" or touchstone_user_key
+):
+    try:
+        client = SHNProviderClient.from_environment(
+            touchstone_crd_url=touchstone_crd_url,
+            touchstone_user_key=touchstone_user_key,
+        )
+    except ValueError as exc:
+        st.sidebar.error(str(exc))
+
+live_ready = client is not None
+workflow = ProviderWorkflow(client=client)
+reference_runner = ReferenceSuiteRunner(
+    client=SHNProviderClient.from_environment() if credentials_ready else None,
+    execution_mode="streamlit",
+)
 
 
 def _json_download(label: str, payload, filename: str, key: str) -> None:
@@ -115,14 +182,19 @@ with single_tab:
             )
         )
     with controls[2]:
-        st.metric("Payer route", scenario_by_id[selected_scenario_id].payer_route)
+        st.metric("Payer route", payer_route)
 
     scenario = get_scenario(selected_scenario_id)
-    case_key = (selected_scenario_id, seed)
+    # Prevent changing destinations or matching keys mid-case.
+    route_fingerprint = hashlib.sha256(
+        (touchstone_user_key or "").encode("utf-8")
+    ).hexdigest() if crd_route == "AEGIS Touchstone (proxy)" else ""
+    case_key = (selected_scenario_id, seed, payer_route, crd_route, touchstone_crd_url, route_fingerprint)
     if st.session_state.get("shn_provider_case_key") != case_key:
         st.session_state["shn_provider_case"] = workflow.create_case(
             selected_scenario_id,
             seed,
+            payer_route=payer_route,
         )
         st.session_state["shn_provider_case_key"] = case_key
 
@@ -162,7 +234,7 @@ with single_tab:
             "Run next live stage",
             type="primary",
             use_container_width=True,
-            disabled=not credentials_ready or case.status in {"complete", "failed"},
+            disabled=not live_ready or case.status in {"complete", "failed"},
         ):
             try:
                 workflow.run_next(case)
@@ -173,7 +245,7 @@ with single_tab:
         if st.button(
             "Run to completion",
             use_container_width=True,
-            disabled=not credentials_ready or case.status in {"complete", "failed"},
+            disabled=not live_ready or case.status in {"complete", "failed"},
         ):
             try:
                 workflow.run_to_completion(case)
@@ -303,7 +375,7 @@ with cohort_tab:
     if st.button(
         "Run live cohort",
         type="primary",
-        disabled=not credentials_ready or not cohort_scenarios,
+        disabled=not live_ready or not cohort_scenarios,
         use_container_width=True,
     ):
         with st.spinner("Running provider cohort through SHN..."):
@@ -311,10 +383,16 @@ with cohort_tab:
                 start_seed=cohort_start,
                 count=cohort_count,
                 scenario_ids=cohort_scenarios,
+                payer_route=payer_route,
             )
         st.session_state["shn_provider_cohort"] = cases
+        st.session_state["shn_provider_cohort_route"] = payer_route
 
-    cohort_cases = st.session_state.get("shn_provider_cohort")
+    cohort_cases = (
+        st.session_state.get("shn_provider_cohort")
+        if st.session_state.get("shn_provider_cohort_route") == payer_route
+        else None
+    )
     if cohort_cases:
         rows = cohort_rows(cohort_cases)
         completed = sum(row["status"] == "complete" for row in rows)
@@ -385,6 +463,7 @@ with artifact_tab:
 
 with reference_tab:
     st.markdown("### SHN Connectathon reference suite")
+    st.caption("Reference Suite remains on the direct SHN Preview route.")
     st.caption(
         "Executable TP-01–TP-05 and TN-01–TN-10 contracts. "
         "Positive cases reuse known-good reference payload structure; negative cases "

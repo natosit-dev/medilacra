@@ -29,6 +29,7 @@ class ProviderCase:
     seed: int
     case_id: str
     reality: dict[str, Any]
+    payer_route: str | None = None
     status: str = "created"
     stop_reason: str | None = None
     crd: StageState = field(default_factory=StageState)
@@ -41,6 +42,7 @@ class ProviderCase:
     def manifest(self) -> dict[str, Any]:
         return {
             "scenario_id": self.scenario_id,
+            "payer_route": self.payer_route,
             "scenario_label": self.scenario_label,
             "seed": self.seed,
             "case_id": self.case_id,
