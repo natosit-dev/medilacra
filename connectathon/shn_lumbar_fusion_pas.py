@@ -198,17 +198,17 @@ def _build_patient(seed: int) -> dict[str, Any]:
     }
 
 
-def _build_insurer() -> dict[str, Any]:
+def _build_insurer(payer_route: str = SHN_ROUTE_00301) -> dict[str, Any]:
     return {
         "resourceType": "Organization",
-        "id": "shn-payer-00301",
+        "id": f"shn-payer-{payer_route}",
         "meta": {"profile": [PROFILE_INSURER]},
         "active": True,
-        "name": "SHN reference payer route 00301",
+        "name": f"SHN reference payer route {payer_route}",
         "identifier": [
             {
                 "system": SHN_PAYER_IDENTIFIER_SYSTEM,
-                "value": SHN_ROUTE_00301,
+                "value": payer_route,
             },
             {"system": US_NPI_SYSTEM, "value": PAYER_NPI},
         ],
@@ -275,6 +275,7 @@ def _build_coverage(
     seed: int,
     patient: dict[str, Any],
     insurer: dict[str, Any],
+    payer_route: str = SHN_ROUTE_00301,
 ) -> dict[str, Any]:
     reality = build_lumbar_fusion_reality(seed)
     member = reality.transaction.member_id
@@ -307,7 +308,7 @@ def _build_coverage(
                 "reference": _reference(insurer),
                 "identifier": {
                     "system": SHN_PAYER_IDENTIFIER_SYSTEM,
-                    "value": SHN_ROUTE_00301,
+                    "value": payer_route,
                 },
             }
         ],
@@ -547,17 +548,19 @@ def _build_claim(
 def build_documented_pas_bundle(
     seed: int,
     questionnaire_response: dict[str, Any],
+    *,
+    payer_route: str = SHN_ROUTE_00301,
 ) -> dict[str, Any]:
     """Build a self-contained PAS request carrying completed DTR documentation."""
     validate_documented_questionnaire_response(questionnaire_response, seed)
     reality = build_lumbar_fusion_reality(seed)
 
     patient = _build_patient(seed)
-    insurer = _build_insurer()
+    insurer = _build_insurer(payer_route)
     requestor = _build_requestor(seed)
     practitioner = _build_practitioner(seed)
     role = _build_practitioner_role(seed, practitioner, requestor)
-    coverage = _build_coverage(seed, patient, insurer)
+    coverage = _build_coverage(seed, patient, insurer, payer_route)
     order = _build_service_request(seed, patient, coverage, practitioner)
     qr = copy.deepcopy(questionnaire_response)
     claim = _build_claim(
