@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from connectathon.shn_provider import crd, dtr, pas
+from connectathon.shn_provider import crd, dtr
 from connectathon.shn_provider.scenario import get_scenario
 from connectathon.shn_provider.workflow import ProviderWorkflow
 import connectathon.shn_lumbar_fusion_pas as pas_builder
@@ -28,11 +28,14 @@ def test_payer_override_is_string_in_crd_and_case_manifest(tmp_path, route):
 
     # The underlying clinical case is invariant; only the network adapter is overridden.
     default_case = workflow.create_case("lumbar-fusion-auth", 300)
+    default_request = workflow.build_crd(default_case)
     assert case.reality == default_case.reality
+    assert request["prefetch"]["patient"] == default_request["prefetch"]["patient"]
+    assert request["context"] == default_request["context"]
     assert default_case.payer_route == "00301"
     if route != "00301":
         assert case.case_id != default_case.case_id  # route-specific artifact directory
-        assert case.crd.request != default_case.crd.request if default_case.crd.request else True
+        assert request != default_request
 
 
 @pytest.mark.parametrize("route", ["00301", "00999"])
@@ -91,7 +94,7 @@ def test_cohort_propagates_single_payer_override(tmp_path, monkeypatch):
     assert [case.payer_route for case in cases] == observed
 
 
-@pytest.mark.parametrize("value", ["", " 00301", "00301 ", "bad/route", "!" , "x" * 54, None, 301])
+@pytest.mark.parametrize("value", ["", " 00301", "00301 ", "bad/route", "!", "x" * 54, None, 301])
 def test_reject_invalid_payer_ids(value):
     with pytest.raises(ValueError, match="payer ID"):
         crd.validate_payer_route(value)
