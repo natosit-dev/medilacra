@@ -6,6 +6,7 @@ import json
 import streamlit as st
 
 from connectathon.shn_provider.client import SHNProviderClient
+from connectathon.shn_provider.crd import validate_payer_route
 from connectathon.shn_provider.export import export_zip_bytes
 from connectathon.shn_provider.scenario import get_scenario, list_scenarios
 from connectathon.shn_provider.reference_suite import ReferenceSuiteRunner, result_rows
@@ -74,6 +75,20 @@ with st.sidebar:
     else:
         st.code("https://pa-test.shn-preview.org", language=None)
         st.caption("Provider test endpoint • route configured per scenario")
+
+    st.divider()
+    payer_input = st.text_input(
+        "Payer ID (CRD / DTR / PAS)",
+        value=scenarios[0].payer_route,
+        key="shn_provider_payer_route",
+        help="SHN payer routing identifier, e.g. 00301. Leading zeros are significant.",
+    )
+    st.caption("Changes only the network payer identity; synthetic clinical facts stay the same.")
+    try:
+        payer_route = validate_payer_route(payer_input)
+    except ValueError as exc:
+        st.error(str(exc))
+        st.stop()
 
 # Keep the previously validated reference suite on the direct SHN route.
 # Only the interactive provider workflow opts into the Touchstone proxy.
@@ -162,18 +177,19 @@ with single_tab:
             )
         )
     with controls[2]:
-        st.metric("Payer route", scenario_by_id[selected_scenario_id].payer_route)
+        st.metric("Payer route", payer_route)
 
     scenario = get_scenario(selected_scenario_id)
     # Prevent changing destinations or matching keys mid-case.
     route_fingerprint = hashlib.sha256(
         (touchstone_user_key or "").encode("utf-8")
     ).hexdigest() if crd_route == "AEGIS Touchstone (proxy)" else ""
-    case_key = (selected_scenario_id, seed, crd_route, touchstone_crd_url, route_fingerprint)
+    case_key = (selected_scenario_id, seed, payer_route, crd_route, touchstone_crd_url, route_fingerprint)
     if st.session_state.get("shn_provider_case_key") != case_key:
         st.session_state["shn_provider_case"] = workflow.create_case(
             selected_scenario_id,
             seed,
+            payer_route=payer_route,
         )
         st.session_state["shn_provider_case_key"] = case_key
 
@@ -362,10 +378,16 @@ with cohort_tab:
                 start_seed=cohort_start,
                 count=cohort_count,
                 scenario_ids=cohort_scenarios,
+                payer_route=payer_route,
             )
         st.session_state["shn_provider_cohort"] = cases
+        st.session_state["shn_provider_cohort_route"] = payer_route
 
-    cohort_cases = st.session_state.get("shn_provider_cohort")
+    cohort_cases = (
+        st.session_state.get("shn_provider_cohort")
+        if st.session_state.get("shn_provider_cohort_route") == payer_route
+        else None
+    )
     if cohort_cases:
         rows = cohort_rows(cohort_cases)
         completed = sum(row["status"] == "complete" for row in rows)
