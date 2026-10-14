@@ -73,6 +73,9 @@ jobs:
             connectathon/shn_provider/mutations.py \
             connectathon/shn_provider/reference_suite.py \
             connectathon/shn_provider/reference_run.py \
+            connectathon/shn_provider/log_schema.py \
+            connectathon/shn_provider/run_logging.py \
+            connectathon/shn_provider/export.py \
             pages/10_SHN_Provider_ePA.py
 
       - name: Check SHN batch runner syntax
@@ -103,4 +106,5 @@ jobs:
             tests/test_shn_lumbar_fusion_pas.py \
             tests/test_shn_bulk_pas.py \
             tests/test_shn_provider_workflow.py \
-            tests/test_shn_reference_suite.py
+            tests/test_shn_reference_suite.py \
+            tests/test_shn_execution_logging.py
