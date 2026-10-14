@@ -169,6 +169,19 @@ class SHNProviderClient:
             )
             return self._token
 
+        if self._token:
+            self._emit(
+                "auth.token.expired",
+                "authentication",
+                {
+                    "auth_method": "client_secret_basic",
+                    "token_endpoint": f"{self.base_url}/oauth/token",
+                    "credential_source": str(self.client_file),
+                },
+            )
+            self._token = None
+            self._token_expires_at = 0.0
+
         self._emit(
             "auth.token.requested",
             "authentication",
@@ -279,6 +292,17 @@ class SHNProviderClient:
                 delay = int(retry_after)
             except (TypeError, ValueError):
                 delay = self.default_retry_after
+            self._emit(
+                "http.retry.scheduled",
+                "transport",
+                {
+                    "path": path,
+                    "correlation_id": sent_correlation_id,
+                    "attempt": attempts,
+                    "http_status": status,
+                    "retry_after_seconds": max(0, delay),
+                },
+            )
             time.sleep(max(0, delay))
             if bearer_token is None:
                 self._token = None
