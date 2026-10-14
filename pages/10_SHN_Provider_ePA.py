@@ -5,8 +5,10 @@ import json
 import streamlit as st
 
 from connectathon.shn_provider.client import SHNProviderClient
+from connectathon.shn_provider.export import export_zip_bytes
 from connectathon.shn_provider.scenario import get_scenario, list_scenarios
 from connectathon.shn_provider.reference_suite import ReferenceSuiteRunner, result_rows
+from connectathon.shn_provider.run_logging import event_rows
 from connectathon.shn_provider.test_case import get_test_case, list_test_cases
 from connectathon.shn_provider.workflow import ProviderWorkflow, cohort_rows
 
@@ -29,7 +31,7 @@ scenario_ids = [scenario.id for scenario in scenarios]
 credentials_ready = SHNProviderClient.credentials_available()
 client = SHNProviderClient.from_environment() if credentials_ready else None
 workflow = ProviderWorkflow(client=client)
-reference_runner = ReferenceSuiteRunner(client=client)
+reference_runner = ReferenceSuiteRunner(client=client, execution_mode="streamlit")
 reference_cases = list_test_cases()
 reference_by_id = {case.id: case for case in reference_cases}
 
@@ -451,6 +453,36 @@ with reference_tab:
             use_container_width=True,
             hide_index=True,
         )
+
+        st.markdown("### Full execution log")
+        st.caption(
+            f"{len(reference_result.events)} chronological events • "
+            "credentials and bearer-token values are intentionally excluded"
+        )
+        if reference_result.events:
+            st.dataframe(
+                event_rows(reference_result.events),
+                use_container_width=True,
+                hide_index=True,
+            )
+            with st.expander("Raw event stream", expanded=False):
+                st.json(reference_result.events, expanded=False)
+
+        if reference_result.artifact_dir:
+            try:
+                export_bytes = export_zip_bytes(reference_result.artifact_dir)
+                st.download_button(
+                    "Export Full Test Log",
+                    data=export_bytes,
+                    file_name=(
+                        f"medilacra-test-log-{reference_result.run_id}.zip"
+                    ),
+                    mime="application/zip",
+                    key=f"export-full-log-{reference_result.run_id}",
+                    use_container_width=True,
+                )
+            except Exception as exc:
+                st.warning(f"Could not build full-log export: {exc}")
 
         for index, operation in enumerate(reference_result.operations, start=1):
             marker = (
