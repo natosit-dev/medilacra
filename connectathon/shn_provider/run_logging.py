@@ -16,7 +16,9 @@ from .log_schema import LOG_SCHEMA_VERSION, validate_event, validate_run_documen
 
 
 BLOCKED_KEYS = {
-    "authorization",
+    "authorization_header",
+    "authorization_value",
+    "http_authorization",
     "client_secret",
     "access_token",
     "bearer_token",
