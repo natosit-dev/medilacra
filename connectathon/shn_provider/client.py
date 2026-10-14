@@ -92,7 +92,7 @@ class SHNProviderClient:
             if (
                 parsed.scheme != "https"
                 or parsed.hostname != "touchstone.aegis.net"
-                or not parsed.path
+                or not parsed.path.strip("/")
                 or parsed.username is not None
                 or parsed.password is not None
                 or parsed.query
