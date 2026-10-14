@@ -13,6 +13,7 @@ def build_request(
     scenario: ScenarioConfig,
     seed: int,
     questionnaire_response: dict[str, Any],
+    payer_route: str | None = None,
 ) -> dict[str, Any]:
     if not scenario.has_stage("pas"):
         raise ValueError(f"scenario {scenario.id!r} has no PAS stage")
@@ -30,7 +31,11 @@ def build_request(
             f"no proven PAS request builder is registered for {scenario.id!r}"
         )
 
-    bundle = build_documented_pas_bundle(seed, questionnaire_response)
+    bundle = build_documented_pas_bundle(
+        seed,
+        questionnaire_response,
+        payer_route=payer_route if payer_route is not None else scenario.payer_route,
+    )
     serialized = str(bundle)
     if reality.service_code not in serialized:
         raise ValueError("configured service code missing from PAS request")
