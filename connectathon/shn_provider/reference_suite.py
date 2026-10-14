@@ -275,7 +275,7 @@ class ReferenceSuiteRunner:
             {
                 "method": "POST",
                 "path": path,
-                "url": f"{client.base_url}{path}",
+                "url": f"{getattr(client, 'base_url', 'https://example.invalid')}{path}",
                 "content_type": content_type,
                 "correlation_id": cid,
                 "request_label": request_label,
