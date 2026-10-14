@@ -5,6 +5,11 @@ import json
 import streamlit as st
 
 from connectathon.shn_provider.client import SHNProviderClient
+from connectathon.shn_provider.collection import (
+    build_collection_data,
+    collection_zip_bytes,
+    discover_runs,
+)
 from connectathon.shn_provider.export import export_zip_bytes
 from connectathon.shn_provider.scenario import get_scenario, list_scenarios
 from connectathon.shn_provider.reference_suite import ReferenceSuiteRunner, result_rows
@@ -390,6 +395,60 @@ with reference_tab:
         "Positive cases reuse known-good reference payload structure; negative cases "
         "apply exactly one named mutation immediately before transport."
     )
+
+    recorded_runs = discover_runs()
+    collection_manifest, collection_transactions, _collection_events = (
+        build_collection_data(recorded_runs)
+    )
+    collection_summary = collection_manifest["summary"]
+
+    st.markdown("#### Recorded transaction logs")
+    log_cols = st.columns(4)
+    log_cols[0].metric("Recorded runs", collection_summary["run_count"])
+    log_cols[1].metric("Transactions", collection_summary["transaction_count"])
+    log_cols[2].metric("Full logs", collection_summary["full_log_runs"])
+    log_cols[3].metric("Legacy runs", collection_summary["legacy_artifact_runs"])
+    st.caption(
+        "Bundles existing local evidence only; preparing this export sends no SHN traffic. "
+        "Runs created before full logging are preserved as legacy artifacts rather than "
+        "having missing chronology reconstructed."
+    )
+
+    if st.button(
+        "Prepare all recorded transaction logs",
+        use_container_width=True,
+        key="prepare-shn-log-collection",
+        disabled=not recorded_runs,
+    ):
+        try:
+            with st.spinner("Collecting recorded SHN transaction evidence..."):
+                collection_bytes, prepared_manifest = collection_zip_bytes(
+                    recorded_runs
+                )
+            st.session_state["shn_log_collection_export"] = {
+                "bytes": collection_bytes,
+                "manifest": prepared_manifest,
+            }
+        except Exception as exc:
+            st.exception(exc)
+
+    prepared_collection = st.session_state.get("shn_log_collection_export")
+    if prepared_collection:
+        prepared_manifest = prepared_collection["manifest"]
+        prepared_summary = prepared_manifest["summary"]
+        st.download_button(
+            "Download all recorded transaction logs",
+            data=prepared_collection["bytes"],
+            file_name=f"{prepared_manifest['collection_id']}.zip",
+            mime="application/zip",
+            key="download-shn-log-collection",
+            use_container_width=True,
+        )
+        st.caption(
+            f"Prepared {prepared_summary['run_count']} runs / "
+            f"{prepared_summary['transaction_count']} transactions / "
+            f"{prepared_summary['event_count']} full-log events."
+        )
 
     reference_id = st.selectbox(
         "Test case",
