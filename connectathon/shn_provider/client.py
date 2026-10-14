@@ -69,6 +69,8 @@ class SHNProviderClient:
         max_retries: int = 2,
         default_retry_after: int = 65,
         event_sink: Callable[[str, str, dict[str, Any]], Any] | None = None,
+        touchstone_crd_url: str | None = None,
+        touchstone_user_key: str | None = None,
     ) -> None:
         self.client_file = Path(client_file)
         self.base_url = base_url.rstrip("/")
@@ -79,13 +81,43 @@ class SHNProviderClient:
         self._token: str | None = None
         self._token_expires_at = 0.0
         self.event_sink = event_sink
+        # Touchstone is an optional CRD-only route. Authentication and DTR/PAS
+        # continue using the original SHN base URL.
+        proxy_url = (touchstone_crd_url or "").strip()
+        user_key = (touchstone_user_key or "").strip()
+        if bool(proxy_url) != bool(user_key):
+            raise ValueError("Touchstone CRD requires both a request URL and USER_KEY")
+        if proxy_url:
+            parsed = urllib.parse.urlsplit(proxy_url)
+            if (
+                parsed.scheme != "https"
+                or parsed.hostname != "touchstone.aegis.net"
+                or not parsed.path
+                or parsed.username is not None
+                or parsed.password is not None
+                or parsed.query
+                or parsed.fragment
+            ):
+                raise ValueError(
+                    "Touchstone CRD URL must be a full HTTPS request URL on "
+                    "touchstone.aegis.net with no embedded credentials or query"
+                )
+        self.touchstone_crd_url = proxy_url or None
+        self._touchstone_user_key = user_key or None
 
     @classmethod
-    def from_environment(cls) -> "SHNProviderClient":
+    def from_environment(
+        cls,
+        *,
+        touchstone_crd_url: str | None = None,
+        touchstone_user_key: str | None = None,
+    ) -> "SHNProviderClient":
         return cls(
             client_file=os.getenv("SHN_CLIENT_FILE", str(DEFAULT_CLIENT_FILE)),
             base_url=os.getenv("SHN_BASE", DEFAULT_BASE_URL),
             console_url=os.getenv("SHN_CONSOLE", DEFAULT_CONSOLE_URL),
+            touchstone_crd_url=touchstone_crd_url,
+            touchstone_user_key=touchstone_user_key,
         )
 
     @classmethod
@@ -272,15 +304,21 @@ class SHNProviderClient:
         while True:
             attempts += 1
             token = bearer_token or self._ensure_token()
+            request_url = f"{self.base_url}{path}"
+            request_headers = {
+                "Authorization": f"Bearer {token}",
+                "Content-Type": content_type,
+                "X-Correlation-Id": sent_correlation_id,
+            }
+            if path == "/cds-services/shn-order-sign" and self.touchstone_crd_url:
+                request_url = self.touchstone_crd_url
+                request_headers["USER_KEY"] = self._touchstone_user_key
+                request_headers["Accept"] = "application/json"
             request = urllib.request.Request(
-                f"{self.base_url}{path}",
+                request_url,
                 data=json.dumps(payload).encode("utf-8"),
                 method="POST",
-                headers={
-                    "Authorization": f"Bearer {token}",
-                    "Content-Type": content_type,
-                    "X-Correlation-Id": sent_correlation_id,
-                },
+                headers=request_headers,
             )
             status, body, headers = self._open(request)
 
