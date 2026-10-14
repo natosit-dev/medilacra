@@ -84,6 +84,11 @@ with st.sidebar:
         help="SHN payer routing identifier, e.g. 00301. Leading zeros are significant.",
     )
     st.caption("Changes only the network payer identity; synthetic clinical facts stay the same.")
+    if payer_input != scenarios[0].payer_route:
+        st.caption(
+            "Non-default payer routes must exist in SHN. PAS still uses the "
+            "reference test fixture's payer NPI until payer-specific details are supplied."
+        )
     try:
         payer_route = validate_payer_route(payer_input)
     except ValueError as exc:
