@@ -212,7 +212,8 @@ The Streamlit UI exposes both a single ZIP download for the complete experiment 
 pytest -q \
   tests/test_disco_inferno.py \
   tests/test_disco_inferno_process_control.py \
-  tests/test_disco_inferno_offline_sdoh.py
+  tests/test_disco_inferno_offline_sdoh.py \
+  tests/test_disco_inferno_lucifer.py
 ```
 
 The tests protect the central boundaries:
@@ -225,6 +226,28 @@ The tests protect the central boundaries:
 - worker locking/stopping/stale-lock recovery behave predictably;
 - offline SDOH mode does not enter external enrichment paths.
 
+## Lucifer — evidence betrayal (2026-11-20 extension)
+
+Lucifer is **not** a fourth way of deleting information. It tests a higher-level failure: a credible representation that encourages a materially false conclusion.
+
+The first implementation uses a small **independent synthetic disclosure-event fixture** derived from the Beatrice patient population. Its source events are an additional invented testing scenario, **not** observed healthcare traffic, and the "authorized/unauthorized" field is a simulation rule, **not a HIPAA legal finding**. The existing clinical Beatrice tables stay unchanged.
+
+- **Phantom violation:** a synthetic authorized disclosure entry is replaced by a plausible invented event described as unauthorized. Its targeted "unauthorized event happened" conclusion is false to the source witness.
+- **Concealed violation:** a synthetic unauthorized disclosure is relabeled as authorized. Its targeted "no unauthorized event for this ID" conclusion is false to the source witness.
+
+Both apparent evidence tables preserve schema, row count, non-null values, unique event IDs, valid patient references, and permissible status values. A consumer inspecting only the evidence cannot establish the contradiction; comparing it with source truth can.
+
+The reproducible artifacts are stored in \`inferno/lucifer/\`, with a separate Beatrice synthetic audit witness, both apparent evidence cases, a claims CSV and a manifest. The experiment report and ZIP bundle include them.
+
+Lucifer runs by default in the CLI and detached worker. Skip it with \`--no-lucifer\`. The existing UI receives its files through the regular ZIP bundle; a dedicated UI panel is not implemented.
+
+\`\`\`bash
+pytest -q tests/test_disco_inferno_lucifer.py
+python experiments/disco_inferno/run_experiment.py --patients 2 --no-labs
+\`\`\`
+
+**Boundary:** This proves a representational false-conclusion fixture can pass ordinary structural checks. It does not prove a live gateway or auditing system would accept it, and it does not model the full legal criteria for a HIPAA violation. A downstream consumer/proving-ground adapter is a next experiment, not something already validated.
+
 ## Good-enough boundary
 
 This phase intentionally stops here.
@@ -235,7 +258,7 @@ Deferred until demanded by a future experiment:
 
 - reconstruction / recoverability scoring;
 - universal or weighted entropy metrics;
-- compound corruption (reserved name: **Lucifer**);
+- general compound corruption beyond the new synthetic **Lucifer** evidence-betrayal arm;
 - direct HL7/FHIR corruption;
 - cognition experiments;
 - larger corruption catalogs;
