@@ -398,7 +398,7 @@ def run_experiment(
             "Two audit-evidence scenarios preserve schema, references, unique IDs, "
             "row counts, and valid categorical values, yet support conclusions "
             "contradicted by retained synthetic source truth. Source and evidence "
-            "are separate under \`inferno/lucifer/\`. These do not establish real HIPAA violations.\n\n"
+            "are separate under `inferno/lucifer/`. These do not establish real HIPAA violations.\n\n"
         )
         for case_name, receipt in lucifer_result.manifest["cases"].items():
             report += (
