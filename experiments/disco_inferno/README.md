@@ -237,14 +237,14 @@ The first implementation uses a small **independent synthetic disclosure-event f
 
 Both apparent evidence tables preserve schema, row count, non-null values, unique event IDs, valid patient references, and permissible status values. A consumer inspecting only the evidence cannot establish the contradiction; comparing it with source truth can.
 
-The reproducible artifacts are stored in \`inferno/lucifer/\`, with a separate Beatrice synthetic audit witness, both apparent evidence cases, a claims CSV and a manifest. The experiment report and ZIP bundle include them.
+The reproducible artifacts are stored in `inferno/lucifer/`, with a separate Beatrice synthetic audit witness, both apparent evidence cases, a claims CSV and a manifest. The experiment report and ZIP bundle include them.
 
-Lucifer runs by default in the CLI and detached worker. Skip it with \`--no-lucifer\`. The existing UI receives its files through the regular ZIP bundle; a dedicated UI panel is not implemented.
+Lucifer runs by default in the CLI and detached worker. Skip it with `--no-lucifer`. The existing UI receives its files through the regular ZIP bundle; a dedicated UI panel is not implemented.
 
-\`\`\`bash
+```bash
 pytest -q tests/test_disco_inferno_lucifer.py
 python experiments/disco_inferno/run_experiment.py --patients 2 --no-labs
-\`\`\`
+```
 
 **Boundary:** This proves a representational false-conclusion fixture can pass ordinary structural checks. It does not prove a live gateway or auditing system would accept it, and it does not model the full legal criteria for a HIPAA violation. A downstream consumer/proving-ground adapter is a next experiment, not something already validated.
 
