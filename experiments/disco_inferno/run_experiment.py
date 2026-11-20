@@ -35,6 +35,7 @@ from experiments.disco_inferno.exports import (  # noqa: E402
     write_source_duckdb,
 )
 from experiments.disco_inferno.materialize import materialize_cases, save_model  # noqa: E402
+from experiments.disco_inferno.lucifer import lucifer  # noqa: E402
 from experiments.disco_inferno.reporting import render_report, write_report  # noqa: E402
 
 
@@ -67,6 +68,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--duplicate-table", default="transactions")
     parser.add_argument("--duplicate-fraction", type=float, default=0.10)
     parser.add_argument("--no-labs", action="store_true")
+    parser.add_argument("--no-lucifer", action="store_true", help="Skip synthetic privacy-evidence betrayal tests.")
     sdoh_group = parser.add_mutually_exclusive_group()
     sdoh_group.add_argument(
         "--with-sdoh",
@@ -222,6 +224,7 @@ def run_experiment(
     null_fraction: float = 0.10,
     duplicate_table: str = "transactions",
     duplicate_fraction: float = 0.10,
+    include_lucifer: bool = True,
     include_labs: bool = True,
     include_sdoh: bool = False,
     report_glob: str | None = None,
@@ -315,6 +318,29 @@ def run_experiment(
         combined_metrics.append(metrics)
         manifests[arm_name] = result.manifest
 
+    # A separate synthetic privacy-evidence layer derived from Beatrice patients.
+    # Never infer real access events or legal conclusions from these fixtures.
+    lucifer_result = lucifer(beatrice["patients"], inferno_seed=inferno_seed) if include_lucifer else None
+    if lucifer_result is not None:
+        lucifer_dir = run_dir / "inferno" / "lucifer"
+        save_model({"synthetic_audit_source_truth": lucifer_result.source_truth}, lucifer_dir / "beatrice", file_suffix=run_id)
+        for case_name, evidence in lucifer_result.evidence.items():
+            save_model({"apparent_audit_evidence": evidence}, lucifer_dir / case_name, file_suffix=run_id)
+        _write_json(lucifer_dir / f"lucifer_manifest_{run_id}.json", lucifer_result.manifest)
+        pd.DataFrame(
+            [
+                {
+                    "case": case_name,
+                    "target_event_id": receipt["target_event_id"],
+                    "source_unauthorized": receipt["source_claim_unauthorized_event_occurred"],
+                    "evidence_unauthorized": receipt["evidence_claim_unauthorized_event_occurred"],
+                    "all_surface_checks_pass": all(receipt["consumer_visible_checks"].values()),
+                    "false_conclusion": receipt["false_conclusion"],
+                }
+                for case_name, receipt in lucifer_result.manifest["cases"].items()
+            ]
+        ).to_csv(lucifer_dir / f"lucifer_claims_{run_id}.csv", index=False)
+
     control_metrics = metrics_by_arm["Control"]
     if not control_is_zero(control_metrics):
         raise RuntimeError("Control arm reported non-zero damage; comparison harness is not trustworthy")
@@ -337,6 +363,7 @@ def run_experiment(
             "charon": {"table": charon_table, "field": charon_field},
             "null": {"table": null_table, "field": null_field_name, "fraction": null_fraction},
             "cerberus": {"table": duplicate_table, "fraction": duplicate_fraction},
+            "lucifer": {"enabled": include_lucifer, "mode": "synthetic_privacy_evidence"},
             "include_labs": include_labs,
             "include_sdoh": include_sdoh,
         },
@@ -346,6 +373,7 @@ def run_experiment(
         },
         "source_reality_duckdb": source_db.name,
         "arms": manifests,
+        "lucifer": lucifer_result.manifest if lucifer_result is not None else {"enabled": False},
         "status": "complete",
     }
 
@@ -364,6 +392,21 @@ def run_experiment(
         arms=report_arms,
     )
     report_path = run_dir / f"DISCO_INFERNO_REPORT_{run_id}.md"
+    if lucifer_result is not None:
+        report += (
+            "\n## Lucifer — Betrayal of Evidence (Synthetic)\n\n"
+            "Two audit-evidence scenarios preserve schema, references, unique IDs, "
+            "row counts, and valid categorical values, yet support conclusions "
+            "contradicted by retained synthetic source truth. Source and evidence "
+            "are separate under \`inferno/lucifer/\`. These do not establish real HIPAA violations.\n\n"
+        )
+        for case_name, receipt in lucifer_result.manifest["cases"].items():
+            report += (
+                f"- **{case_name}:** source unauthorized="
+                f"{receipt['source_claim_unauthorized_event_occurred']}; "
+                f"evidence unauthorized={receipt['evidence_claim_unauthorized_event_occurred']}; "
+                f"ordinary checks passed={all(receipt['consumer_visible_checks'].values())}.\n"
+            )
     write_report(report_path, report)
 
     bundle_path = run_dir / f"DISCO_INFERNO_{run_id}.zip"
@@ -384,6 +427,7 @@ def run_experiment(
         "cases": cases,
         "beatrice": beatrice,
         "arms": arms,
+        "lucifer": lucifer_result,
         "metrics_by_arm": metrics_by_arm,
         "manifest": manifest,
         "artifacts": artifacts,
@@ -413,6 +457,7 @@ def main() -> None:
         null_fraction=args.null_fraction,
         duplicate_table=args.duplicate_table,
         duplicate_fraction=args.duplicate_fraction,
+        include_lucifer=not args.no_lucifer,
         include_labs=not args.no_labs,
         include_sdoh=bool(args.with_sdoh),
         report_glob=args.reports,
